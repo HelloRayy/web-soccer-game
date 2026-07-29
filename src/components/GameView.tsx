@@ -1,0 +1,447 @@
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { useGamepad } from '../hooks/useGamepad';
+import { useGameLoop } from '../hooks/useGameLoop';
+import { Field } from '../game/Field';
+import { Ball } from '../game/Ball';
+import { Player } from '../game/Player';
+import { MatchRules } from '../game/MatchRules';
+import { HUDOverlay } from './HUDOverlay';
+import { MatchMode, MatchRulesState, GamepadState } from '../types/game';
+import { HostPeerService } from '../services/peerService';
+
+// Large Virtual Stadium World Dimensions
+const WORLD_WIDTH = 2200;
+const WORLD_HEIGHT = 1350;
+// Wide Broadcast Tactical Viewport Zoom
+const CAMERA_ZOOM = 0.92;
+
+export const GameView: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const { gamepads } = useGamepad();
+
+  // Screen Viewport dimensions
+  const [dimensions, setDimensions] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight
+  });
+
+  // Toggle HUD Overlay & Debugger State
+  const [showHUD, setShowHUD] = useState(true);
+
+  // Mouse Cursor Visibility State (Toggleable via Ctrl Key or Xbox Back Button)
+  const [showCursor, setShowCursor] = useState(false);
+  const prevBackBtnRef = useRef(false);
+
+  // WebRTC PeerJS Smartphone Remote Controller State
+  const [peerRoomId, setPeerRoomId] = useState('8492');
+  const [isPeerConnected, setIsPeerConnected] = useState(false);
+  const peerServiceRef = useRef<HostPeerService | null>(null);
+  const remoteGamepadStateRef = useRef<GamepadState | null>(null);
+
+  // Smooth Camera Position Tracking State
+  const cameraRef = useRef({
+    x: WORLD_WIDTH * 0.5,
+    y: WORLD_HEIGHT * 0.5
+  });
+
+  // Core Game Engine instances (Large World Pitch)
+  const fieldRef = useRef(new Field(WORLD_WIDTH, WORLD_HEIGHT));
+  const ballRef = useRef(new Ball(WORLD_WIDTH * 0.5, WORLD_HEIGHT * 0.5));
+  const matchRulesRef = useRef(new MatchRules('1v1_local'));
+
+  // 3 Team Players (P1 User, P2 Teammate, P3 Enemy Bot) in World Space
+  const playersRef = useRef<Player[]>([
+    new Player('p1', 'Player 1 (Kamu)', 'home', 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5),
+    new Player('p2', 'Player 2 (Rekan)', 'home', 1, '#34d399', WORLD_WIDTH * 0.45, WORLD_HEIGHT * 0.38),
+    new Player('p3', 'Musuh (P3)', 'away', null, '#f59e0b', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.5)
+  ]);
+
+  const [matchState, setMatchState] = useState<MatchRulesState>(matchRulesRef.current.state);
+
+  // Initialize WebRTC Host PeerJS Service for HP Remote Gamepad
+  useEffect(() => {
+    const hostService = new HostPeerService();
+    peerServiceRef.current = hostService;
+
+    hostService.onConnectionStateChange = (connected) => {
+      setIsPeerConnected(connected);
+    };
+
+    hostService.onInputReceived = (input) => {
+      if (input) {
+        remoteGamepadStateRef.current = {
+          index: 99,
+          id: 'Smartphone Remote Controller',
+          connected: true,
+          axes: {
+            leftStickX: input.axes?.leftStickX || 0,
+            leftStickY: input.axes?.leftStickY || 0,
+            rightStickX: 0,
+            rightStickY: 0,
+          },
+          buttons: {
+            a: input.buttons?.a || false,
+            b: input.buttons?.b || false,
+            x: input.buttons?.x || false,
+            y: input.buttons?.y || false,
+            lb: input.buttons?.lb || false,
+            rb: input.buttons?.rb || false,
+            lt: 0,
+            rt: input.buttons?.rt || 0,
+            back: false,
+            start: input.buttons?.start || false,
+            lsClick: false,
+            rsClick: false,
+          },
+        };
+      }
+    };
+
+    hostService.init().then((roomId) => {
+      setPeerRoomId(roomId);
+    });
+
+    return () => {
+      hostService.destroy();
+    };
+  }, []);
+
+  // Window Resize & Keyboard Ctrl Listener for Cursor Visibility
+  useEffect(() => {
+    const handleResize = () => {
+      setDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Control' || e.ctrlKey) {
+        setShowCursor((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  const resetMatchPositions = useCallback(() => {
+    ballRef.current.reset(WORLD_WIDTH * 0.5, WORLD_HEIGHT * 0.5);
+    playersRef.current[0].reset(WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5);
+    playersRef.current[1].reset(WORLD_WIDTH * 0.45, WORLD_HEIGHT * 0.38);
+    playersRef.current[2].reset(WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.5);
+
+    cameraRef.current = {
+      x: WORLD_WIDTH * 0.5,
+      y: WORLD_HEIGHT * 0.5
+    };
+  }, []);
+
+  const handleResetMatch = useCallback(() => {
+    matchRulesRef.current.resetMatch();
+    resetMatchPositions();
+    setMatchState({ ...matchRulesRef.current.state });
+  }, [resetMatchPositions]);
+
+  const handleToggleMode = useCallback((mode: MatchMode) => {
+    matchRulesRef.current.setMode(mode);
+    resetMatchPositions();
+    setMatchState({ ...matchRulesRef.current.state });
+  }, [resetMatchPositions]);
+
+  const handleToggleHUD = useCallback(() => {
+    setShowHUD((prev) => !prev);
+  }, []);
+
+  // Main 60 FPS Game Loop with Tactical Passing Grid & Tackle vs Gocek Duel Engine
+  useGameLoop((dt) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const field = fieldRef.current;
+    const ball = ballRef.current;
+    const rules = matchRulesRef.current;
+    const players = playersRef.current;
+    const player1 = players[0];
+    const player2 = players[1];
+    const player3 = players[2]; // P3 Enemy Bot
+
+    // Check Controller 0 Back Button for Cursor Toggle
+    if (gamepads[0]) {
+      const isPressingBack = gamepads[0].buttons.back;
+      if (isPressingBack && !prevBackBtnRef.current) {
+        setShowCursor((prev) => !prev);
+      }
+      prevBackBtnRef.current = isPressingBack;
+    }
+
+    // 1. Update Match Rules & Timer
+    const goalScored = rules.update(dt, ball, field);
+    if (goalScored) {
+      resetMatchPositions();
+    }
+
+    if (rules.state.state !== 'GAME_OVER') {
+      // 2. Update All 3 Players (P1 User, P2 Teammate, P3 Enemy Bot)
+      players.forEach((player) => {
+        const teammates = players.filter((p) => p.team === player.team && p.id !== player.id);
+        const opponents = players.filter((p) => p.team !== player.team);
+
+        if (player.id === 'p1' && remoteGamepadStateRef.current && isPeerConnected) {
+          const remoteGp = remoteGamepadStateRef.current;
+          const { toggleHUDRequested } = player.updateFromGamepad(remoteGp, ball, field, teammates, opponents);
+          if (toggleHUDRequested) {
+            setShowHUD((prev) => !prev);
+          }
+        } else if (player.controllerIndex !== null && gamepads[player.controllerIndex]) {
+          const gp = gamepads[player.controllerIndex];
+          const { toggleHUDRequested } = player.updateFromGamepad(gp, ball, field, teammates, opponents);
+
+          if (toggleHUDRequested) {
+            setShowHUD((prev) => !prev);
+          }
+        } else if (player.id === 'p3') {
+          // AI Enemy Bot (P3) Intelligence Loop
+          player.updateEnemyBotAI(ball, field, opponents);
+        } else {
+          player.updatePassiveReception(ball, field);
+        }
+      });
+
+      // =========================================================================
+      // 3. TACKLE VS DRIBBLE GOCEK DUEL ENGINE RESOLUTION
+      // =========================================================================
+      players.forEach((tackler) => {
+        if (tackler.isTackling) {
+          const ballCarrier = players.find((p) => p.id !== tackler.id && p.hasPossession);
+          if (ballCarrier) {
+            const dist = Math.hypot(tackler.pos.x - ballCarrier.pos.x, tackler.pos.y - ballCarrier.pos.y);
+
+            // EXPANDED SLIDE TACKLE STEAL THRESHOLD FROM 58px TO 95px FOR CRISP EASY TACKLING!
+            const stealDistanceThreshold = tackler.radius + ballCarrier.radius + 60;
+
+            if (dist < stealDistanceThreshold) {
+              // SCENARIO A: Ball carrier executed Dribble Skill Move (Gocek) -> GOCEK SUCCESS!
+              if (ballCarrier.skillDodgeInvincibleTimer > 0) {
+                ballCarrier.triggerFeedback('🔥 GOCEK SUCCESS!');
+                tackler.stumbleTimer = 0.55;
+                tackler.isTackling = false;
+                tackler.triggerFeedback('❌ TACKLE MISSED!');
+              }
+              // SCENARIO B: Ball carrier DOES NOT use Gocek -> TACKLE SUCCESS / BOLA DIREBUT!
+              else {
+                ballCarrier.hasPossession = false;
+                tackler.hasPossession = true;
+                ball.attachToPlayer(tackler.pos, tackler.facingAngle, tackler.radius, tackler.vel, tackler.id);
+
+                tackler.triggerFeedback('⚡ BOLA DIREBUT!');
+                ballCarrier.triggerFeedback('💥 REBUT!');
+                tackler.isTackling = false;
+              }
+            }
+          }
+        }
+      });
+
+      const controllerSource = isPeerConnected ? '📱 HP Remote' : 'P1 Controller 0';
+      rules.state.debugInputText = `${players[0].debugInputString} | SRC: ${controllerSource}`;
+
+      // 4. Update Ball Physics & Shift Deflection
+      ball.update(dt, field);
+    }
+
+    setMatchState({ ...rules.state });
+
+    // 5. Tactical Broadcast Camera Target (Tracks P1, P3, & Ball)
+    const targetCamX = player1.pos.x * 0.40 + (player3 ? player3.pos.x * 0.30 : 0) + ball.pos.x * 0.30;
+    const targetCamY = player1.pos.y * 0.40 + (player3 ? player3.pos.y * 0.30 : 0) + ball.pos.y * 0.30;
+
+    // Smooth Lerp Camera Follow
+    cameraRef.current.x = cameraRef.current.x * 0.88 + targetCamX * 0.12;
+    cameraRef.current.y = cameraRef.current.y * 0.88 + targetCamY * 0.12;
+
+    const viewW = dimensions.width;
+    const viewH = dimensions.height;
+    const halfVisibleW = viewW / (2 * CAMERA_ZOOM);
+    const halfVisibleH = viewH / (2 * CAMERA_ZOOM);
+
+    const clampedCamX = Math.max(halfVisibleW, Math.min(WORLD_WIDTH - halfVisibleW, cameraRef.current.x));
+    const clampedCamY = Math.max(halfVisibleH, Math.min(WORLD_HEIGHT - halfVisibleH, cameraRef.current.y));
+
+    // 6. Render World with Camera Transform & Conditional Dynamic Passing Grid
+    ctx.clearRect(0, 0, viewW, viewH);
+
+    ctx.save();
+    ctx.translate(viewW / 2, viewH / 2);
+    ctx.scale(CAMERA_ZOOM, CAMERA_ZOOM);
+    ctx.translate(-clampedCamX, -clampedCamY);
+
+    // Render Field
+    field.draw(ctx);
+
+    // DYNAMIC PASSING LINE & TARGET LOCK (ONLY WHEN AIMING TOWARD TEAMMATE)
+    if (showHUD) {
+      const passer = player1.hasPossession ? player1 : player2.hasPossession ? player2 : null;
+
+      if (passer) {
+        // A. Radial Concentric Distance Grid Rings
+        const ranges = [140, 280, 420];
+        ranges.forEach((r, idx) => {
+          ctx.strokeStyle = idx === 0 ? 'rgba(56, 189, 248, 0.35)' : idx === 1 ? 'rgba(52, 211, 153, 0.25)' : 'rgba(168, 85, 247, 0.20)';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([6, 6]);
+          ctx.beginPath();
+          ctx.arc(passer.pos.x, passer.pos.y, r, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+        ctx.setLineDash([]);
+
+        // B. Passing Vision Cone Grid Overlay (60° Angle Cone in front of Passer)
+        const coneAngle = Math.PI / 3;
+        const startAngle = passer.facingAngle - coneAngle / 2;
+        const endAngle = passer.facingAngle + coneAngle / 2;
+        const coneRadius = 320;
+
+        ctx.fillStyle = 'rgba(6, 182, 212, 0.08)';
+        ctx.strokeStyle = 'rgba(6, 182, 212, 0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(passer.pos.x, passer.pos.y);
+        ctx.arc(passer.pos.x, passer.pos.y, coneRadius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // C. Check if passer is actively aiming toward a teammate
+        const teammates = players.filter((p) => p.team === passer.team && p.id !== passer.id);
+        const targetedTeammate = passer.findBestPassTarget(teammates, passer.facingAngle);
+
+        // ONLY RENDER DASHED PASS LINE & LOCK BRACKETS WHEN AIMING TOWARD A TEAMMATE!
+        if (targetedTeammate) {
+          const dx = targetedTeammate.pos.x - passer.pos.x;
+          const dy = targetedTeammate.pos.y - passer.pos.y;
+          const dist = Math.hypot(dx, dy) || 1;
+
+          // Main Dashed Pass Vector Line
+          ctx.strokeStyle = '#06b6d4';
+          ctx.lineWidth = 2.5;
+          ctx.setLineDash([8, 6]);
+          ctx.beginPath();
+          ctx.moveTo(passer.pos.x, passer.pos.y);
+          ctx.lineTo(targetedTeammate.pos.x, targetedTeammate.pos.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Grid Tick Markers along the Pass Vector
+          const stepCount = Math.floor(dist / 50);
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2;
+
+          for (let i = 1; i <= stepCount; i++) {
+            const tickX = passer.pos.x + (dx / dist) * (i * 50);
+            const tickY = passer.pos.y + (dy / dist) * (i * 50);
+
+            const perpX = -(dy / dist) * 6;
+            const perpY = (dx / dist) * 6;
+
+            ctx.beginPath();
+            ctx.moveTo(tickX - perpX, tickY - perpY);
+            ctx.lineTo(tickX + perpX, tickY + perpY);
+            ctx.stroke();
+          }
+
+          // Target Lock Box & Crosshair Brackets at Targeted Teammate
+          const recX = targetedTeammate.pos.x;
+          const recY = targetedTeammate.pos.y;
+          const boxSize = 22;
+
+          ctx.strokeStyle = '#34d399';
+          ctx.lineWidth = 2.5;
+
+          ctx.beginPath();
+          ctx.moveTo(recX - boxSize, recY - boxSize + 6);
+          ctx.lineTo(recX - boxSize, recY - boxSize);
+          ctx.lineTo(recX - boxSize + 6, recY - boxSize);
+
+          ctx.moveTo(recX + boxSize - 6, recY - boxSize);
+          ctx.lineTo(recX + boxSize, recY - boxSize);
+          ctx.lineTo(recX + boxSize, recY - boxSize + 6);
+
+          ctx.moveTo(recX - boxSize, recY + boxSize - 6);
+          ctx.lineTo(recX - boxSize, recY + boxSize);
+          ctx.lineTo(recX - boxSize + 6, recY + boxSize);
+
+          ctx.moveTo(recX + boxSize - 6, recY + boxSize);
+          ctx.lineTo(recX + boxSize, recY + boxSize);
+          ctx.lineTo(recX + boxSize, recY + boxSize - 6);
+          ctx.stroke();
+        }
+      }
+
+      // D. Draw Active Ball Homing Pass Vector (during pass flight)
+      if (ball.homingTargetPlayer) {
+        const receiver = ball.homingTargetPlayer;
+
+        ctx.strokeStyle = ball.throughPassTargetPos ? '#f59e0b' : '#a855f7';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(ball.pos.x, ball.pos.y);
+        ctx.lineTo(receiver.pos.x, receiver.pos.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // E. Draw Ball Velocity Vector Arrow
+      const speed = Math.hypot(ball.vel.x, ball.vel.y);
+      if (speed > 0.2) {
+        const arrowLen = Math.min(speed * 8, 40);
+        const arrowX = ball.pos.x + (ball.vel.x / speed) * arrowLen;
+        const arrowY = ball.pos.y + (ball.vel.y / speed) * arrowLen;
+
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(ball.pos.x, ball.pos.y);
+        ctx.lineTo(arrowX, arrowY);
+        ctx.stroke();
+      }
+    }
+
+    // Render Players & Ball
+    players.forEach((p) => p.draw(ctx));
+    ball.draw(ctx);
+
+    ctx.restore();
+  });
+
+  return (
+    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-slate-950 flex flex-col items-center justify-center">
+      {/* Floating Toggleable HUD Overlay */}
+      <HUDOverlay
+        matchState={matchState}
+        showHUD={showHUD}
+        onToggleHUD={handleToggleHUD}
+        onResetMatch={handleResetMatch}
+        onToggleMode={handleToggleMode}
+        peerRoomId={peerRoomId}
+        isPeerConnected={isPeerConnected}
+      />
+
+      {/* Screen Viewport HTML5 Canvas Arena (Cursor Visibility Toggleable via Ctrl / Xbox Back) */}
+      <canvas
+        ref={canvasRef}
+        width={dimensions.width}
+        height={dimensions.height}
+        className={`w-full h-full block ${showCursor ? 'cursor-default' : 'cursor-none'}`}
+      />
+    </div>
+  );
+};
