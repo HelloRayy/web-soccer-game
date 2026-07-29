@@ -52,8 +52,8 @@ export const GameView: React.FC = () => {
   // 3 Team Players (P1 User, P2 Teammate, P3 Enemy Bot) in World Space
   const playersRef = useRef<Player[]>([
     new Player('p1', 'Player 1 (Kamu)', 'home', 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5),
-    new Player('p2', 'Player 2 (Rekan)', 'home', 1, '#34d399', WORLD_WIDTH * 0.45, WORLD_HEIGHT * 0.38),
-    new Player('p3', 'Musuh (P3)', 'away', null, '#f59e0b', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.5)
+    new Player('p2', 'Player 2 (Rekan)', 'home', 1, '#34d399', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.35),
+    new Player('p3', 'Musuh (P3)', 'away', null, '#f59e0b', WORLD_WIDTH * 0.46, WORLD_HEIGHT * 0.5)
   ]);
 
   const [matchState, setMatchState] = useState<MatchRulesState>(matchRulesRef.current.state);
@@ -131,16 +131,26 @@ export const GameView: React.FC = () => {
   }, []);
 
   const resetMatchPositions = useCallback(() => {
-    ballRef.current.reset(WORLD_WIDTH * 0.5, WORLD_HEIGHT * 0.5);
+    ballRef.current.reset(WORLD_WIDTH * 0.46, WORLD_HEIGHT * 0.5);
     playersRef.current[0].reset(WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5);
-    playersRef.current[1].reset(WORLD_WIDTH * 0.45, WORLD_HEIGHT * 0.38);
-    playersRef.current[2].reset(WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.5);
+    playersRef.current[1].reset(WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.35);
+
+    // Reset P3 Enemy Bot right in front of P1 with Initial Ball Possession!
+    const p3 = playersRef.current[2];
+    p3.reset(WORLD_WIDTH * 0.46, WORLD_HEIGHT * 0.5);
+    p3.hasPossession = true;
+    ballRef.current.attachToPlayer(p3.pos, p3.facingAngle, p3.radius, p3.vel, 'p3');
 
     cameraRef.current = {
       x: WORLD_WIDTH * 0.5,
       y: WORLD_HEIGHT * 0.5
     };
   }, []);
+
+  // Mount initial positions with P3 starting with ball
+  useEffect(() => {
+    resetMatchPositions();
+  }, [resetMatchPositions]);
 
   const handleResetMatch = useCallback(() => {
     matchRulesRef.current.resetMatch();
@@ -158,7 +168,7 @@ export const GameView: React.FC = () => {
     setShowHUD((prev) => !prev);
   }, []);
 
-  // Main 60 FPS Game Loop with Tactical Passing Grid & Tackle vs Gocek Duel Engine
+  // Main 60 FPS Game Loop with FIFA/PES Style Micro-Touch Dribble & Ball Collision Engine
   useGameLoop((dt) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -216,50 +226,100 @@ export const GameView: React.FC = () => {
       });
 
       // =========================================================================
-      // 3. TACKLE VS DRIBBLE GOCEK DUEL ENGINE RESOLUTION
+      // 3. SOLID PLAYER-TO-PLAYER BODY COLLISION PHYSICS SOLVER
       // =========================================================================
-      players.forEach((tackler) => {
-        if (tackler.isTackling) {
-          const ballCarrier = players.find((p) => p.id !== tackler.id && p.hasPossession);
-          if (ballCarrier) {
-            const dist = Math.hypot(tackler.pos.x - ballCarrier.pos.x, tackler.pos.y - ballCarrier.pos.y);
+      for (let i = 0; i < players.length; i++) {
+        for (let j = i + 1; j < players.length; j++) {
+          const pA = players[i];
+          const pB = players[j];
 
-            // EXPANDED SLIDE TACKLE STEAL THRESHOLD FROM 58px TO 95px FOR CRISP EASY TACKLING!
-            const stealDistanceThreshold = tackler.radius + ballCarrier.radius + 60;
+          const dx = pB.pos.x - pA.pos.x;
+          const dy = pB.pos.y - pA.pos.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const minDist = pA.radius + pB.radius;
 
-            if (dist < stealDistanceThreshold) {
-              // SCENARIO A: Ball carrier executed Dribble Skill Move (Gocek) -> GOCEK SUCCESS!
-              if (ballCarrier.skillDodgeInvincibleTimer > 0) {
-                ballCarrier.triggerFeedback('🔥 GOCEK SUCCESS!');
-                tackler.stumbleTimer = 0.55;
-                tackler.isTackling = false;
-                tackler.triggerFeedback('❌ TACKLE MISSED!');
-              }
-              // SCENARIO B: Ball carrier DOES NOT use Gocek -> TACKLE SUCCESS / BOLA DIREBUT!
-              else {
-                ballCarrier.hasPossession = false;
-                tackler.hasPossession = true;
-                ball.attachToPlayer(tackler.pos, tackler.facingAngle, tackler.radius, tackler.vel, tackler.id);
+          if (dist < minDist) {
+            const overlap = minDist - dist;
+            const nx = dx / dist;
+            const ny = dy / dist;
 
-                tackler.triggerFeedback('⚡ BOLA DIREBUT!');
-                ballCarrier.triggerFeedback('💥 REBUT!');
-                tackler.isTackling = false;
-              }
+            pA.pos.x -= nx * overlap * 0.5;
+            pA.pos.y -= ny * overlap * 0.5;
+            pB.pos.x += nx * overlap * 0.5;
+            pB.pos.y += ny * overlap * 0.5;
+
+            const kx = pA.vel.x - pB.vel.x;
+            const ky = pA.vel.y - pB.vel.y;
+            const p = nx * kx + ny * ky;
+
+            if (p > 0) {
+              pA.vel.x -= p * nx * 0.5;
+              pA.vel.y -= p * ny * 0.5;
+              pB.vel.x += p * nx * 0.5;
+              pB.vel.y += p * ny * 0.5;
             }
           }
+        }
+      }
+
+      // =========================================================================
+      // 4. FIFA/PES STYLE BALL COLLISION & DISPOSSESS RESOLUTION ENGINE
+      // =========================================================================
+      players.forEach((tackler) => {
+        const ballCarrier = players.find((p) => p.id !== tackler.id && p.hasPossession);
+        if (ballCarrier) {
+          const distToCarrier = Math.hypot(tackler.pos.x - ballCarrier.pos.x, tackler.pos.y - ballCarrier.pos.y);
+          const distToBall = Math.hypot(tackler.pos.x - ball.pos.x, tackler.pos.y - ball.pos.y);
+
+          const touchDistanceThreshold = tackler.radius + ballCarrier.radius + 18;
+          const slideReachThreshold = tackler.radius + ballCarrier.radius + 75;
+
+          const isBodyTouching = distToCarrier < touchDistanceThreshold || distToBall < (tackler.radius + ball.radius + 18);
+          const isSlideReaching = tackler.isTackling && (distToCarrier < slideReachThreshold || distToBall < slideReachThreshold);
+
+          if (isBodyTouching || isSlideReaching) {
+            // SCENARIO A: Ball carrier executed Dribble Skill Move (Gocek) -> GOCEK SUCCESS!
+            if (ballCarrier.skillDodgeInvincibleTimer > 0) {
+              ballCarrier.triggerFeedback('🔥 GOCEK SUCCESS!');
+              tackler.stumbleTimer = 0.55;
+              tackler.isTackling = false;
+              tackler.triggerFeedback('❌ TACKLE MISSED!');
+            }
+            // SCENARIO B: Ball carrier DOES NOT use Gocek -> INSTANT 100% DISPOSSESS BALL THEFT!
+            else {
+              ballCarrier.hasPossession = false;
+              tackler.hasPossession = true;
+
+              ball.releaseTimer = 0;
+              ball.homingTargetPlayer = null;
+              ball.throughPassTargetPos = null;
+              ball.attachToPlayer(tackler.pos, tackler.facingAngle, tackler.radius, tackler.vel, tackler.id);
+
+              tackler.triggerFeedback('⚡ BOLA DIREBUT!');
+              ballCarrier.triggerFeedback('💥 REBUT!');
+              tackler.isTackling = false;
+            }
+          }
+        }
+      });
+
+      // 5. Check Loose Ball Collision Bounce for all Non-Carrying Players
+      players.forEach((p) => {
+        if (!p.hasPossession && ball.releaseTimer <= 0) {
+          ball.checkPlayerCollision(p);
         }
       });
 
       const controllerSource = isPeerConnected ? '📱 HP Remote' : 'P1 Controller 0';
       rules.state.debugInputText = `${players[0].debugInputString} | SRC: ${controllerSource}`;
 
-      // 4. Update Ball Physics & Shift Deflection
+      // 6. Update Ball Physics & Shift Deflection
       ball.update(dt, field);
     }
 
     setMatchState({ ...rules.state });
 
-    // 5. Tactical Broadcast Camera Target (Tracks P1, P3, & Ball)
+    // 7. Tactical Broadcast Camera Target (Tracks P1, P3, & Ball)
     const targetCamX = player1.pos.x * 0.40 + (player3 ? player3.pos.x * 0.30 : 0) + ball.pos.x * 0.30;
     const targetCamY = player1.pos.y * 0.40 + (player3 ? player3.pos.y * 0.30 : 0) + ball.pos.y * 0.30;
 
@@ -275,7 +335,7 @@ export const GameView: React.FC = () => {
     const clampedCamX = Math.max(halfVisibleW, Math.min(WORLD_WIDTH - halfVisibleW, cameraRef.current.x));
     const clampedCamY = Math.max(halfVisibleH, Math.min(WORLD_HEIGHT - halfVisibleH, cameraRef.current.y));
 
-    // 6. Render World with Camera Transform & Conditional Dynamic Passing Grid
+    // 8. Render World with Camera Transform & Conditional Dynamic Passing Grid
     ctx.clearRect(0, 0, viewW, viewH);
 
     ctx.save();

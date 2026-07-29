@@ -38,15 +38,20 @@ export class Player implements PlayerEntity {
   bodyTiltAngle: number;
   turfParticles: TurfParticle[];
 
-  // Ball Stealing & Dribble Gocek Duel Engine Properties
+  // Charged Power Bar Slide Tackle Properties
+  isChargingSlide: boolean;
+  slidePower: number; // 0.0 to 1.0
   isTackling: boolean;
   tackleTimer: number;
   tackleSlideAngle: number;
+
+  // Gocek & Stumble Properties
   isDribbleSkillActive: boolean;
   skillDodgeInvincibleTimer: number;
   stumbleTimer: number;
   duelFeedbackText: string;
   duelFeedbackTimer: number;
+  duelFeedbackYOffset: number;
   dribbleSpinAngle: number;
 
   // Debug State Tracker
@@ -81,15 +86,19 @@ export class Player implements PlayerEntity {
     this.bodyTiltAngle = 0;
     this.turfParticles = [];
 
-    // Duel Engine Defaults
+    // Charged Slide Power Defaults
+    this.isChargingSlide = false;
+    this.slidePower = 0;
     this.isTackling = false;
     this.tackleTimer = 0;
     this.tackleSlideAngle = 0;
+
     this.isDribbleSkillActive = false;
     this.skillDodgeInvincibleTimer = 0;
     this.stumbleTimer = 0;
     this.duelFeedbackText = '';
     this.duelFeedbackTimer = 0;
+    this.duelFeedbackYOffset = 0;
     this.dribbleSpinAngle = 0;
 
     this.debugInputString = 'IDLE - Ready for Input';
@@ -109,14 +118,19 @@ export class Player implements PlayerEntity {
     this.bodyTiltAngle = 0;
     this.turfParticles = [];
     this.hasPossession = false;
+
+    this.isChargingSlide = false;
+    this.slidePower = 0;
     this.isTackling = false;
     this.tackleTimer = 0;
     this.tackleSlideAngle = 0;
+
     this.isDribbleSkillActive = false;
     this.skillDodgeInvincibleTimer = 0;
     this.stumbleTimer = 0;
     this.duelFeedbackText = '';
     this.duelFeedbackTimer = 0;
+    this.duelFeedbackYOffset = 0;
     this.dribbleSpinAngle = 0;
 
     this.debugInputString = 'RESET - Position Cleared';
@@ -128,17 +142,12 @@ export class Player implements PlayerEntity {
     this.prevStart = false;
   }
 
-  /**
-   * Trigger Visual Feedback Text
-   */
   triggerFeedback(text: string) {
     this.duelFeedbackText = text;
     this.duelFeedbackTimer = 1.2;
+    this.duelFeedbackYOffset = 0;
   }
 
-  /**
-   * Strict Angle Vision Threshold Teammate Selection (36°)
-   */
   findBestPassTarget(teammates: Player[], aimAngle: number): Player | null {
     const candidates = teammates.filter((t) => t.id !== this.id);
     if (candidates.length === 0) return null;
@@ -173,9 +182,9 @@ export class Player implements PlayerEntity {
       const p = this.turfParticles[i];
       p.x += p.vx;
       p.y += p.vy;
-      p.vx *= 0.90;
-      p.vy *= 0.90;
-      p.life -= 0.04;
+      p.vx *= 0.92;
+      p.vy *= 0.92;
+      p.life -= 0.025;
       if (p.life <= 0) {
         this.turfParticles.splice(i, 1);
       }
@@ -185,15 +194,15 @@ export class Player implements PlayerEntity {
   private spawnTurfParticle(speedRatio: number, isSlide = false) {
     const count = isSlide ? 4 : 1;
     for (let k = 0; k < count; k++) {
-      const backAngle = (isSlide ? this.tackleSlideAngle : this.facingAngle) + Math.PI + (Math.random() - 0.5) * 1.2;
+      const backAngle = (isSlide ? this.tackleSlideAngle : this.facingAngle) + Math.PI + (Math.random() - 0.5) * 1.1;
       this.turfParticles.push({
         x: this.pos.x + Math.cos(backAngle) * (this.radius * 0.7),
         y: this.pos.y + Math.sin(backAngle) * (this.radius * 0.7),
-        vx: Math.cos(backAngle) * (Math.random() * 3.5 + 1.2) * speedRatio,
-        vy: Math.sin(backAngle) * (Math.random() * 3.5 + 1.2) * speedRatio,
+        vx: Math.cos(backAngle) * (Math.random() * 4.0 + 1.2) * speedRatio,
+        vy: Math.sin(backAngle) * (Math.random() * 4.0 + 1.2) * speedRatio,
         life: 1.0,
-        color: isSlide ? (Math.random() > 0.3 ? '#86efac' : '#fef08a') : Math.random() > 0.5 ? '#15803d' : '#86efac',
-        size: isSlide ? Math.random() * 4.0 + 2.0 : Math.random() * 2.5 + 1.2,
+        color: isSlide ? (Math.random() > 0.4 ? '#e0f2fe' : Math.random() > 0.5 ? '#86efac' : '#38bdf8') : Math.random() > 0.5 ? '#15803d' : '#86efac',
+        size: isSlide ? Math.random() * 4.5 + 2.0 : Math.random() * 2.5 + 1.2,
       });
     }
   }
@@ -214,15 +223,13 @@ export class Player implements PlayerEntity {
     ball.kick({ x: dx / dist, y: dy / dist }, passPower, this.id, targetPlayer);
   }
 
-  /**
-   * AI Enemy Bot (P3) Intelligence Behavior
-   */
   updateEnemyBotAI(ball: Ball, field: Field, opponents: Player[]) {
     this.updateParticles();
 
-    // Update Timers
     if (this.tackleTimer > 0) {
       this.tackleTimer -= 0.016;
+      this.vel.x *= 0.94;
+      this.vel.y *= 0.94;
       this.spawnTurfParticle(2.5, true);
     } else {
       this.isTackling = false;
@@ -237,11 +244,13 @@ export class Player implements PlayerEntity {
     }
 
     if (this.stumbleTimer > 0) this.stumbleTimer -= 0.016;
-    if (this.duelFeedbackTimer > 0) this.duelFeedbackTimer -= 0.016;
+    if (this.duelFeedbackTimer > 0) {
+      this.duelFeedbackTimer -= 0.016;
+      this.duelFeedbackYOffset += 0.4;
+    }
 
     const distToBall = Math.hypot(this.pos.x - ball.pos.x, this.pos.y - ball.pos.y);
 
-    // 1. When P3 HAS POSSESSION: Dribble Forward towards Home Goal & React to Tackles
     if (this.hasPossession) {
       const targetGoal = field.goals.homeGoal;
       const targetY = targetGoal.top + (targetGoal.bottom - targetGoal.top) * 0.5;
@@ -250,7 +259,7 @@ export class Player implements PlayerEntity {
       const dy = targetY - this.pos.y;
       const dist = Math.hypot(dx, dy) || 1;
 
-      const walkSpeed = this.speed * 0.45;
+      const walkSpeed = this.speed * 0.40;
       this.vel.x = (dx / dist) * walkSpeed;
       this.vel.y = (dy / dist) * walkSpeed;
 
@@ -258,23 +267,7 @@ export class Player implements PlayerEntity {
       this.facingAngle = lerpAngle(this.facingAngle, targetAngle, 0.22);
 
       ball.attachToPlayer(this.pos, this.facingAngle, this.radius, this.vel, this.id);
-
-      // AI Dribble Gocek Counter: Reduced to 25% so P1 can easily steal ball!
-      opponents.forEach((opp) => {
-        if (opp.isTackling) {
-          const oppDist = Math.hypot(opp.pos.x - this.pos.x, opp.pos.y - this.pos.y);
-          if (oppDist < 95 && this.skillDodgeInvincibleTimer <= 0) {
-            if (Math.random() < 0.25) {
-              this.isDribbleSkillActive = true;
-              this.skillDodgeInvincibleTimer = 0.45;
-              this.triggerFeedback('🔥 GOCEK!');
-            }
-          }
-        }
-      });
-    }
-    // 2. When P3 DOES NOT HAVE POSSESSION: Press and Chase Ball Carrier
-    else {
+    } else {
       const ballCarrier = opponents.find((p) => p.hasPossession);
       const targetPos = ballCarrier ? ballCarrier.pos : ball.pos;
 
@@ -282,31 +275,18 @@ export class Player implements PlayerEntity {
       const dy = targetPos.y - this.pos.y;
       const dist = Math.hypot(dx, dy) || 1;
 
-      const chaseSpeed = this.speed * 0.70;
+      const chaseSpeed = this.speed * 0.65;
       this.vel.x = (dx / dist) * chaseSpeed;
       this.vel.y = (dy / dist) * chaseSpeed;
 
       const targetAngle = Math.atan2(dy, dx);
       this.facingAngle = lerpAngle(this.facingAngle, targetAngle, 0.22);
 
-      // AI Tackle Trigger
-      if (ballCarrier && dist < this.radius + ballCarrier.radius + 45 && !this.isTackling) {
-        if (Math.random() < 0.08) {
-          this.isTackling = true;
-          this.tackleTimer = 0.45;
-          this.tackleSlideAngle = this.facingAngle;
-          this.vel.x += Math.cos(this.facingAngle) * 11.5;
-          this.vel.y += Math.sin(this.facingAngle) * 11.5;
-          this.triggerFeedback('⚡ TACKLE!');
-        }
-      }
-
       if (ball.releaseTimer <= 0 && distToBall < this.radius + ball.radius + 25) {
         this.hasPossession = true;
       }
     }
 
-    // Position Update & Bounds Clamp
     this.pos.x += this.vel.x;
     this.pos.y += this.vel.y;
 
@@ -315,15 +295,14 @@ export class Player implements PlayerEntity {
     this.pos.y = Math.max(bounds.top + this.radius, Math.min(bounds.bottom - this.radius, this.pos.y));
   }
 
-  /**
-   * Passive Walking & Intelligent Pass Reception for Teammates
-   */
   updatePassiveReception(ball: Ball, field: Field) {
     this.walkTimer += 0.02;
     this.updateParticles();
 
     if (this.tackleTimer > 0) {
       this.tackleTimer -= 0.016;
+      this.vel.x *= 0.94;
+      this.vel.y *= 0.94;
       this.spawnTurfParticle(2.5, true);
     } else {
       this.isTackling = false;
@@ -338,7 +317,10 @@ export class Player implements PlayerEntity {
     }
 
     if (this.stumbleTimer > 0) this.stumbleTimer -= 0.016;
-    if (this.duelFeedbackTimer > 0) this.duelFeedbackTimer -= 0.016;
+    if (this.duelFeedbackTimer > 0) {
+      this.duelFeedbackTimer -= 0.016;
+      this.duelFeedbackYOffset += 0.4;
+    }
 
     const distToBall = Math.hypot(this.pos.x - ball.pos.x, this.pos.y - ball.pos.y);
 
@@ -420,6 +402,8 @@ export class Player implements PlayerEntity {
 
     if (this.tackleTimer > 0) {
       this.tackleTimer -= 0.016;
+      this.vel.x *= 0.94; // Smooth ice slide deceleration curve
+      this.vel.y *= 0.94;
       this.spawnTurfParticle(2.8, true);
     } else {
       this.isTackling = false;
@@ -434,7 +418,10 @@ export class Player implements PlayerEntity {
     }
 
     if (this.stumbleTimer > 0) this.stumbleTimer -= 0.016;
-    if (this.duelFeedbackTimer > 0) this.duelFeedbackTimer -= 0.016;
+    if (this.duelFeedbackTimer > 0) {
+      this.duelFeedbackTimer -= 0.016;
+      this.duelFeedbackYOffset += 0.4;
+    }
 
     const moveMultiplier = this.stumbleTimer > 0 ? 0.3 : 1.0;
 
@@ -506,7 +493,8 @@ export class Player implements PlayerEntity {
       if (isPressingY) activeBtns.push('Y (Through / Gocek)');
       if (isPressingRB) activeBtns.push('RB (Gocek Skill)');
     } else {
-      if (isPressingX) activeBtns.push('X (SLIDE TACKLE!)');
+      if (this.isChargingSlide) activeBtns.push(`X (SLIDE CHARGE: ${(this.slidePower * 100).toFixed(0)}%)`);
+      else if (isPressingX) activeBtns.push('X (SLIDE TACKLE!)');
       if (isPressingA) activeBtns.push('A (Switch)');
       if (isPressingY) activeBtns.push('Y (Press)');
     }
@@ -516,6 +504,9 @@ export class Player implements PlayerEntity {
     this.debugInputString = activeBtns.length > 0 ? `PRESSED: ${activeBtns.join(' + ')}` : `STICK: [${moveX.toFixed(2)}, ${moveY.toFixed(2)}]`;
 
     if (this.hasPossession) {
+      this.isChargingSlide = false;
+      this.slidePower = 0;
+
       if (isPressingX && !this.prevX) {
         const targetGoal = this.team === 'home' ? field.goals.awayGoal : field.goals.homeGoal;
         const targetY = targetGoal.top + (targetGoal.bottom - targetGoal.top) * 0.5;
@@ -542,7 +533,7 @@ export class Player implements PlayerEntity {
 
           const passPower = Math.min(Math.max(dist * 0.042 + 4.5, 6.5), 11.5);
           ball.kick({ x: dx / dist, y: dy / dist }, passPower, this.id, targetTeammate, null);
-          this.debugInputString = `⚽ SMART ASSIST PASS TO ${targetTeammate.name} (Tombol A)!`;
+          this.debugInputString = `⚽ SMART ASSAssist PASS TO ${targetTeammate.name} (Tombol A)!`;
         } else {
           const passDir = { x: Math.cos(aimAngle), y: Math.sin(aimAngle) };
           ball.kick(passDir, 8.5, this.id, null, null);
@@ -558,18 +549,29 @@ export class Player implements PlayerEntity {
         this.debugInputString = `🔥 DRIBBLE SKILL MOVE / GOCEK TRIGGERED!`;
       }
     } else {
-      // 1. POWERFUL SLIDE TACKLE (Tombol X in Defending Mode) -> Slides 120px forward!
-      if (isPressingX && !this.prevX) {
+      // 1. Holding Button X Charges Slide Power Bar!
+      if (isPressingX) {
+        this.isChargingSlide = true;
+        this.slidePower = Math.min(1.0, this.slidePower + 0.035);
+      }
+      // 2. Releasing Button X Launches Charged Ice Slide Lunge!
+      else if (this.prevX && this.isChargingSlide) {
+        this.isChargingSlide = false;
         this.isTackling = true;
-        this.tackleTimer = 0.45;
+
+        const slideSpeed = 8.0 + this.slidePower * 14.0;
+        this.tackleTimer = 0.40 + this.slidePower * 0.35;
         this.tackleSlideAngle = this.facingAngle;
 
-        // Long Powerful Forward Slide Lunge
-        this.vel.x += Math.cos(this.facingAngle) * 12.5;
-        this.vel.y += Math.sin(this.facingAngle) * 12.5;
+        this.vel.x += Math.cos(this.facingAngle) * slideSpeed;
+        this.vel.y += Math.sin(this.facingAngle) * slideSpeed;
 
-        this.triggerFeedback('⚡ SLIDE TACKLE!');
-        this.debugInputString = '⚡ SLIDE TACKLE EXECUTED (Tombol X)!';
+        const powerPercent = Math.round(this.slidePower * 100);
+        this.triggerFeedback(`⚡ SLIDE ${powerPercent}%!`);
+        this.slidePower = 0;
+      } else {
+        this.isChargingSlide = false;
+        this.slidePower = 0;
       }
 
       const reqPassTriggered = (isPressingRB && !this.prevRB) || (isPressingLB && !this.prevLB);
@@ -610,7 +612,33 @@ export class Player implements PlayerEntity {
     });
     ctx.globalAlpha = 1.0;
 
-    // 0.1 RENDER SLIDE TACKLE VISUAL EFFECT (Leg Extension & Cyan Slide Arc Wave)
+    // 0.1 RENDER SMOOTH CHARGED SLIDE POWER BAR OVERHEAD
+    if (this.isChargingSlide) {
+      const barWidth = 52;
+      const barHeight = 9;
+      const barX = this.pos.x - barWidth / 2;
+      const barY = this.pos.y - this.radius - 28;
+
+      // Glow Container Box
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(barX, barY, barWidth, barHeight, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      // Dynamic Color Fill (Cyan -> Amber -> Bright Red)
+      const fillW = Math.max(2, (barWidth - 2) * this.slidePower);
+      const fillColor = this.slidePower < 0.5 ? '#06b6d4' : this.slidePower < 0.85 ? '#f59e0b' : '#ef4444';
+
+      ctx.fillStyle = fillColor;
+      ctx.beginPath();
+      ctx.roundRect(barX + 1, barY + 1, fillW, barHeight - 2, 3);
+      ctx.fill();
+    }
+
+    // 0.2 RENDER SMOOTH ICE SLIDE TACKLE GRAPHIC
     if (this.isTackling) {
       ctx.save();
       ctx.translate(this.pos.x, this.pos.y);
@@ -619,23 +647,23 @@ export class Player implements PlayerEntity {
       // Extended Sliding Leg Graphic
       ctx.fillStyle = '#f87171';
       ctx.strokeStyle = '#06b6d4';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.5;
       ctx.beginPath();
-      ctx.roundRect(0, -6, this.radius + 28, 12, 6);
+      ctx.roundRect(0, -7, this.radius + 38, 14, 7);
       ctx.fill();
       ctx.stroke();
 
-      // Front Slide Shockwave Arc
+      // Front Slide Shockwave Arc Wave
       ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 4.5;
       ctx.beginPath();
-      ctx.arc(this.radius + 28, 0, 16, -Math.PI / 2, Math.PI / 2);
+      ctx.arc(this.radius + 38, 0, 20, -Math.PI / 2, Math.PI / 2);
       ctx.stroke();
 
       ctx.restore();
     }
 
-    // 0.2 Render Dribble Skill Gocek Gold Aura Ring
+    // 0.3 Render Dribble Skill Gocek Gold Aura Ring
     if (this.skillDodgeInvincibleTimer > 0) {
       ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 4;
@@ -696,14 +724,20 @@ export class Player implements PlayerEntity {
     ctx.strokeText(topLabel, this.pos.x, this.pos.y - 12 - this.radius);
     ctx.fillText(topLabel, this.pos.x, this.pos.y - 12 - this.radius);
 
+    // 0.4 ANIMATED SMOOTH UPWARD FLOATING FEEDBACK TEXT
     if (this.duelFeedbackTimer > 0) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1.0, this.duelFeedbackTimer * 1.5);
       ctx.fillStyle = this.duelFeedbackText.includes('GOCEK') ? '#fbbf24' : '#06b6d4';
       ctx.font = '900 16px sans-serif';
       ctx.textAlign = 'center';
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 3.5;
-      ctx.strokeText(this.duelFeedbackText, this.pos.x, this.pos.y - 32 - this.radius);
-      ctx.fillText(this.duelFeedbackText, this.pos.x, this.pos.y - 32 - this.radius);
+
+      const animY = this.pos.y - 32 - this.radius - this.duelFeedbackYOffset;
+      ctx.strokeText(this.duelFeedbackText, this.pos.x, animY);
+      ctx.fillText(this.duelFeedbackText, this.pos.x, animY);
+      ctx.restore();
     }
   }
 }
