@@ -107,39 +107,49 @@ export class Ball {
       this.releaseTimer -= dt;
     }
 
-    // 1. Dynamic Accelerating Homing Flight (Ball accelerates as it approaches target)
+    // 1. Dynamic Predictive Interception Homing (Predicts target player's sprint vector)
     if (this.homingTargetPlayer) {
-      const targetPos = this.throughPassTargetPos ? this.throughPassTargetPos : this.homingTargetPlayer.pos;
-      const dx = targetPos.x - this.pos.x;
-      const dy = targetPos.y - this.pos.y;
-      const dist = Math.hypot(dx, dy);
+      const targetPlayer = this.homingTargetPlayer;
 
-      // Target player velocity
-      const targetSpeed = Math.hypot(this.homingTargetPlayer.vel.x, this.homingTargetPlayer.vel.y);
+      // Predict target player's future position in 14 frames based on velocity
+      const predictedTargetPos = {
+        x: this.throughPassTargetPos ? this.throughPassTargetPos.x : targetPlayer.pos.x + targetPlayer.vel.x * 14,
+        y: this.throughPassTargetPos ? this.throughPassTargetPos.y : targetPlayer.pos.y + targetPlayer.vel.y * 14,
+      };
 
-      // Accelerating pass speed (Ensures ball catches up faster than any sprinting player!)
-      const minPassSpeed = Math.max(9.5, targetSpeed + 5.5);
-      const passSpeed = Math.max(Math.hypot(this.vel.x, this.vel.y) * 1.03, minPassSpeed);
+      const dx = predictedTargetPos.x - this.pos.x;
+      const dy = predictedTargetPos.y - this.pos.y;
+      const distToPredicted = Math.hypot(dx, dy) || 1;
+      const distToPlayer = Math.hypot(targetPlayer.pos.x - this.pos.x, targetPlayer.pos.y - this.pos.y);
 
-      const homingDirX = dx / (dist || 1);
-      const homingDirY = dy / (dist || 1);
+      // Receiver's current speed
+      const targetSpeed = Math.hypot(targetPlayer.vel.x, targetPlayer.vel.y);
 
-      this.vel.x = this.vel.x * 0.70 + homingDirX * passSpeed * 0.30;
-      this.vel.y = this.vel.y * 0.70 + homingDirY * passSpeed * 0.30;
+      // Minimum pass speed is ALWAYS much faster than sprint speed (minimum 14.5)
+      const minPassSpeed = Math.max(14.5, targetSpeed * 2.2);
+      const passSpeed = Math.max(Math.hypot(this.vel.x, this.vel.y) * 1.04, minPassSpeed);
 
-      // AUTOMATIC RECEPTION ATTACHMENT
-      if (dist < this.radius + this.homingTargetPlayer.radius + 18) {
-        const receiver = this.homingTargetPlayer;
-        receiver.hasPossession = true;
-        this.attachToPlayer(receiver.pos, receiver.facingAngle, receiver.radius, receiver.vel, receiver.id);
+      const homingDirX = dx / distToPredicted;
+      const homingDirY = dy / distToPredicted;
+
+      // Zero Grass Friction Homing Motion (Ball flies without slowing down on grass)
+      this.vel.x = this.vel.x * 0.55 + homingDirX * passSpeed * 0.45;
+      this.vel.y = this.vel.y * 0.55 + homingDirY * passSpeed * 0.45;
+
+      this.pos.x += this.vel.x;
+      this.pos.y += this.vel.y;
+
+      // EXTENDED SUCTION RECEPTION ATTACHMENT (38px reach)
+      if (distToPlayer < this.radius + targetPlayer.radius + 22 || distToPredicted < 24) {
+        targetPlayer.hasPossession = true;
+        this.attachToPlayer(targetPlayer.pos, targetPlayer.facingAngle, targetPlayer.radius, targetPlayer.vel, targetPlayer.id);
 
         this.homingTargetPlayer = null;
         this.throughPassTargetPos = null;
       }
     }
-
-    // 2. Free Motion & Grass Friction
-    if (!this.attachedPlayerId) {
+    // 2. Free Motion & Grass Friction (For loose balls and shots)
+    else if (!this.attachedPlayerId) {
       this.pos.x += this.vel.x;
       this.pos.y += this.vel.y;
 
