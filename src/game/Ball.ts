@@ -107,14 +107,14 @@ export class Ball {
       this.releaseTimer -= dt;
     }
 
-    // 1. Dynamic Predictive Interception Homing (Predicts target player's sprint vector)
+    // 1. Smooth Progressive Pass Flight Acceleration (Soft initial kick lerps to target speed)
     if (this.homingTargetPlayer) {
       const targetPlayer = this.homingTargetPlayer;
 
-      // Predict target player's future position in 14 frames based on velocity
+      // Predict target player's future position dynamically based on velocity
       const predictedTargetPos = {
-        x: this.throughPassTargetPos ? this.throughPassTargetPos.x : targetPlayer.pos.x + targetPlayer.vel.x * 14,
-        y: this.throughPassTargetPos ? this.throughPassTargetPos.y : targetPlayer.pos.y + targetPlayer.vel.y * 14,
+        x: this.throughPassTargetPos ? this.throughPassTargetPos.x : targetPlayer.pos.x + targetPlayer.vel.x * 12,
+        y: this.throughPassTargetPos ? this.throughPassTargetPos.y : targetPlayer.pos.y + targetPlayer.vel.y * 12,
       };
 
       const dx = predictedTargetPos.x - this.pos.x;
@@ -125,16 +125,19 @@ export class Ball {
       // Receiver's current speed
       const targetSpeed = Math.hypot(targetPlayer.vel.x, targetPlayer.vel.y);
 
-      // Minimum pass speed is ALWAYS much faster than sprint speed (minimum 14.5)
-      const minPassSpeed = Math.max(14.5, targetSpeed * 2.2);
-      const passSpeed = Math.max(Math.hypot(this.vel.x, this.vel.y) * 1.04, minPassSpeed);
+      // Desired target speed for pass (Natural progressive acceleration)
+      const desiredPassSpeed = Math.max(13.5, targetSpeed * 2.0);
+      const currentSpeed = Math.hypot(this.vel.x, this.vel.y);
+
+      // Smooth Ease-In Acceleration Lerp (0.86 / 0.14)
+      const smoothedSpeed = currentSpeed * 0.86 + desiredPassSpeed * 0.14;
 
       const homingDirX = dx / distToPredicted;
       const homingDirY = dy / distToPredicted;
 
-      // Zero Grass Friction Homing Motion (Ball flies without slowing down on grass)
-      this.vel.x = this.vel.x * 0.55 + homingDirX * passSpeed * 0.45;
-      this.vel.y = this.vel.y * 0.55 + homingDirY * passSpeed * 0.45;
+      // Smooth direction & speed blend
+      this.vel.x = this.vel.x * 0.65 + homingDirX * smoothedSpeed * 0.35;
+      this.vel.y = this.vel.y * 0.65 + homingDirY * smoothedSpeed * 0.35;
 
       this.pos.x += this.vel.x;
       this.pos.y += this.vel.y;
