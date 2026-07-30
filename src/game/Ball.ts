@@ -1,6 +1,7 @@
 import { Vector2D } from '../types/game';
 import { Field } from './Field';
 import { Player } from './Player';
+import footballSvgUrl from '../assets/ion_football.svg';
 
 export class Ball {
   pos: Vector2D;
@@ -17,16 +18,30 @@ export class Ball {
   // Micro-Touch Dribble Animation Timer
   private dribblePhase: number;
 
+  // Cached Loaded Ball SVG Image
+  private static ballImage: HTMLImageElement | null = null;
+  private static isImageLoaded = false;
+
   constructor(startX: number, startY: number) {
     this.pos = { x: startX, y: startY };
     this.vel = { x: 0, y: 0 };
-    this.radius = 8;
+    this.radius = 10; // Slightly larger for crisp SVG detail visibility
     this.friction = 0.968; // Smooth grass friction
     this.attachedPlayerId = null;
     this.releaseTimer = 0;
     this.homingTargetPlayer = null;
     this.throughPassTargetPos = null;
     this.dribblePhase = 0;
+
+    // Preload ion_football.svg Image
+    if (!Ball.ballImage && typeof window !== 'undefined') {
+      const img = new Image();
+      img.src = footballSvgUrl;
+      img.onload = () => {
+        Ball.isImageLoaded = true;
+      };
+      Ball.ballImage = img;
+    }
   }
 
   reset(x: number, y: number) {
@@ -125,7 +140,7 @@ export class Ball {
       // Receiver's current speed
       const targetSpeed = Math.hypot(targetPlayer.vel.x, targetPlayer.vel.y);
 
-      // Grounded natural pass speed (Moderate pace matching natural pass speed 8.5 - 9.5)
+      // Grounded natural pass speed (Moderate pace matching natural pass speed 8.8 - 9.5)
       const desiredPassSpeed = Math.max(8.8, targetSpeed * 1.35);
       const currentSpeed = Math.hypot(this.vel.x, this.vel.y);
 
@@ -197,21 +212,26 @@ export class Ball {
     ctx.ellipse(this.pos.x + 3, this.pos.y + 4, this.radius, this.radius * 0.6, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 2. White Football Base
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
-    ctx.fill();
+    // 2. Render Crisp SVG Ball Image (src/assets/ion_football.svg)
+    if (Ball.ballImage && Ball.isImageLoaded) {
+      const size = this.radius * 2.2;
+      ctx.drawImage(Ball.ballImage, this.pos.x - size / 2, this.pos.y - size / 2, size, size);
+    } else {
+      // White Football Fallback
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
+      ctx.fill();
 
-    ctx.strokeStyle = '#0f172a';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
-    // 3. Classic Pentagonal Soccer Patches
-    ctx.fillStyle = '#0f172a';
-    ctx.beginPath();
-    ctx.arc(this.pos.x, this.pos.y, this.radius * 0.38, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(this.pos.x, this.pos.y, this.radius * 0.38, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     ctx.restore();
   }
