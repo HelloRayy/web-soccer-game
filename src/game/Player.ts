@@ -67,6 +67,7 @@ export class Player implements PlayerEntity {
   // Previous button states for single-press edge detection
   private prevX: boolean;
   private prevA: boolean;
+  private prevB: boolean;
   private prevY: boolean;
   private prevRB: boolean;
   private prevLB: boolean;
@@ -113,6 +114,7 @@ export class Player implements PlayerEntity {
     this.walkTimer = Math.random() * 100;
     this.prevX = false;
     this.prevA = false;
+    this.prevB = false;
     this.prevY = false;
     this.prevRB = false;
     this.prevLB = false;
@@ -146,6 +148,7 @@ export class Player implements PlayerEntity {
     this.debugInputString = 'RESET - Position Cleared';
     this.prevX = false;
     this.prevA = false;
+    this.prevB = false;
     this.prevY = false;
     this.prevRB = false;
     this.prevLB = false;
@@ -236,7 +239,6 @@ export class Player implements PlayerEntity {
   updateEnemyBotAI(ball: Ball, field: Field, opponents: Player[]) {
     this.updateParticles();
 
-    // Stamina Regeneration for AI Bot
     if (!this.isSprinting) {
       this.stamina = Math.min(1.0, this.stamina + 0.0025);
       if (this.isExhausted && this.stamina >= 0.20) {
@@ -317,7 +319,6 @@ export class Player implements PlayerEntity {
     this.walkTimer += 0.02;
     this.updateParticles();
 
-    // Stamina Regeneration for Teammate
     if (!this.isSprinting) {
       this.stamina = Math.min(1.0, this.stamina + 0.0025);
       if (this.isExhausted && this.stamina >= 0.20) {
@@ -360,7 +361,6 @@ export class Player implements PlayerEntity {
         targetX = ball.throughPassTargetPos.x;
         targetY = ball.throughPassTargetPos.y;
 
-        // Sprint to through pass target if not exhausted
         if (!this.isExhausted && this.stamina > 0) {
           this.isSprinting = true;
           this.stamina = Math.max(0, this.stamina - 0.004);
@@ -466,7 +466,7 @@ export class Player implements PlayerEntity {
     const moveX = gp.axes.leftStickX;
     const moveY = gp.axes.leftStickY;
 
-    // STAMINA & SPRINT LOGIC
+    // STAMINA & SPRINT LOGIC (R2 / RT)
     const isWantsSprint = gp.buttons.rt > 0.3;
 
     if (isWantsSprint) {
@@ -474,7 +474,7 @@ export class Player implements PlayerEntity {
         this.isSprinting = false;
       } else {
         this.isSprinting = true;
-        this.stamina = Math.max(0, this.stamina - 0.004); // Drains in ~4.1 seconds of continuous sprint
+        this.stamina = Math.max(0, this.stamina - 0.004);
 
         if (this.stamina === 0) {
           this.isExhausted = true;
@@ -484,11 +484,10 @@ export class Player implements PlayerEntity {
       }
     } else {
       this.isSprinting = false;
-      // Regenerate stamina when walking / idle
       this.stamina = Math.min(1.0, this.stamina + 0.0025);
 
       if (this.isExhausted && this.stamina >= 0.20) {
-        this.isExhausted = false; // Cooldown cutoff threshold: 20%
+        this.isExhausted = false;
       }
     }
 
@@ -538,8 +537,10 @@ export class Player implements PlayerEntity {
       this.hasPossession = false;
     }
 
-    const isPressingX = gp.buttons.x;
+    // BUTTON MAPPING SPEC: A = Pass, B = Tackle, Y = Through/Gocek, X = Shoot, R1 (RB) = Request Ball, R2 (RT) = Sprint
     const isPressingA = gp.buttons.a;
+    const isPressingB = gp.buttons.b;
+    const isPressingX = gp.buttons.x;
     const isPressingY = gp.buttons.y;
     const isPressingRB = gp.buttons.rb;
     const isPressingLB = gp.buttons.lb;
@@ -551,26 +552,28 @@ export class Player implements PlayerEntity {
 
     const activeBtns: string[] = [];
     if (this.hasPossession) {
-      if (isPressingA) activeBtns.push('A (Direct Pass)');
-      if (isPressingX) activeBtns.push('X (Shoot)');
+      if (isPressingA) activeBtns.push('A (Passing)');
+      if (isPressingX) activeBtns.push('X (Shoot Goal)');
       if (isPressingY) activeBtns.push('Y (Through / Gocek)');
-      if (isPressingRB) activeBtns.push('RB (Gocek Skill)');
+      if (isPressingRB) activeBtns.push('R1 (Gocek Skill)');
     } else {
-      if (this.isChargingSlide) activeBtns.push(`X (SLIDE CHARGE: ${(this.slidePower * 100).toFixed(0)}%)`);
-      else if (isPressingX) activeBtns.push('X (SLIDE TACKLE!)');
-      if (isPressingA) activeBtns.push('A (Switch)');
-      if (isPressingY) activeBtns.push('Y (Press)');
+      if (this.isChargingSlide) activeBtns.push(`B (SLIDE CHARGE: ${(this.slidePower * 100).toFixed(0)}%)`);
+      else if (isPressingB) activeBtns.push('B (SLIDE TACKLE!)');
+      if (isPressingA) activeBtns.push('A (Switch Defender)');
+      if (isPressingY) activeBtns.push('Y (Press / Pressure)');
     }
-    if (this.isSprinting) activeBtns.push(`RT (Sprint Stamina: ${Math.round(this.stamina * 100)}%)`);
+    if (this.isSprinting) activeBtns.push(`R2 (Sprint Stamina: ${Math.round(this.stamina * 100)}%)`);
     if (this.isExhausted) activeBtns.push('⚠️ EXHAUSTED!');
     if (isPressingStart) activeBtns.push('Start (ToggleHUD)');
 
     this.debugInputString = activeBtns.length > 0 ? `PRESSED: ${activeBtns.join(' + ')}` : `STICK: [${moveX.toFixed(2)}, ${moveY.toFixed(2)}]`;
 
+    // 1. ATTACKING ACTIONS
     if (this.hasPossession) {
       this.isChargingSlide = false;
       this.slidePower = 0;
 
+      // X Button = Shoot (Goal Shot)
       if (isPressingX && !this.prevX) {
         const targetGoal = this.team === 'home' ? field.goals.awayGoal : field.goals.homeGoal;
         const targetY = targetGoal.top + (targetGoal.bottom - targetGoal.top) * 0.5;
@@ -581,9 +584,10 @@ export class Player implements PlayerEntity {
 
         this.hasPossession = false;
         ball.kick({ x: shootDx / len, y: shootDy / len }, 14.5, this.id, null, null);
-        this.debugInputString = '🔥 SHOOT TRIGGERED (Tombol X)!';
+        this.debugInputString = '🔥 GOAL SHOOT TRIGGERED (Tombol X)!';
       }
 
+      // A Button = Pass (Passing)
       if (isPressingA && !this.prevA) {
         this.hasPossession = false;
 
@@ -605,18 +609,21 @@ export class Player implements PlayerEntity {
         }
       }
 
+      // Y Button = Through Pass / Gocek
       const isTriggeringGocek = (isPressingY && !this.prevY) || (isPressingRB && !this.prevRB);
       if (isTriggeringGocek) {
         this.isDribbleSkillActive = true;
         this.skillDodgeInvincibleTimer = 0.45;
         this.triggerFeedback('🔥 GOCEK!');
-        this.debugInputString = `🔥 DRIBBLE SKILL MOVE / GOCEK TRIGGERED!`;
+        this.debugInputString = `🔥 THROUGH / DRIBBLE GOCEK TRIGGERED (Tombol Y)!`;
       }
-    } else {
-      if (isPressingX) {
+    }
+    // 2. DEFENDING ACTIONS: B Button = Slide Tackle with Charged Power Bar!
+    else {
+      if (isPressingB) {
         this.isChargingSlide = true;
         this.slidePower = Math.min(1.0, this.slidePower + 0.035);
-      } else if (this.prevX && this.isChargingSlide) {
+      } else if (this.prevB && this.isChargingSlide) {
         this.isChargingSlide = false;
         this.isTackling = true;
 
@@ -635,18 +642,20 @@ export class Player implements PlayerEntity {
         this.slidePower = 0;
       }
 
+      // RB / R1 Button = Request Ball
       const reqPassTriggered = (isPressingRB && !this.prevRB) || (isPressingLB && !this.prevLB);
       if (reqPassTriggered) {
         const targetTeammate = teammates.find((t) => t.id !== this.id);
         if (targetTeammate) {
           targetTeammate.executePassTo(this, ball);
-          this.debugInputString = `⚡ RB/LB REQUEST PASS -> PLAYER 2 PASSED TO PLAYER 1!`;
+          this.debugInputString = `⚡ R1 (RB) REQUEST PASS -> PLAYER 2 PASSED TO PLAYER 1!`;
         }
       }
     }
 
     this.prevX = isPressingX;
     this.prevA = isPressingA;
+    this.prevB = isPressingB;
     this.prevY = isPressingY;
     this.prevRB = isPressingRB;
     this.prevLB = isPressingLB;
@@ -663,7 +672,6 @@ export class Player implements PlayerEntity {
     const topLabel = isP1 ? 'Kamu' : isP2 ? 'Rekan' : 'Musuh (P3)';
     const innerInitial = isP1 ? 'QI' : isP2 ? 'P2' : 'P3';
 
-    // 0. Render Turf & Grass Dust Particles
     this.turfParticles.forEach((p) => {
       ctx.fillStyle = p.color;
       ctx.globalAlpha = Math.max(0, p.life);
@@ -673,18 +681,15 @@ export class Player implements PlayerEntity {
     });
     ctx.globalAlpha = 1.0;
 
-    // 0.1 RENDER STAMINA CIRCULAR ARC RING AROUND PLAYER BODY
     const staminaRadius = this.radius + 14;
     const staminaColor = this.isExhausted ? '#ef4444' : this.stamina > 0.5 ? '#10b981' : this.stamina > 0.2 ? '#f59e0b' : '#ef4444';
 
-    // Background track ring
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
     ctx.lineWidth = 3.5;
     ctx.beginPath();
     ctx.arc(this.pos.x, this.pos.y, staminaRadius, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Active Stamina Arc Fill
     if (this.stamina > 0) {
       const startAngle = -Math.PI / 2;
       const endAngle = startAngle + this.stamina * Math.PI * 2;
@@ -696,7 +701,6 @@ export class Player implements PlayerEntity {
       ctx.stroke();
     }
 
-    // 0.2 RENDER CHARGED SLIDE POWER BAR OVERHEAD
     if (this.isChargingSlide) {
       const barWidth = 52;
       const barHeight = 9;
@@ -720,7 +724,6 @@ export class Player implements PlayerEntity {
       ctx.fill();
     }
 
-    // 0.3 RENDER ICE SLIDE TACKLE GRAPHIC
     if (this.isTackling) {
       ctx.save();
       ctx.translate(this.pos.x, this.pos.y);
@@ -743,7 +746,6 @@ export class Player implements PlayerEntity {
       ctx.restore();
     }
 
-    // 0.4 Render Dribble Skill Gocek Gold Aura Ring
     if (this.skillDodgeInvincibleTimer > 0) {
       ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 4;
@@ -804,7 +806,6 @@ export class Player implements PlayerEntity {
     ctx.strokeText(topLabel, this.pos.x, this.pos.y - 12 - this.radius);
     ctx.fillText(topLabel, this.pos.x, this.pos.y - 12 - this.radius);
 
-    // 0.5 ANIMATED FLOATING FEEDBACK TEXT
     if (this.duelFeedbackTimer > 0) {
       ctx.save();
       ctx.globalAlpha = Math.min(1.0, this.duelFeedbackTimer * 1.5);

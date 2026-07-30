@@ -153,7 +153,6 @@ export const MobileControllerView: React.FC = () => {
 
     setKnobPos({ x: knobX, y: knobY });
 
-    // Normalized Stick Vector (-1.0 to 1.0)
     inputStateRef.current.leftStickX = Number((knobX / maxRadius).toFixed(2));
     inputStateRef.current.leftStickY = Number((knobY / maxRadius).toFixed(2));
 
@@ -183,7 +182,6 @@ export const MobileControllerView: React.FC = () => {
     sendInputToHost();
   };
 
-  // If not connected yet, show Room Join Screen
   if (!isConnected) {
     return (
       <div className="fixed inset-0 bg-[#4e9a51] text-slate-100 flex flex-col items-center justify-center p-6 font-sans select-none">
@@ -229,7 +227,8 @@ export const MobileControllerView: React.FC = () => {
     );
   }
 
-  // Fixed Landscape Gamepad UI matching EXACT Figma Android Compact Spec (241px x 256px)
+  // Fixed Landscape Gamepad UI matching EXACT User Specification:
+  // A = Passing, B = Tackle, Y = Through/Gocek, X = Shoot, RB = Request Ball, RT = Sprint
   return (
     <div className="fixed inset-0 bg-[#4e9a51] text-slate-100 select-none touch-none overflow-hidden font-sans w-screen h-screen">
       {/* Top Bar Header (Connection Status + Fullscreen & Pause Buttons) */}
@@ -239,7 +238,16 @@ export const MobileControllerView: React.FC = () => {
           <span>CONNECTED ({roomId})</span>
         </div>
 
+        {/* Top Right Shoulder Buttons: R1 (Request Ball) & Pause */}
         <div className="flex items-center gap-2 pointer-events-auto">
+          <button
+            onPointerDown={() => handleButtonTouch('rb', true)}
+            onPointerUp={() => handleButtonTouch('rb', false)}
+            className="px-3 py-1.5 rounded-xl bg-[#3d7a40]/90 border border-[#6cb870] text-amber-300 font-black text-xs shadow-lg active:scale-95 transition backdrop-blur-md"
+          >
+            R1 (Request Ball)
+          </button>
+
           <button
             onClick={requestFullscreenLandscape}
             className="w-9 h-9 rounded-xl bg-black/40 border border-white/30 text-white flex items-center justify-center hover:bg-black/60 active:scale-90 transition shadow-lg backdrop-blur-md"
@@ -257,7 +265,7 @@ export const MobileControllerView: React.FC = () => {
         </div>
       </div>
 
-      {/* LEFT HALF TOUCH ZONE: Dynamic Floating Joystick (Spawns under thumb anywhere on left 50%) */}
+      {/* LEFT HALF TOUCH ZONE: Dynamic Floating Joystick */}
       <div
         onPointerDown={handleLeftZonePointerDown}
         onPointerMove={handleLeftZonePointerMove}
@@ -265,7 +273,6 @@ export const MobileControllerView: React.FC = () => {
         onPointerCancel={handleLeftZonePointerUp}
         className="absolute top-0 left-0 w-1/2 h-full z-10 touch-none"
       >
-        {/* Render Base & Knob ONLY when thumb touches left zone */}
         {joystickOrigin ? (
           <div
             className="absolute w-40 h-40 rounded-full bg-[#1b431d]/70 border-4 border-[#2b662d] flex items-center justify-center shadow-2xl pointer-events-none -translate-x-1/2 -translate-y-1/2"
@@ -274,10 +281,8 @@ export const MobileControllerView: React.FC = () => {
               top: `${joystickOrigin.y}px`,
             }}
           >
-            {/* Outer Guide Ring */}
             <div className="w-20 h-20 rounded-full border border-white/20 pointer-events-none" />
 
-            {/* Floating Dynamic Thumb Knob */}
             <div
               className="w-14 h-14 rounded-full bg-gradient-to-b from-slate-100 to-slate-300 border-2 border-slate-400 shadow-2xl absolute pointer-events-none transition-transform duration-75 flex items-center justify-center"
               style={{
@@ -288,67 +293,62 @@ export const MobileControllerView: React.FC = () => {
             </div>
           </div>
         ) : (
-          /* Subtle Hint Base on Left Side when idle */
           <div className="absolute left-8 bottom-8 w-32 h-32 rounded-full bg-[#1b431d]/40 border-4 border-[#2b662d]/60 flex items-center justify-center opacity-40 pointer-events-none">
             <div className="w-12 h-12 rounded-full bg-slate-200/80 border-2 border-slate-300" />
           </div>
         )}
       </div>
 
-      {/* RIGHT HALF: EXACT FIGMA ANDROID COMPACT 4-BUTTON CLUSTER (241px x 256px) */}
+      {/* RIGHT HALF: 4-BUTTON CLUSTER MATCHING USER LAYOUT SPEC */}
       <div className="absolute top-0 right-0 w-1/2 h-full z-20 flex items-end justify-end pb-3 pr-3 pointer-events-none">
-        {/* Exact Figma Frame Box: 241px x 256px */}
         <div className="relative w-[241px] h-[256px] pointer-events-auto">
           
-          {/* 1. PASS (Bottom-Left: 80px x 80px, bottom: 0px, left: 0px) */}
+          {/* 1. A = PASS (Bottom-Left: 80px x 80px, bottom: 0px, left: 0px) */}
           <div
             onPointerDown={() => handleButtonTouch('a', true)}
             onPointerUp={() => handleButtonTouch('a', false)}
             className="absolute bottom-0 left-0 w-[80px] h-[80px] rounded-full bg-[#3d7a40]/80 border-2 border-[#6cb870] shadow-xl backdrop-blur-sm active:scale-90 transition flex flex-col items-center justify-center cursor-pointer select-none"
           >
-            <div className="absolute top-1 text-[8px] text-white/90">▲</div>
-            <div className="absolute bottom-1 text-[8px] text-white/90">▼</div>
-            <div className="absolute left-1 text-[8px] text-white/90">◄</div>
-            <div className="absolute right-1 text-[8px] text-white/90">►</div>
-
-            <span className="text-white font-bold text-sm">Pass</span>
+            <span className="text-white font-black text-sm">A (Pass)</span>
           </div>
 
-          {/* 2. THROUGH / GOCEK (Top-Left Diagonal: 80px x 80px, top: 68px, left: 44px) */}
+          {/* 2. Y = THROUGH / GOCEK (Top-Left: 80px x 80px, top: 68px, left: 44px) */}
           <div
             onPointerDown={() => handleButtonTouch('y', true)}
             onPointerUp={() => handleButtonTouch('y', false)}
             className="absolute top-[68px] left-[44px] w-[80px] h-[80px] rounded-full bg-[#3d7a40]/80 border-2 border-[#6cb870] shadow-xl backdrop-blur-sm active:scale-90 transition flex flex-col items-center justify-center cursor-pointer select-none"
           >
-            <div className="absolute top-1 text-[8px] text-white/90">▲</div>
-            <div className="absolute bottom-1 text-[8px] text-white/90">▼</div>
-            <div className="absolute left-1 text-[8px] text-white/90">◄</div>
-            <div className="absolute right-1 text-[8px] text-white/90">►</div>
-
-            <span className="text-white font-bold text-xs">Through</span>
+            <span className="text-white font-black text-xs">Y (Through)</span>
             <span className="text-amber-300 text-[8px] font-extrabold">(Gocek)</span>
           </div>
 
-          {/* 3. CLEAR / TACKLE (Top-Right: 96px x 96px, top: 0px, right: 0px) */}
+          {/* 3. X = SHOOT (Top-Right: 96px x 96px, top: 0px, right: 0px) */}
           <div
             onPointerDown={() => handleButtonTouch('x', true)}
             onPointerUp={() => handleButtonTouch('x', false)}
             className="absolute top-0 right-0 w-[96px] h-[96px] rounded-full bg-[#3d7a40]/80 border-2 border-[#6cb870] shadow-2xl backdrop-blur-sm active:scale-90 transition flex flex-col items-center justify-center cursor-pointer select-none"
           >
             <div className="w-[84px] h-[84px] rounded-full border border-white/25 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-white font-bold text-base">Clear</span>
-              <span className="text-cyan-300 text-[9px] font-black uppercase tracking-wider">(Tackle)</span>
+              <span className="text-white font-black text-base">X (Shoot)</span>
             </div>
           </div>
 
-          {/* 4. DASH / PRESS (Bottom-Right: 104px x 104px, bottom: 0px, right: 0px) */}
+          {/* 4. B = TACKLE (Bottom-Right 1: 90px x 90px) & RT = SPRINT (Bottom-Right 2: 104px x 104px) */}
+          <div
+            onPointerDown={() => handleButtonTouch('b', true)}
+            onPointerUp={() => handleButtonTouch('b', false)}
+            className="absolute bottom-0 right-[100px] w-[80px] h-[80px] rounded-full bg-[#3d7a40]/80 border-2 border-[#6cb870] shadow-2xl backdrop-blur-sm active:scale-90 transition flex flex-col items-center justify-center cursor-pointer select-none"
+          >
+            <span className="text-cyan-300 font-black text-xs">B (Tackle)</span>
+          </div>
+
           <div
             onPointerDown={() => handleButtonTouch('rt', true)}
             onPointerUp={() => handleButtonTouch('rt', false)}
-            className="absolute bottom-0 right-0 w-[104px] h-[104px] rounded-full bg-[#3d7a40]/80 border-2 border-[#6cb870] shadow-2xl backdrop-blur-sm active:scale-90 transition flex flex-col items-center justify-center cursor-pointer select-none"
+            className="absolute bottom-0 right-0 w-[96px] h-[96px] rounded-full bg-[#3d7a40]/80 border-2 border-[#6cb870] shadow-2xl backdrop-blur-sm active:scale-90 transition flex flex-col items-center justify-center cursor-pointer select-none"
           >
-            <div className="w-[92px] h-[92px] rounded-full border border-white/25 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-white font-bold text-base">Dash</span>
+            <div className="w-[84px] h-[84px] rounded-full border border-white/25 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-white font-black text-sm">R2 (Sprint)</span>
             </div>
           </div>
 
