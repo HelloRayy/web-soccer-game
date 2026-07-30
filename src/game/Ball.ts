@@ -107,14 +107,14 @@ export class Ball {
       this.releaseTimer -= dt;
     }
 
-    // 1. Smooth Progressive Pass Flight Acceleration (Soft initial kick lerps to target speed)
+    // 1. Natural Grounded Pass Flight Acceleration (Smooth realistic speed)
     if (this.homingTargetPlayer) {
       const targetPlayer = this.homingTargetPlayer;
 
-      // Predict target player's future position dynamically based on velocity
+      // Predict target player's future position in 8 frames based on velocity
       const predictedTargetPos = {
-        x: this.throughPassTargetPos ? this.throughPassTargetPos.x : targetPlayer.pos.x + targetPlayer.vel.x * 12,
-        y: this.throughPassTargetPos ? this.throughPassTargetPos.y : targetPlayer.pos.y + targetPlayer.vel.y * 12,
+        x: this.throughPassTargetPos ? this.throughPassTargetPos.x : targetPlayer.pos.x + targetPlayer.vel.x * 8,
+        y: this.throughPassTargetPos ? this.throughPassTargetPos.y : targetPlayer.pos.y + targetPlayer.vel.y * 8,
       };
 
       const dx = predictedTargetPos.x - this.pos.x;
@@ -125,25 +125,24 @@ export class Ball {
       // Receiver's current speed
       const targetSpeed = Math.hypot(targetPlayer.vel.x, targetPlayer.vel.y);
 
-      // Desired target speed for pass (Natural progressive acceleration)
-      const desiredPassSpeed = Math.max(13.5, targetSpeed * 2.0);
+      // Grounded natural pass speed (Moderate pace matching natural pass speed 8.5 - 9.5)
+      const desiredPassSpeed = Math.max(8.8, targetSpeed * 1.35);
       const currentSpeed = Math.hypot(this.vel.x, this.vel.y);
 
-      // Smooth Ease-In Acceleration Lerp (0.86 / 0.14)
-      const smoothedSpeed = currentSpeed * 0.86 + desiredPassSpeed * 0.14;
+      // Ultra-smooth speed blend (0.90 / 0.10)
+      const smoothedSpeed = currentSpeed * 0.90 + desiredPassSpeed * 0.10;
 
       const homingDirX = dx / distToPredicted;
       const homingDirY = dy / distToPredicted;
 
-      // Smooth direction & speed blend
-      this.vel.x = this.vel.x * 0.65 + homingDirX * smoothedSpeed * 0.35;
-      this.vel.y = this.vel.y * 0.65 + homingDirY * smoothedSpeed * 0.35;
+      this.vel.x = this.vel.x * 0.70 + homingDirX * smoothedSpeed * 0.30;
+      this.vel.y = this.vel.y * 0.70 + homingDirY * smoothedSpeed * 0.30;
 
       this.pos.x += this.vel.x;
       this.pos.y += this.vel.y;
 
-      // EXTENDED SUCTION RECEPTION ATTACHMENT (38px reach)
-      if (distToPlayer < this.radius + targetPlayer.radius + 22 || distToPredicted < 24) {
+      // RECEPTION ATTACHMENT (36px reach)
+      if (distToPlayer < this.radius + targetPlayer.radius + 20 || distToPredicted < 22) {
         targetPlayer.hasPossession = true;
         this.attachToPlayer(targetPlayer.pos, targetPlayer.facingAngle, targetPlayer.radius, targetPlayer.vel, targetPlayer.id);
 
