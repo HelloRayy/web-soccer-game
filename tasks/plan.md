@@ -1,38 +1,57 @@
-# Implementation & UX Audit Plan: Football Game Control Standards
+# Implementation Plan: 4-Player Multi-Device Controller System (2v2 WebRTC)
 
-Audit komprehensif terhadap pemetaan tombol Xbox & Smartphone Remote Controller untuk memastikan **0% Learning Curve** dan **100% kesesuaian standar UX game sepak bola populer** (EA FC / FIFA, eFootball / PES, & Dream League Soccer).
-
----
-
-## 🎮 Audit Matriks Tombol (Xbox / PES / EA FC Standard vs Game Soccer Antigravity)
-
-| Tombol Gamepad | Posisi | Aksi (Saat Membawa Bola) | Aksi (Saat Bertahan) | Standar FIFA / EA FC / eFootball | Status Game Saat Ini |
-|---|---|---|---|---|---|
-| **Button A** | Bawah (Green) | **Umpan Pendek / Short Pass** | **Ganti Pemain / Switch** | **A (Xbox) / × (PS)** | ✅ **100% Akurat** |
-| **Button B** | Kanan (Red) | **Clear / Buang Bola** | **Tekel / Slide Tackle** | **B (Xbox) / ○ (PS)** | ✅ **100% Akurat** |
-| **Button X** | Kiri (Blue) | **Shooting / Tendang Gawang** | **Standing Tackle / Pressing** | **X (Xbox) / □ (PS)** | ✅ **100% Akurat** |
-| **Button Y** | Atas (Yellow) | **Umpan Terobosan / Skill Gocek** | **Kiper Keluar / Intercept** | **Y (Xbox) / Δ (PS)** | ✅ **100% Akurat** |
-| **Button R1 (RB)** | Bumper Kanan | **Request Ball / Minta Bola** | **Call Teammate Press** | **RB (Xbox) / R1 (PS)** | ✅ **100% Akurat** |
-| **Button R2 (RT)** | Trigger Kanan | **Sprint / Lari Kencang** | **Sprint / Speed Chase** | **RT (Xbox) / R2 (PS)** | ✅ **100% Akurat** |
-| **Left Stick** | Analog Kiri | **Arah Gerak Dribel / 360°** | **Arah Lari Bertahan** | **Left Analog Stick** | ✅ **100% Akurat** |
+Sistem arsitektur **4-Player Multi-Device Smartphone Controller (2v2 Local Multiplayer)** via WebRTC PeerJS. Memungkinkan hingga 4 HP menyambung secara instan ke layar utama (PC/Laptop/TV) untuk bertanding 2v2 (Tim Merah vs Tim Kuning), di mana slot yang tidak diisi HP akan dikendalikan oleh AI.
 
 ---
 
-## 💡 Evaluasi Pengalaman Pengguna (UX Benchmark):
-- **0% Learning Curve**: Layout yang diterapkan saat ini **100% persis** dengan layout standar industri (*Alternate / Classic Preset*) yang dipakai oleh ratusan juta pemain game sepak bola di console (Xbox/PlayStation) maupun mobile (eFootball Mobile / DLS).
-- **Intuitif & Responsif**: Pemain tidak perlu membaca tutorial atau menghafal tombol baru.
+## 🏗️ Technical Architecture Decisions
+
+1. **Multi-Peer Channel Manager (`peerService.ts`)**:
+   - Mengelola `Map<string, ClientConnection>` untuk mendukung hingga 4 koneksi HP secara bersamaan.
+   - Melakukan broadcast status ketersediaan slot (`slotState: { p1: boolean, p2: boolean, p3: boolean, p4: boolean }`) secara real-time ke seluruh HP yang terhubung.
+
+2. **Mobile Role Selection Screen (`MobileControllerView.tsx`)**:
+   - **Lobby Pemilihan Slot di HP**:
+     - 🔴 **P1 (Home 1 - Kamu)**
+     - 🟢 **P2 (Home 2 - Rekan)**
+     - 🟡 **P3 (Away 1 - Musuh 1)**
+     - 🔵 **P4 (Away 2 - Musuh 2)**
+   - Slot yang telah dipilih oleh HP lain akan otomatis terunci (`🔒 TERPAKAI`).
+   - Fitur "Ganti Slot" (*Change Role*) tersedia kapan saja dari layar HP.
+
+3. **Hybrid Dynamic AI & Human Control (`GameView.tsx`)**:
+   - Arena pertandingan mendukung 4 pemain aktif:
+     - `p1` (Home 1): Human HP / Xbox / AI Fallback
+     - `p2` (Home 2): Human HP / Xbox / AI Fallback
+     - `p3` (Away 1): Human HP / AI Fallback
+     - `p4` (Away 2): Human HP / AI Fallback
+   - Transisi *seamless*: Jika HP terputus atau belum memilih slot, AI langsung mengambil alih tanpa menghentikan pertandingan.
 
 ---
 
-## 📋 Task List & Checkpoints
+## 📋 Task Breakdown
 
-### Phase 1: Controller UI Overlay Verification
-- [x] Audit tombol A, B, X, Y, R1, R2 pada controller Xbox & Remote HP.
-- [x] Verifikasi respon input pada game loop ([Player.ts](file:///home/rayhan/Windows-D/project/web-game-soccer/src/game/Player.ts)).
+### Phase 1: Multi-Peer & Slot Reservation Service
+- [ ] **Task 1**: Update `HostPeerService` & `ClientPeerService` untuk mendukung Multi-Client broadcast & slot reservation messaging.
+- [ ] **Task 2**: Implementasi sinyal registrasi slot (`SELECT_SLOT`, `RELEASE_SLOT`, `SLOT_STATE_UPDATE`).
 
-### Phase 2: Legend HUD Visual Guidance
-- [x] Tampilkan label indikator kontrol tombol di HUD overlay agar pengguna HP / PC baru dapat melihat petunjuk cepat saat awal bermain.
+### Phase 2: Mobile Lobby & Role Selection UI
+- [ ] **Task 3**: Tampilkan layar **Lobby Pemilihan Slot (P1, P2, P3, P4)** di HP setelah terhubung via WebRTC.
+- [ ] **Task 4**: Sinkronisasi status slot terunci (`🔒 TERPAKAI`) secara real-time di seluruh HP.
 
-### Checkpoint: Complete Verification
-- [ ] Build clean without errors (`npm run build`).
-- [ ] Auto commit & push updates to GitHub.
+### Phase 3: 4-Player Match Arena Engine Integration
+- [ ] **Task 5**: Perbarui `GameView.tsx` & `Player.ts` untuk mengelola 4 pemain (P1, P2 vs P3, P4) dengan warna indikator visual khas.
+- [ ] **Task 6**: Integrasikan logika input hybrid (Remote HP / Xbox Gamepad / Dynamic AI Fallback).
+
+---
+
+## 📊 Verification Plan
+
+### Automated Tests
+- Verification build: `npm run build` dengan 0 errors.
+
+### Manual Verification
+1. Buka Game Arena di PC/Laptop.
+2. Hubungkan HP ke-1 & HP ke-2 -> Pilih slot P1 & P2.
+3. Hubungkan HP ke-3 & HP ke-4 -> Pilih slot P3 & P4.
+4. Mainkan pertandingan 2v2 secara real-time dengan 4 HP controller!

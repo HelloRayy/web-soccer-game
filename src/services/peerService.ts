@@ -3,6 +3,19 @@ import { GamepadState } from '../types/game';
 
 const ROOM_PREFIX = 'soccer-game-room-';
 
+const PEER_CONFIG = {
+  debug: 1,
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' }
+    ]
+  }
+};
+
 export class HostPeerService {
   private peer: Peer | null = null;
   private connection: DataConnection | null = null;
@@ -25,9 +38,7 @@ export class HostPeerService {
 
     return new Promise((resolve, reject) => {
       try {
-        this.peer = new Peer(peerId, {
-          debug: 1,
-        });
+        this.peer = new Peer(peerId, PEER_CONFIG);
 
         this.peer.on('open', (id: string) => {
           console.log('[HostPeerService] Host Peer open with ID:', id);
@@ -98,7 +109,7 @@ export class ControllerPeerService {
 
     return new Promise((resolve, reject) => {
       try {
-        this.peer = new Peer({ debug: 1 });
+        this.peer = new Peer(PEER_CONFIG);
 
         this.peer.on('open', () => {
           console.log('[ControllerPeerService] Controller Peer open, connecting to host:', hostPeerId);
