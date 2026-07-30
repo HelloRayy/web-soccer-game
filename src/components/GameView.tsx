@@ -168,7 +168,7 @@ export const GameView: React.FC = () => {
     setShowHUD((prev) => !prev);
   }, []);
 
-  // Main 60 FPS Game Loop with FIFA/PES Style Micro-Touch Dribble & Ball Collision Engine
+  // Main 60 FPS Game Loop with Accelerating Homing Pass & Frame-Perfect Possession Attachment
   useGameLoop((dt) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -225,9 +225,28 @@ export const GameView: React.FC = () => {
         }
       });
 
-      // =========================================================================
-      // 3. SOLID PLAYER-TO-PLAYER BODY COLLISION PHYSICS SOLVER
-      // =========================================================================
+      // 3. FRAME-PERFECT RECEPTION POSSESSION ATTACHMENT SOLVER
+      players.forEach((p) => {
+        const distToBall = Math.hypot(p.pos.x - ball.pos.x, p.pos.y - ball.pos.y);
+        const receptionRadius = p.radius + ball.radius + 22;
+
+        if (ball.releaseTimer <= 0 && distToBall < receptionRadius) {
+          // Case A: Ball was homing to this receiver via Pass or R1 Request
+          if (ball.homingTargetPlayer && ball.homingTargetPlayer.id === p.id) {
+            p.hasPossession = true;
+            ball.homingTargetPlayer = null;
+            ball.throughPassTargetPos = null;
+            ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
+          }
+          // Case B: Loose ball is claimed by player
+          else if (!ball.homingTargetPlayer && !players.some(other => other.id !== p.id && other.hasPossession)) {
+            p.hasPossession = true;
+            ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
+          }
+        }
+      });
+
+      // 4. SOLID PLAYER-TO-PLAYER BODY COLLISION PHYSICS SOLVER
       for (let i = 0; i < players.length; i++) {
         for (let j = i + 1; j < players.length; j++) {
           const pA = players[i];
@@ -262,9 +281,7 @@ export const GameView: React.FC = () => {
         }
       }
 
-      // =========================================================================
-      // 4. FIFA/PES STYLE BALL COLLISION & DISPOSSESS RESOLUTION ENGINE
-      // =========================================================================
+      // 5. FIFA/PES STYLE BALL COLLISION & DISPOSSESS RESOLUTION ENGINE
       players.forEach((tackler) => {
         const ballCarrier = players.find((p) => p.id !== tackler.id && p.hasPossession);
         if (ballCarrier) {
@@ -278,15 +295,12 @@ export const GameView: React.FC = () => {
           const isSlideReaching = tackler.isTackling && (distToCarrier < slideReachThreshold || distToBall < slideReachThreshold);
 
           if (isBodyTouching || isSlideReaching) {
-            // SCENARIO A: Ball carrier executed Dribble Skill Move (Gocek) -> GOCEK SUCCESS!
             if (ballCarrier.skillDodgeInvincibleTimer > 0) {
               ballCarrier.triggerFeedback('🔥 GOCEK SUCCESS!');
               tackler.stumbleTimer = 0.55;
               tackler.isTackling = false;
               tackler.triggerFeedback('❌ TACKLE MISSED!');
-            }
-            // SCENARIO B: Ball carrier DOES NOT use Gocek -> INSTANT 100% DISPOSSESS BALL THEFT!
-            else {
+            } else {
               ballCarrier.hasPossession = false;
               tackler.hasPossession = true;
 
@@ -303,7 +317,7 @@ export const GameView: React.FC = () => {
         }
       });
 
-      // 5. Check Loose Ball Collision Bounce for all Non-Carrying Players
+      // 6. Check Loose Ball Collision Bounce for all Non-Carrying Players
       players.forEach((p) => {
         if (!p.hasPossession && ball.releaseTimer <= 0) {
           ball.checkPlayerCollision(p);
@@ -313,13 +327,13 @@ export const GameView: React.FC = () => {
       const controllerSource = isPeerConnected ? '📱 HP Remote' : 'P1 Controller 0';
       rules.state.debugInputText = `${players[0].debugInputString} | SRC: ${controllerSource}`;
 
-      // 6. Update Ball Physics & Shift Deflection
+      // 7. Update Ball Physics & Shift Deflection
       ball.update(dt, field);
     }
 
     setMatchState({ ...rules.state });
 
-    // 7. Tactical Broadcast Camera Target (Tracks P1, P3, & Ball)
+    // 8. Tactical Broadcast Camera Target (Tracks P1, P3, & Ball)
     const targetCamX = player1.pos.x * 0.40 + (player3 ? player3.pos.x * 0.30 : 0) + ball.pos.x * 0.30;
     const targetCamY = player1.pos.y * 0.40 + (player3 ? player3.pos.y * 0.30 : 0) + ball.pos.y * 0.30;
 
@@ -335,7 +349,7 @@ export const GameView: React.FC = () => {
     const clampedCamX = Math.max(halfVisibleW, Math.min(WORLD_WIDTH - halfVisibleW, cameraRef.current.x));
     const clampedCamY = Math.max(halfVisibleH, Math.min(WORLD_HEIGHT - halfVisibleH, cameraRef.current.y));
 
-    // 8. Render World with Camera Transform & Conditional Dynamic Passing Grid
+    // 9. Render World with Camera Transform & Dynamic Passing Grid
     ctx.clearRect(0, 0, viewW, viewH);
 
     ctx.save();
@@ -343,15 +357,12 @@ export const GameView: React.FC = () => {
     ctx.scale(CAMERA_ZOOM, CAMERA_ZOOM);
     ctx.translate(-clampedCamX, -clampedCamY);
 
-    // Render Field
     field.draw(ctx);
 
-    // DYNAMIC PASSING LINE & TARGET LOCK (ONLY WHEN AIMING TOWARD TEAMMATE)
     if (showHUD) {
       const passer = player1.hasPossession ? player1 : player2.hasPossession ? player2 : null;
 
       if (passer) {
-        // A. Radial Concentric Distance Grid Rings
         const ranges = [140, 280, 420];
         ranges.forEach((r, idx) => {
           ctx.strokeStyle = idx === 0 ? 'rgba(56, 189, 248, 0.35)' : idx === 1 ? 'rgba(52, 211, 153, 0.25)' : 'rgba(168, 85, 247, 0.20)';
@@ -363,7 +374,6 @@ export const GameView: React.FC = () => {
         });
         ctx.setLineDash([]);
 
-        // B. Passing Vision Cone Grid Overlay (60° Angle Cone in front of Passer)
         const coneAngle = Math.PI / 3;
         const startAngle = passer.facingAngle - coneAngle / 2;
         const endAngle = passer.facingAngle + coneAngle / 2;
@@ -379,17 +389,14 @@ export const GameView: React.FC = () => {
         ctx.fill();
         ctx.stroke();
 
-        // C. Check if passer is actively aiming toward a teammate
         const teammates = players.filter((p) => p.team === passer.team && p.id !== passer.id);
         const targetedTeammate = passer.findBestPassTarget(teammates, passer.facingAngle);
 
-        // ONLY RENDER DASHED PASS LINE & LOCK BRACKETS WHEN AIMING TOWARD A TEAMMATE!
         if (targetedTeammate) {
           const dx = targetedTeammate.pos.x - passer.pos.x;
           const dy = targetedTeammate.pos.y - passer.pos.y;
           const dist = Math.hypot(dx, dy) || 1;
 
-          // Main Dashed Pass Vector Line
           ctx.strokeStyle = '#06b6d4';
           ctx.lineWidth = 2.5;
           ctx.setLineDash([8, 6]);
@@ -399,7 +406,6 @@ export const GameView: React.FC = () => {
           ctx.stroke();
           ctx.setLineDash([]);
 
-          // Grid Tick Markers along the Pass Vector
           const stepCount = Math.floor(dist / 50);
           ctx.strokeStyle = '#38bdf8';
           ctx.lineWidth = 2;
@@ -417,7 +423,6 @@ export const GameView: React.FC = () => {
             ctx.stroke();
           }
 
-          // Target Lock Box & Crosshair Brackets at Targeted Teammate
           const recX = targetedTeammate.pos.x;
           const recY = targetedTeammate.pos.y;
           const boxSize = 22;
@@ -445,7 +450,6 @@ export const GameView: React.FC = () => {
         }
       }
 
-      // D. Draw Active Ball Homing Pass Vector (during pass flight)
       if (ball.homingTargetPlayer) {
         const receiver = ball.homingTargetPlayer;
 
@@ -459,7 +463,6 @@ export const GameView: React.FC = () => {
         ctx.setLineDash([]);
       }
 
-      // E. Draw Ball Velocity Vector Arrow
       const speed = Math.hypot(ball.vel.x, ball.vel.y);
       if (speed > 0.2) {
         const arrowLen = Math.min(speed * 8, 40);
@@ -475,7 +478,6 @@ export const GameView: React.FC = () => {
       }
     }
 
-    // Render Players & Ball
     players.forEach((p) => p.draw(ctx));
     ball.draw(ctx);
 
@@ -495,7 +497,6 @@ export const GameView: React.FC = () => {
         isPeerConnected={isPeerConnected}
       />
 
-      {/* Screen Viewport HTML5 Canvas Arena (Cursor Visibility Toggleable via Ctrl / Xbox Back) */}
       <canvas
         ref={canvasRef}
         width={dimensions.width}

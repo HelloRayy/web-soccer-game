@@ -65,7 +65,7 @@ export class Ball {
    */
   kick(dir: Vector2D, power: number, kickerId: string, homingTarget: Player | null = null, throughPos: Vector2D | null = null) {
     this.attachedPlayerId = null;
-    this.releaseTimer = 0.20; // 200ms grace period before kicker re-claims
+    this.releaseTimer = 0.15; // 150ms grace period before kicker re-claims
     this.homingTargetPlayer = homingTarget;
     this.throughPassTargetPos = throughPos;
 
@@ -77,7 +77,6 @@ export class Ball {
    * Physical Ball-to-Player Circle Collision Bounce (For Loose Balls & Tackles)
    */
   checkPlayerCollision(player: Player): boolean {
-    // Skip if ball is currently attached to this player
     if (this.attachedPlayerId === player.id) return false;
 
     const dx = this.pos.x - player.pos.x;
@@ -90,16 +89,14 @@ export class Ball {
       const nx = dx / dist;
       const ny = dy / dist;
 
-      // Displace ball outside player's body
       this.pos.x += nx * overlap;
       this.pos.y += ny * overlap;
 
-      // Elastic Bounce Impulse off player's body/feet
       const bounceSpeed = Math.max(5.5, Math.hypot(player.vel.x, player.vel.y) * 1.5);
       this.vel.x = nx * bounceSpeed + player.vel.x * 0.5;
       this.vel.y = ny * bounceSpeed + player.vel.y * 0.5;
 
-      return true; // Collision occurred!
+      return true;
     }
 
     return false;
@@ -110,24 +107,34 @@ export class Ball {
       this.releaseTimer -= dt;
     }
 
-    // 1. Update Active Pass Homing Flight
+    // 1. Dynamic Accelerating Homing Flight (Ball accelerates as it approaches target)
     if (this.homingTargetPlayer) {
       const targetPos = this.throughPassTargetPos ? this.throughPassTargetPos : this.homingTargetPlayer.pos;
       const dx = targetPos.x - this.pos.x;
       const dy = targetPos.y - this.pos.y;
       const dist = Math.hypot(dx, dy);
 
-      if (dist < 22) {
+      // Target player velocity
+      const targetSpeed = Math.hypot(this.homingTargetPlayer.vel.x, this.homingTargetPlayer.vel.y);
+
+      // Accelerating pass speed (Ensures ball catches up faster than any sprinting player!)
+      const minPassSpeed = Math.max(9.5, targetSpeed + 5.5);
+      const passSpeed = Math.max(Math.hypot(this.vel.x, this.vel.y) * 1.03, minPassSpeed);
+
+      const homingDirX = dx / (dist || 1);
+      const homingDirY = dy / (dist || 1);
+
+      this.vel.x = this.vel.x * 0.70 + homingDirX * passSpeed * 0.30;
+      this.vel.y = this.vel.y * 0.70 + homingDirY * passSpeed * 0.30;
+
+      // AUTOMATIC RECEPTION ATTACHMENT
+      if (dist < this.radius + this.homingTargetPlayer.radius + 18) {
+        const receiver = this.homingTargetPlayer;
+        receiver.hasPossession = true;
+        this.attachToPlayer(receiver.pos, receiver.facingAngle, receiver.radius, receiver.vel, receiver.id);
+
         this.homingTargetPlayer = null;
         this.throughPassTargetPos = null;
-      } else {
-        const homingDirX = dx / dist;
-        const homingDirY = dy / dist;
-        const speed = Math.hypot(this.vel.x, this.vel.y);
-        const nextSpeed = Math.max(speed, 6.5);
-
-        this.vel.x = this.vel.x * 0.85 + homingDirX * nextSpeed * 0.15;
-        this.vel.y = this.vel.y * 0.85 + homingDirY * nextSpeed * 0.15;
       }
     }
 
