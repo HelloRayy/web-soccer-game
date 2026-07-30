@@ -4,27 +4,30 @@ import { Field } from './Field';
 
 export class MatchRules {
   state: MatchRulesState;
+  isDebugMode: boolean;
 
   constructor(mode: MatchMode = '1v1_local') {
+    this.isDebugMode = true; // Debugging mode active (scoring & match reset disabled)
+
     this.state = {
       mode,
-      timerSeconds: 180, // 3 Minutes Countdown Timer
+      timerSeconds: 999, // Extended Debugging Timer
       scoreHome: 0,
       scoreAway: 0,
       state: 'PLAYING',
       winnerTitle: '',
-      logMessage: 'Arena Match Started! First to 3 Goals or 3-Min Timer Countdown.',
+      logMessage: '🛠️ DEBUGGING MODE ACTIVE - Scoring & Game Over Disabled',
       debugInputText: 'Ready'
     };
   }
 
   resetMatch() {
-    this.state.timerSeconds = 180;
+    this.state.timerSeconds = 999;
     this.state.scoreHome = 0;
     this.state.scoreAway = 0;
     this.state.state = 'PLAYING';
     this.state.winnerTitle = '';
-    this.state.logMessage = 'Arena Reset! First to 3 Goals or 3-Min Timer Countdown.';
+    this.state.logMessage = '🛠️ DEBUGGING MODE - Arena Reset';
     this.state.debugInputText = 'Ready';
   }
 
@@ -34,6 +37,13 @@ export class MatchRules {
   }
 
   update(dt: number, ball: Ball, field: Field): boolean {
+    // If Debugging Mode is Active -> Disable Goal Scoring & Timer End
+    if (this.isDebugMode) {
+      this.state.state = 'PLAYING';
+      this.state.logMessage = '🛠️ DEBUGGING MODE - Free Sandbox Play (Scoring Off)';
+      return false;
+    }
+
     if (this.state.state === 'GAME_OVER') return false;
 
     // Countdown Match Timer
@@ -43,7 +53,6 @@ export class MatchRules {
       if (this.state.scoreHome !== this.state.scoreAway) {
         this.triggerGameOver(this.state.scoreHome > this.state.scoreAway ? 'HOME TEAM WINS ON TIME!' : 'AWAY TEAM WINS ON TIME!');
       } else {
-        // Tied on time -> Enter Golden Goal Overtime!
         this.state.state = 'GOLDEN_GOAL';
         this.state.logMessage = '⏰ TIME EXPIRED! Entering GOLDEN GOAL Overtime (Next goal wins!)';
       }
