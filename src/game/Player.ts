@@ -34,6 +34,10 @@ export class Player implements PlayerEntity {
   isSprinting: boolean;
   hasPossession: boolean;
 
+  // Stamina & Fatigue Properties
+  stamina: number; // 0.0 to 1.0
+  isExhausted: boolean;
+
   // Realistic Micro-Movement Properties
   bodyTiltAngle: number;
   turfParticles: TurfParticle[];
@@ -83,6 +87,10 @@ export class Player implements PlayerEntity {
     this.isSprinting = false;
     this.hasPossession = false;
 
+    // Stamina Defaults
+    this.stamina = 1.0;
+    this.isExhausted = false;
+
     this.bodyTiltAngle = 0;
     this.turfParticles = [];
 
@@ -115,6 +123,8 @@ export class Player implements PlayerEntity {
     this.pos = { x, y };
     this.vel = { x: 0, y: 0 };
     this.facingAngle = this.team === 'home' ? 0 : Math.PI;
+    this.stamina = 1.0;
+    this.isExhausted = false;
     this.bodyTiltAngle = 0;
     this.turfParticles = [];
     this.hasPossession = false;
@@ -226,6 +236,14 @@ export class Player implements PlayerEntity {
   updateEnemyBotAI(ball: Ball, field: Field, opponents: Player[]) {
     this.updateParticles();
 
+    // Stamina Regeneration for AI Bot
+    if (!this.isSprinting) {
+      this.stamina = Math.min(1.0, this.stamina + 0.0025);
+      if (this.isExhausted && this.stamina >= 0.20) {
+        this.isExhausted = false;
+      }
+    }
+
     if (this.tackleTimer > 0) {
       this.tackleTimer -= 0.016;
       this.vel.x *= 0.94;
@@ -299,6 +317,14 @@ export class Player implements PlayerEntity {
     this.walkTimer += 0.02;
     this.updateParticles();
 
+    // Stamina Regeneration for Teammate
+    if (!this.isSprinting) {
+      this.stamina = Math.min(1.0, this.stamina + 0.0025);
+      if (this.isExhausted && this.stamina >= 0.20) {
+        this.isExhausted = false;
+      }
+    }
+
     if (this.tackleTimer > 0) {
       this.tackleTimer -= 0.016;
       this.vel.x *= 0.94;
@@ -333,7 +359,19 @@ export class Player implements PlayerEntity {
       if (ball.throughPassTargetPos) {
         targetX = ball.throughPassTargetPos.x;
         targetY = ball.throughPassTargetPos.y;
-        this.isSprinting = true;
+
+        // Sprint to through pass target if not exhausted
+        if (!this.isExhausted && this.stamina > 0) {
+          this.isSprinting = true;
+          this.stamina = Math.max(0, this.stamina - 0.004);
+          if (this.stamina === 0) {
+            this.isExhausted = true;
+            this.isSprinting = false;
+            this.triggerFeedback('⚠️ EXHAUSTED!');
+          }
+        } else {
+          this.isSprinting = false;
+        }
         this.spawnTurfParticle(1.5);
       } else {
         this.isSprinting = false;
@@ -402,7 +440,7 @@ export class Player implements PlayerEntity {
 
     if (this.tackleTimer > 0) {
       this.tackleTimer -= 0.016;
-      this.vel.x *= 0.94; // Smooth ice slide deceleration curve
+      this.vel.x *= 0.94;
       this.vel.y *= 0.94;
       this.spawnTurfParticle(2.8, true);
     } else {
@@ -428,7 +466,32 @@ export class Player implements PlayerEntity {
     const moveX = gp.axes.leftStickX;
     const moveY = gp.axes.leftStickY;
 
-    this.isSprinting = gp.buttons.rt > 0.3;
+    // STAMINA & SPRINT LOGIC
+    const isWantsSprint = gp.buttons.rt > 0.3;
+
+    if (isWantsSprint) {
+      if (this.isExhausted) {
+        this.isSprinting = false;
+      } else {
+        this.isSprinting = true;
+        this.stamina = Math.max(0, this.stamina - 0.004); // Drains in ~4.1 seconds of continuous sprint
+
+        if (this.stamina === 0) {
+          this.isExhausted = true;
+          this.isSprinting = false;
+          this.triggerFeedback('⚠️ EXHAUSTED!');
+        }
+      }
+    } else {
+      this.isSprinting = false;
+      // Regenerate stamina when walking / idle
+      this.stamina = Math.min(1.0, this.stamina + 0.0025);
+
+      if (this.isExhausted && this.stamina >= 0.20) {
+        this.isExhausted = false; // Cooldown cutoff threshold: 20%
+      }
+    }
+
     const currentSpeed = (this.isSprinting ? this.speed * 1.6 : this.speed) * moveMultiplier;
     const stickMagnitude = Math.hypot(moveX, moveY);
 
@@ -498,7 +561,8 @@ export class Player implements PlayerEntity {
       if (isPressingA) activeBtns.push('A (Switch)');
       if (isPressingY) activeBtns.push('Y (Press)');
     }
-    if (this.isSprinting) activeBtns.push('RT (Sprint)');
+    if (this.isSprinting) activeBtns.push(`RT (Sprint Stamina: ${Math.round(this.stamina * 100)}%)`);
+    if (this.isExhausted) activeBtns.push('⚠️ EXHAUSTED!');
     if (isPressingStart) activeBtns.push('Start (ToggleHUD)');
 
     this.debugInputString = activeBtns.length > 0 ? `PRESSED: ${activeBtns.join(' + ')}` : `STICK: [${moveX.toFixed(2)}, ${moveY.toFixed(2)}]`;
@@ -533,7 +597,7 @@ export class Player implements PlayerEntity {
 
           const passPower = Math.min(Math.max(dist * 0.042 + 4.5, 6.5), 11.5);
           ball.kick({ x: dx / dist, y: dy / dist }, passPower, this.id, targetTeammate, null);
-          this.debugInputString = `⚽ SMART ASSAssist PASS TO ${targetTeammate.name} (Tombol A)!`;
+          this.debugInputString = `⚽ SMART ASSIST PASS TO ${targetTeammate.name} (Tombol A)!`;
         } else {
           const passDir = { x: Math.cos(aimAngle), y: Math.sin(aimAngle) };
           ball.kick(passDir, 8.5, this.id, null, null);
@@ -549,13 +613,10 @@ export class Player implements PlayerEntity {
         this.debugInputString = `🔥 DRIBBLE SKILL MOVE / GOCEK TRIGGERED!`;
       }
     } else {
-      // 1. Holding Button X Charges Slide Power Bar!
       if (isPressingX) {
         this.isChargingSlide = true;
         this.slidePower = Math.min(1.0, this.slidePower + 0.035);
-      }
-      // 2. Releasing Button X Launches Charged Ice Slide Lunge!
-      else if (this.prevX && this.isChargingSlide) {
+      } else if (this.prevX && this.isChargingSlide) {
         this.isChargingSlide = false;
         this.isTackling = true;
 
@@ -612,14 +673,36 @@ export class Player implements PlayerEntity {
     });
     ctx.globalAlpha = 1.0;
 
-    // 0.1 RENDER SMOOTH CHARGED SLIDE POWER BAR OVERHEAD
+    // 0.1 RENDER STAMINA CIRCULAR ARC RING AROUND PLAYER BODY
+    const staminaRadius = this.radius + 14;
+    const staminaColor = this.isExhausted ? '#ef4444' : this.stamina > 0.5 ? '#10b981' : this.stamina > 0.2 ? '#f59e0b' : '#ef4444';
+
+    // Background track ring
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.arc(this.pos.x, this.pos.y, staminaRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Active Stamina Arc Fill
+    if (this.stamina > 0) {
+      const startAngle = -Math.PI / 2;
+      const endAngle = startAngle + this.stamina * Math.PI * 2;
+
+      ctx.strokeStyle = staminaColor;
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.arc(this.pos.x, this.pos.y, staminaRadius, startAngle, endAngle);
+      ctx.stroke();
+    }
+
+    // 0.2 RENDER CHARGED SLIDE POWER BAR OVERHEAD
     if (this.isChargingSlide) {
       const barWidth = 52;
       const barHeight = 9;
       const barX = this.pos.x - barWidth / 2;
       const barY = this.pos.y - this.radius - 28;
 
-      // Glow Container Box
       ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
       ctx.lineWidth = 1.5;
@@ -628,7 +711,6 @@ export class Player implements PlayerEntity {
       ctx.fill();
       ctx.stroke();
 
-      // Dynamic Color Fill (Cyan -> Amber -> Bright Red)
       const fillW = Math.max(2, (barWidth - 2) * this.slidePower);
       const fillColor = this.slidePower < 0.5 ? '#06b6d4' : this.slidePower < 0.85 ? '#f59e0b' : '#ef4444';
 
@@ -638,13 +720,12 @@ export class Player implements PlayerEntity {
       ctx.fill();
     }
 
-    // 0.2 RENDER SMOOTH ICE SLIDE TACKLE GRAPHIC
+    // 0.3 RENDER ICE SLIDE TACKLE GRAPHIC
     if (this.isTackling) {
       ctx.save();
       ctx.translate(this.pos.x, this.pos.y);
       ctx.rotate(this.tackleSlideAngle);
 
-      // Extended Sliding Leg Graphic
       ctx.fillStyle = '#f87171';
       ctx.strokeStyle = '#06b6d4';
       ctx.lineWidth = 3.5;
@@ -653,7 +734,6 @@ export class Player implements PlayerEntity {
       ctx.fill();
       ctx.stroke();
 
-      // Front Slide Shockwave Arc Wave
       ctx.strokeStyle = '#38bdf8';
       ctx.lineWidth = 4.5;
       ctx.beginPath();
@@ -663,7 +743,7 @@ export class Player implements PlayerEntity {
       ctx.restore();
     }
 
-    // 0.3 Render Dribble Skill Gocek Gold Aura Ring
+    // 0.4 Render Dribble Skill Gocek Gold Aura Ring
     if (this.skillDodgeInvincibleTimer > 0) {
       ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 4;
@@ -678,7 +758,7 @@ export class Player implements PlayerEntity {
     ctx.translate(this.pos.x, this.pos.y);
     ctx.rotate(this.bodyTiltAngle + this.dribbleSpinAngle);
 
-    const outerRingRadius = this.radius + 9;
+    const outerRingRadius = this.radius + 8;
     ctx.strokeStyle = this.hasPossession ? '#10b981' : 'rgba(187, 247, 208, 0.85)';
     ctx.lineWidth = this.hasPossession ? 4.5 : 3.5;
     ctx.beginPath();
@@ -724,11 +804,11 @@ export class Player implements PlayerEntity {
     ctx.strokeText(topLabel, this.pos.x, this.pos.y - 12 - this.radius);
     ctx.fillText(topLabel, this.pos.x, this.pos.y - 12 - this.radius);
 
-    // 0.4 ANIMATED SMOOTH UPWARD FLOATING FEEDBACK TEXT
+    // 0.5 ANIMATED FLOATING FEEDBACK TEXT
     if (this.duelFeedbackTimer > 0) {
       ctx.save();
       ctx.globalAlpha = Math.min(1.0, this.duelFeedbackTimer * 1.5);
-      ctx.fillStyle = this.duelFeedbackText.includes('GOCEK') ? '#fbbf24' : '#06b6d4';
+      ctx.fillStyle = this.duelFeedbackText.includes('EXHAUSTED') ? '#ef4444' : this.duelFeedbackText.includes('GOCEK') ? '#fbbf24' : '#06b6d4';
       ctx.font = '900 16px sans-serif';
       ctx.textAlign = 'center';
       ctx.strokeStyle = '#000000';
