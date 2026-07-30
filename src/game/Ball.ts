@@ -15,6 +15,9 @@ export class Ball {
   homingTargetPlayer: Player | null;
   throughPassTargetPos: Vector2D | null;
 
+  // Rolling Rotation Physics Angle
+  rotationAngle: number;
+
   // Micro-Touch Dribble Animation Timer
   private dribblePhase: number;
 
@@ -25,12 +28,13 @@ export class Ball {
   constructor(startX: number, startY: number) {
     this.pos = { x: startX, y: startY };
     this.vel = { x: 0, y: 0 };
-    this.radius = 10; // Slightly larger for crisp SVG detail visibility
+    this.radius = 10;
     this.friction = 0.968; // Smooth grass friction
     this.attachedPlayerId = null;
     this.releaseTimer = 0;
     this.homingTargetPlayer = null;
     this.throughPassTargetPos = null;
+    this.rotationAngle = 0;
     this.dribblePhase = 0;
 
     // Preload ion_football.svg Image
@@ -51,23 +55,28 @@ export class Ball {
     this.releaseTimer = 0;
     this.homingTargetPlayer = null;
     this.throughPassTargetPos = null;
+    this.rotationAngle = 0;
     this.dribblePhase = 0;
   }
 
   /**
    * FIFA/PES Style Micro-Touch Dribble Attachment:
-   * Keeps a natural 14px micro-gap in front of player's feet with subtle micro-bounces
+   * Keeps a natural 14px micro-gap in front of player's feet with rolling rotation
    */
   attachToPlayer(playerPos: Vector2D, facingAngle: number, playerRadius: number, playerVel: Vector2D, playerId: string) {
     this.attachedPlayerId = playerId;
     this.dribblePhase += 0.25;
+
+    // Rolling rotation angle advances proportionally as player dribbles
+    const playerSpeed = Math.hypot(playerVel.x, playerVel.y);
+    this.rotationAngle += playerSpeed * 0.12;
 
     // Micro-gap 14px ahead of player's feet
     const microGap = playerRadius + this.radius + 6 + Math.sin(this.dribblePhase) * 2;
     const targetX = playerPos.x + Math.cos(facingAngle) * microGap;
     const targetY = playerPos.y + Math.sin(facingAngle) * microGap;
 
-    // Smooth Lerp Follow (Creates realistic loose dribble inertia)
+    // Smooth Lerp Follow
     this.pos.x = this.pos.x * 0.40 + targetX * 0.60;
     this.pos.y = this.pos.y * 0.40 + targetY * 0.60;
 
@@ -80,7 +89,7 @@ export class Ball {
    */
   kick(dir: Vector2D, power: number, kickerId: string, homingTarget: Player | null = null, throughPos: Vector2D | null = null) {
     this.attachedPlayerId = null;
-    this.releaseTimer = 0.15; // 150ms grace period before kicker re-claims
+    this.releaseTimer = 0.15;
     this.homingTargetPlayer = homingTarget;
     this.throughPassTargetPos = throughPos;
 
@@ -122,11 +131,16 @@ export class Ball {
       this.releaseTimer -= dt;
     }
 
-    // 1. Natural Grounded Pass Flight Acceleration (Smooth realistic speed)
+    // Update rolling rotation angle based on ball movement speed
+    const currentSpeed = Math.hypot(this.vel.x, this.vel.y);
+    if (currentSpeed > 0.05) {
+      this.rotationAngle += (currentSpeed / this.radius) * 0.45;
+    }
+
+    // 1. Natural Grounded Pass Flight Acceleration
     if (this.homingTargetPlayer) {
       const targetPlayer = this.homingTargetPlayer;
 
-      // Predict target player's future position in 8 frames based on velocity
       const predictedTargetPos = {
         x: this.throughPassTargetPos ? this.throughPassTargetPos.x : targetPlayer.pos.x + targetPlayer.vel.x * 8,
         y: this.throughPassTargetPos ? this.throughPassTargetPos.y : targetPlayer.pos.y + targetPlayer.vel.y * 8,
@@ -137,14 +151,9 @@ export class Ball {
       const distToPredicted = Math.hypot(dx, dy) || 1;
       const distToPlayer = Math.hypot(targetPlayer.pos.x - this.pos.x, targetPlayer.pos.y - this.pos.y);
 
-      // Receiver's current speed
       const targetSpeed = Math.hypot(targetPlayer.vel.x, targetPlayer.vel.y);
-
-      // Grounded natural pass speed (Moderate pace matching natural pass speed 8.8 - 9.5)
       const desiredPassSpeed = Math.max(8.8, targetSpeed * 1.35);
-      const currentSpeed = Math.hypot(this.vel.x, this.vel.y);
 
-      // Ultra-smooth speed blend (0.90 / 0.10)
       const smoothedSpeed = currentSpeed * 0.90 + desiredPassSpeed * 0.10;
 
       const homingDirX = dx / distToPredicted;
@@ -156,7 +165,6 @@ export class Ball {
       this.pos.x += this.vel.x;
       this.pos.y += this.vel.y;
 
-      // RECEPTION ATTACHMENT (36px reach)
       if (distToPlayer < this.radius + targetPlayer.radius + 20 || distToPredicted < 22) {
         targetPlayer.hasPossession = true;
         this.attachToPlayer(targetPlayer.pos, targetPlayer.facingAngle, targetPlayer.radius, targetPlayer.vel, targetPlayer.id);
@@ -165,7 +173,7 @@ export class Ball {
         this.throughPassTargetPos = null;
       }
     }
-    // 2. Free Motion & Grass Friction (For loose balls and shots)
+    // 2. Free Motion & Grass Friction
     else if (!this.attachedPlayerId) {
       this.pos.x += this.vel.x;
       this.pos.y += this.vel.y;
@@ -212,15 +220,19 @@ export class Ball {
     ctx.ellipse(this.pos.x + 3, this.pos.y + 4, this.radius, this.radius * 0.6, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 2. Render Crisp SVG Ball Image (src/assets/ion_football.svg)
+    // 2. Render Rotating SVG Ball Image (src/assets/ion_football.svg)
+    ctx.save();
+    ctx.translate(this.pos.x, this.pos.y);
+    ctx.rotate(this.rotationAngle);
+
     if (Ball.ballImage && Ball.isImageLoaded) {
       const size = this.radius * 2.2;
-      ctx.drawImage(Ball.ballImage, this.pos.x - size / 2, this.pos.y - size / 2, size, size);
+      ctx.drawImage(Ball.ballImage, -size / 2, -size / 2, size, size);
     } else {
       // White Football Fallback
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
+      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.strokeStyle = '#0f172a';
@@ -229,10 +241,11 @@ export class Ball {
 
       ctx.fillStyle = '#0f172a';
       ctx.beginPath();
-      ctx.arc(this.pos.x, this.pos.y, this.radius * 0.38, 0, Math.PI * 2);
+      ctx.arc(0, 0, this.radius * 0.38, 0, Math.PI * 2);
       ctx.fill();
     }
 
+    ctx.restore();
     ctx.restore();
   }
 }
