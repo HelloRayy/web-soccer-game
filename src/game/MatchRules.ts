@@ -7,16 +7,16 @@ export class MatchRules {
   isDebugMode: boolean;
 
   constructor(mode: MatchMode = '1v1_local') {
-    this.isDebugMode = true; // Debugging mode active (scoring & match reset disabled)
+    this.isDebugMode = true;
 
     this.state = {
       mode,
-      timerSeconds: 999, // Extended Debugging Timer
+      timerSeconds: 999,
       scoreHome: 0,
       scoreAway: 0,
       state: 'PLAYING',
       winnerTitle: '',
-      logMessage: '🛠️ DEBUGGING MODE ACTIVE - Scoring & Game Over Disabled',
+      logMessage: '🛠️ DEBUGGING MODE - Goal Resets Positions (Score Disabled)',
       debugInputText: 'Ready'
     };
   }
@@ -27,7 +27,7 @@ export class MatchRules {
     this.state.scoreAway = 0;
     this.state.state = 'PLAYING';
     this.state.winnerTitle = '';
-    this.state.logMessage = '🛠️ DEBUGGING MODE - Arena Reset';
+    this.state.logMessage = '🛠️ DEBUGGING MODE - Positions Reset';
     this.state.debugInputText = 'Ready';
   }
 
@@ -37,68 +37,26 @@ export class MatchRules {
   }
 
   update(dt: number, ball: Ball, field: Field): boolean {
-    // If Debugging Mode is Active -> Disable Goal Scoring & Timer End
-    if (this.isDebugMode) {
-      this.state.state = 'PLAYING';
-      this.state.logMessage = '🛠️ DEBUGGING MODE - Free Sandbox Play (Scoring Off)';
-      return false;
-    }
-
     if (this.state.state === 'GAME_OVER') return false;
 
-    // Countdown Match Timer
-    if (this.state.timerSeconds > 0) {
-      this.state.timerSeconds = Math.max(0, this.state.timerSeconds - dt);
-    } else if (this.state.state === 'PLAYING') {
-      if (this.state.scoreHome !== this.state.scoreAway) {
-        this.triggerGameOver(this.state.scoreHome > this.state.scoreAway ? 'HOME TEAM WINS ON TIME!' : 'AWAY TEAM WINS ON TIME!');
-      } else {
-        this.state.state = 'GOLDEN_GOAL';
-        this.state.logMessage = '⏰ TIME EXPIRED! Entering GOLDEN GOAL Overtime (Next goal wins!)';
-      }
-    }
-
-    // Goal Collision Detection
+    // Goal Collision Detection (Resets positions on goal without score/game over)
     const goals = field.goals;
     const isGoalY = ball.pos.y > goals.homeGoal.top && ball.pos.y < goals.homeGoal.bottom;
 
     if (isGoalY) {
-      // Home Goal (Left / Red Goal) -> Point for Away
+      // Home Goal (Left / Red Goal)
       if (ball.pos.x - ball.radius < goals.homeGoal.x - 10) {
-        this.state.scoreAway++;
-        this.state.logMessage = `⚽ GOAL FOR AWAY TEAM! (${this.state.scoreHome} - ${this.state.scoreAway})`;
-        this.checkWinCondition('AWAY TEAM');
-        return true;
+        this.state.logMessage = `⚽ GOAL SCORED IN HOME GOAL! Resetting Kickoff Positions...`;
+        return true; // Triggers resetMatchPositions() in GameView.tsx!
       }
 
-      // Away Goal (Right / Blue Goal) -> Point for Home
+      // Away Goal (Right / Blue Goal)
       if (ball.pos.x + ball.radius > goals.awayGoal.x + 10) {
-        this.state.scoreHome++;
-        this.state.logMessage = `⚽ GOAL FOR HOME TEAM! (${this.state.scoreHome} - ${this.state.scoreAway})`;
-        this.checkWinCondition('HOME TEAM');
-        return true;
+        this.state.logMessage = `⚽ GOAL SCORED IN AWAY GOAL! Resetting Kickoff Positions...`;
+        return true; // Triggers resetMatchPositions() in GameView.tsx!
       }
     }
 
     return false;
-  }
-
-  private checkWinCondition(lastScorer: 'HOME TEAM' | 'AWAY TEAM') {
-    if (this.state.state === 'GOLDEN_GOAL') {
-      this.triggerGameOver(`🏆 ${lastScorer} WINS VIA GOLDEN GOAL!`);
-      return;
-    }
-
-    if (this.state.scoreHome >= 3) {
-      this.triggerGameOver('🏆 HOME TEAM VICTORIOUS! (3 Goals Scored)');
-    } else if (this.state.scoreAway >= 3) {
-      this.triggerGameOver('🏆 AWAY TEAM VICTORIOUS! (3 Goals Scored)');
-    }
-  }
-
-  private triggerGameOver(title: string) {
-    this.state.state = 'GAME_OVER';
-    this.state.winnerTitle = title;
-    this.state.logMessage = `🏁 GAME OVER! ${title}`;
   }
 }

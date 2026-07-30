@@ -550,6 +550,19 @@ export class Player implements PlayerEntity {
       toggleHUDRequested = true;
     }
 
+    // R1 / RB REQUEST BALL TRIGGER
+    const reqPassTriggered = (isPressingRB && !this.prevRB) || (isPressingLB && !this.prevLB);
+    if (reqPassTriggered) {
+      const targetTeammate = teammates.find((t) => t.id !== this.id);
+      if (targetTeammate && targetTeammate.hasPossession) {
+        targetTeammate.executePassTo(this, ball);
+        this.triggerFeedback('⚡ REQUEST BALL!');
+        this.debugInputString = `⚡ R1 (RB) REQUEST BALL -> TEAMMATE PASSED TO ${this.name}!`;
+      } else {
+        this.triggerFeedback('⚡ REQUEST BALL!');
+      }
+    }
+
     const activeBtns: string[] = [];
     if (this.hasPossession) {
       if (isPressingA) activeBtns.push('A (Passing)');
@@ -561,6 +574,7 @@ export class Player implements PlayerEntity {
       else if (isPressingB) activeBtns.push('B (SLIDE TACKLE!)');
       if (isPressingA) activeBtns.push('A (Switch Defender)');
       if (isPressingY) activeBtns.push('Y (Press / Pressure)');
+      if (isPressingRB) activeBtns.push('R1 (Request Ball)');
     }
     if (this.isSprinting) activeBtns.push(`R2 (Sprint Stamina: ${Math.round(this.stamina * 100)}%)`);
     if (this.isExhausted) activeBtns.push('⚠️ EXHAUSTED!');
@@ -610,7 +624,7 @@ export class Player implements PlayerEntity {
       }
 
       // Y Button = Through Pass / Gocek
-      const isTriggeringGocek = (isPressingY && !this.prevY) || (isPressingRB && !this.prevRB);
+      const isTriggeringGocek = (isPressingY && !this.prevY);
       if (isTriggeringGocek) {
         this.isDribbleSkillActive = true;
         this.skillDodgeInvincibleTimer = 0.45;
@@ -640,16 +654,6 @@ export class Player implements PlayerEntity {
       } else {
         this.isChargingSlide = false;
         this.slidePower = 0;
-      }
-
-      // RB / R1 Button = Request Ball
-      const reqPassTriggered = (isPressingRB && !this.prevRB) || (isPressingLB && !this.prevLB);
-      if (reqPassTriggered) {
-        const targetTeammate = teammates.find((t) => t.id !== this.id);
-        if (targetTeammate) {
-          targetTeammate.executePassTo(this, ball);
-          this.debugInputString = `⚡ R1 (RB) REQUEST PASS -> PLAYER 2 PASSED TO PLAYER 1!`;
-        }
       }
     }
 
