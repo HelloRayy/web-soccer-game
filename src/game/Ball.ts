@@ -15,8 +15,9 @@ export class Ball {
   homingTargetPlayer: Player | null;
   throughPassTargetPos: Vector2D | null;
 
-  // Rolling Rotation Physics Angle
+  // Natural Rolling Rotation Angle & Roll Motion Direction
   rotationAngle: number;
+  rollDirAngle: number;
 
   // Micro-Touch Dribble Animation Timer
   private dribblePhase: number;
@@ -35,6 +36,7 @@ export class Ball {
     this.homingTargetPlayer = null;
     this.throughPassTargetPos = null;
     this.rotationAngle = 0;
+    this.rollDirAngle = 0;
     this.dribblePhase = 0;
 
     // Preload ion_football.svg Image
@@ -56,20 +58,23 @@ export class Ball {
     this.homingTargetPlayer = null;
     this.throughPassTargetPos = null;
     this.rotationAngle = 0;
+    this.rollDirAngle = 0;
     this.dribblePhase = 0;
   }
 
   /**
    * FIFA/PES Style Micro-Touch Dribble Attachment:
-   * Keeps a natural 14px micro-gap in front of player's feet with rolling rotation
+   * Keeps a natural 14px micro-gap in front of player's feet with subtle natural rolling
    */
   attachToPlayer(playerPos: Vector2D, facingAngle: number, playerRadius: number, playerVel: Vector2D, playerId: string) {
     this.attachedPlayerId = playerId;
     this.dribblePhase += 0.25;
 
-    // Rolling rotation angle advances proportionally as player dribbles
     const playerSpeed = Math.hypot(playerVel.x, playerVel.y);
-    this.rotationAngle += playerSpeed * 0.12;
+    if (playerSpeed > 0.1) {
+      this.rollDirAngle = Math.atan2(playerVel.y, playerVel.x);
+      this.rotationAngle += Math.min(0.08, playerSpeed * 0.025);
+    }
 
     // Micro-gap 14px ahead of player's feet
     const microGap = playerRadius + this.radius + 6 + Math.sin(this.dribblePhase) * 2;
@@ -95,6 +100,7 @@ export class Ball {
 
     this.vel.x = dir.x * power;
     this.vel.y = dir.y * power;
+    this.rollDirAngle = Math.atan2(dir.y, dir.x);
   }
 
   /**
@@ -119,6 +125,7 @@ export class Ball {
       const bounceSpeed = Math.max(5.5, Math.hypot(player.vel.x, player.vel.y) * 1.5);
       this.vel.x = nx * bounceSpeed + player.vel.x * 0.5;
       this.vel.y = ny * bounceSpeed + player.vel.y * 0.5;
+      this.rollDirAngle = Math.atan2(this.vel.y, this.vel.x);
 
       return true;
     }
@@ -131,10 +138,11 @@ export class Ball {
       this.releaseTimer -= dt;
     }
 
-    // Update rolling rotation angle based on ball movement speed
+    // Update natural subtle rolling rotation angle based on ball movement speed
     const currentSpeed = Math.hypot(this.vel.x, this.vel.y);
-    if (currentSpeed > 0.05) {
-      this.rotationAngle += (currentSpeed / this.radius) * 0.45;
+    if (currentSpeed > 0.1) {
+      this.rollDirAngle = Math.atan2(this.vel.y, this.vel.x);
+      this.rotationAngle += Math.min(0.08, (currentSpeed / this.radius) * 0.06);
     }
 
     // 1. Natural Grounded Pass Flight Acceleration
@@ -220,9 +228,12 @@ export class Ball {
     ctx.ellipse(this.pos.x + 3, this.pos.y + 4, this.radius, this.radius * 0.6, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 2. Render Rotating SVG Ball Image (src/assets/ion_football.svg)
+    // 2. Render Naturally Aligned Rolling SVG Ball Image (src/assets/ion_football.svg)
     ctx.save();
     ctx.translate(this.pos.x, this.pos.y);
+
+    // Align roll rotation with actual movement direction angle for 100% natural 2D rolling!
+    ctx.rotate(this.rollDirAngle);
     ctx.rotate(this.rotationAngle);
 
     if (Ball.ballImage && Ball.isImageLoaded) {
