@@ -65,6 +65,7 @@ export class Player implements PlayerEntity {
   // Patrol / Walking Simulation & AI Cooldown Timers
   private walkTimer: number;
   private aiGocekCooldownTimer: number;
+  private aiTackleCooldownTimer: number;
 
   // Previous button states for single-press edge detection
   private prevX: boolean;
@@ -273,20 +274,18 @@ export class Player implements PlayerEntity {
 
     if (this.stumbleTimer > 0) this.stumbleTimer -= 0.016;
     if (this.aiGocekCooldownTimer > 0) this.aiGocekCooldownTimer -= 0.016;
+    if (this.aiTackleCooldownTimer > 0) this.aiTackleCooldownTimer -= 0.016;
     if (this.dispossessProtectionTimer > 0) this.dispossessProtectionTimer -= 0.016;
     if (this.duelFeedbackTimer > 0) {
       this.duelFeedbackTimer -= 0.016;
       this.duelFeedbackYOffset += 0.4;
     }
 
-    const distToBall = Math.hypot(this.pos.x - ball.pos.x, this.pos.y - ball.pos.y);
-
     const teammateCarrier = teammates.find((t) => t.hasPossession);
     const opponentCarrier = opponents.find((opp) => opp.hasPossession);
-    const isLooseBall = !ball.attachedPlayerId && ball.releaseTimer <= 0;
 
     if (this.hasPossession) {
-      // 1. CARRIER BOT: Dribble towards Home Goal, shoot or pass
+      // 1. CARRIER BOT: Dribble towards Home Goal
       const targetGoal = field.goals.homeGoal;
       const targetY = targetGoal.top + (targetGoal.bottom - targetGoal.top) * 0.5;
 
@@ -303,11 +302,10 @@ export class Player implements PlayerEntity {
 
         ball.kick({ x: shootDirX, y: shootDirY }, shootPower, this.id);
         this.triggerFeedback('⚽ AI SHOOT!');
-      } else if (teammateCarrier === undefined && teammates.length > 0 && Math.random() < 0.012) {
-        // Smart AI Pass Option to open teammate
+      } else if (teammateCarrier === undefined && teammates.length > 0 && Math.random() < 0.010) {
         const openTeammate = teammates[0];
         const distToTm = Math.hypot(openTeammate.pos.x - this.pos.x, openTeammate.pos.y - this.pos.y);
-        if (distToTm > 160 && distToTm < 550) {
+        if (distToTm > 200 && distToTm < 600) {
           this.hasPossession = false;
           const passDirX = (openTeammate.pos.x - this.pos.x) / distToTm;
           const passDirY = (openTeammate.pos.y - this.pos.y) / distToTm;
@@ -337,7 +335,7 @@ export class Player implements PlayerEntity {
           moveY /= norm;
         }
 
-        const walkSpeed = this.speed * 0.55;
+        const walkSpeed = this.speed * 0.48;
         this.vel.x = moveX * walkSpeed;
         this.vel.y = moveY * walkSpeed;
 
@@ -346,23 +344,23 @@ export class Player implements PlayerEntity {
         ball.attachToPlayer(this.pos, this.facingAngle, this.radius, this.vel, this.id);
       }
     } else if (teammateCarrier) {
-      // 2. OFF-THE-BALL SUPPORT: Teammate has possession -> Make intelligent off-the-ball run!
-      const yOffset = (this.id === 'p4' ? 140 : -140);
+      // 2. OFF-THE-BALL SUPPORT: Run in wide parallel channels (yOffset = 260px)
+      const yOffset = (this.id === 'p4' ? 260 : -260);
       const targetRunX = Math.max(field.pitchBounds.left + 200, teammateCarrier.pos.x - 40);
-      const targetRunY = Math.max(field.pitchBounds.top + 100, Math.min(field.pitchBounds.bottom - 100, teammateCarrier.pos.y + yOffset));
+      const targetRunY = Math.max(field.pitchBounds.top + 120, Math.min(field.pitchBounds.bottom - 120, teammateCarrier.pos.y + yOffset));
 
       const dx = targetRunX - this.pos.x;
       const dy = targetRunY - this.pos.y;
       const dist = Math.hypot(dx, dy) || 1;
 
-      const runSpeed = dist > 40 ? this.speed * 0.60 : 0;
+      const runSpeed = dist > 40 ? this.speed * 0.52 : 0;
       this.vel.x = (dx / dist) * runSpeed;
       this.vel.y = (dy / dist) * runSpeed;
 
       const targetAngle = Math.atan2(field.goals.homeGoal.y - this.pos.y, field.goals.homeGoal.x - this.pos.x);
       this.facingAngle = lerpAngle(this.facingAngle, targetAngle, 0.18);
     } else if (opponentCarrier) {
-      // 3. DEFENDING OPPONENT: Closest bot presses & tackles, second bot covers line to goal
+      // 3. DEFENDING OPPONENT: One bot presses gently, second bot covers
       const isClosestToOpponent = teammates.every((t) => {
         const myDist = Math.hypot(opponentCarrier.pos.x - this.pos.x, opponentCarrier.pos.y - this.pos.y);
         const tDist = Math.hypot(opponentCarrier.pos.x - t.pos.x, opponentCarrier.pos.y - t.pos.y);
@@ -374,15 +372,16 @@ export class Player implements PlayerEntity {
         const dy = opponentCarrier.pos.y - this.pos.y;
         const dist = Math.hypot(dx, dy) || 1;
 
-        if (dist < 85 && !this.isTackling && this.stamina > 0.25) {
+        // Slide Tackle ONLY if very close (< 65px), rare chance (8%), and 4.0s cooldown!
+        if (dist < 65 && !this.isTackling && this.aiTackleCooldownTimer <= 0 && Math.random() < 0.08) {
           this.isTackling = true;
-          this.tackleTimer = 0.45;
+          this.tackleTimer = 0.40;
+          this.aiTackleCooldownTimer = 4.0; // 4.0s Cooldown!
           this.tackleSlideAngle = Math.atan2(dy, dx);
-          this.stamina = Math.max(0, this.stamina - 0.20);
           this.triggerFeedback('⚡ SLIDE TACKLE!');
         }
 
-        const chaseSpeed = this.speed * 0.75;
+        const chaseSpeed = this.speed * 0.52; // Fair, non-brutal chase speed!
         this.vel.x = (dx / dist) * chaseSpeed;
         this.vel.y = (dy / dist) * chaseSpeed;
         this.facingAngle = lerpAngle(this.facingAngle, Math.atan2(dy, dx), 0.22);
@@ -394,13 +393,13 @@ export class Player implements PlayerEntity {
         const dy = targetCoverY - this.pos.y;
         const dist = Math.hypot(dx, dy) || 1;
 
-        const coverSpeed = dist > 30 ? this.speed * 0.60 : 0;
+        const coverSpeed = dist > 40 ? this.speed * 0.48 : 0;
         this.vel.x = (dx / dist) * coverSpeed;
         this.vel.y = (dy / dist) * coverSpeed;
         this.facingAngle = lerpAngle(this.facingAngle, Math.atan2(dy, dx), 0.18);
       }
     } else {
-      // 4. LOOSE BALL CHASE: Only closest bot chases loose ball
+      // 4. LOOSE BALL CHASE: Only closest bot chases, other stays back
       const isClosestToBall = teammates.every((t) => {
         const myDist = Math.hypot(ball.pos.x - this.pos.x, ball.pos.y - this.pos.y);
         const tDist = Math.hypot(ball.pos.x - t.pos.x, ball.pos.y - t.pos.y);
@@ -412,23 +411,36 @@ export class Player implements PlayerEntity {
         const dy = ball.pos.y - this.pos.y;
         const dist = Math.hypot(dx, dy) || 1;
 
-        this.vel.x = (dx / dist) * this.speed * 0.85;
-        this.vel.y = (dy / dist) * this.speed * 0.85;
+        this.vel.x = (dx / dist) * this.speed * 0.65;
+        this.vel.y = (dy / dist) * this.speed * 0.65;
         this.facingAngle = lerpAngle(this.facingAngle, Math.atan2(dy, dx), 0.22);
       } else {
-        const yOffset = (this.id === 'p4' ? 120 : -120);
-        const targetX = ball.pos.x - 100;
+        const yOffset = (this.id === 'p4' ? 240 : -240);
+        const targetX = ball.pos.x - 140;
         const targetY = ball.pos.y + yOffset;
 
         const dx = targetX - this.pos.x;
         const dy = targetY - this.pos.y;
         const dist = Math.hypot(dx, dy) || 1;
 
-        this.vel.x = (dx / dist) * this.speed * 0.50;
-        this.vel.y = (dy / dist) * this.speed * 0.50;
+        this.vel.x = (dx / dist) * this.speed * 0.45;
+        this.vel.y = (dy / dist) * this.speed * 0.45;
         this.facingAngle = lerpAngle(this.facingAngle, Math.atan2(dy, dx), 0.18);
       }
     }
+
+    // Anti-Clumping Repulsion Vector between Bot Teammates
+    teammates.forEach((teammate) => {
+      const tmDist = Math.hypot(teammate.pos.x - this.pos.x, teammate.pos.y - this.pos.y);
+      if (tmDist < 260 && tmDist > 0) {
+        const repX = (this.pos.x - teammate.pos.x) / tmDist;
+        const repY = (this.pos.y - teammate.pos.y) / tmDist;
+        const repForce = (260 - tmDist) * 0.035;
+
+        this.vel.x += repX * repForce;
+        this.vel.y += repY * repForce;
+      }
+    });
 
     this.pos.x += this.vel.x;
     this.pos.y += this.vel.y;
