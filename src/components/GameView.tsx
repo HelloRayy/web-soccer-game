@@ -49,10 +49,11 @@ export const GameView: React.FC<GameViewProps> = ({
   const [goalBannerText, setGoalBannerText] = useState<string | null>(null);
   const remoteGamepadStateRef = useRef<GamepadState | null>(null);
 
-  // Smooth Camera Position Tracking State
+  // Smooth Camera Position & Dynamic Zoom Tracking State
   const cameraRef = useRef({
     x: WORLD_WIDTH * 0.5,
-    y: WORLD_HEIGHT * 0.5
+    y: WORLD_HEIGHT * 0.5,
+    zoom: 0.85
   });
 
   // Core Game Engine instances
@@ -375,21 +376,57 @@ export const GameView: React.FC<GameViewProps> = ({
       // 7. Update Ball Physics
       ball.update(dt, field);
 
-      // 8. Tactical Broadcast Camera Target
-      const p1Pos = players[0] ? players[0].pos : ball.pos;
-      const targetCamX = p1Pos.x * 0.60 + ball.pos.x * 0.40;
-      const targetCamY = p1Pos.y * 0.60 + ball.pos.y * 0.40;
+      // 8. Dynamic Multi-Player Broadcast Camera Tracking & Auto-Zoom
+      let minX = ball.pos.x;
+      let maxX = ball.pos.x;
+      let minY = ball.pos.y;
+      let maxY = ball.pos.y;
+      let sumX = ball.pos.x * 1.5;
+      let sumY = ball.pos.y * 1.5;
+      let totalWeight = 1.5;
 
-      cameraRef.current.x = cameraRef.current.x * 0.92 + targetCamX * 0.08;
-      cameraRef.current.y = cameraRef.current.y * 0.92 + targetCamY * 0.08;
+      players.forEach((p) => {
+        minX = Math.min(minX, p.pos.x);
+        maxX = Math.max(maxX, p.pos.x);
+        minY = Math.min(minY, p.pos.y);
+        maxY = Math.max(maxY, p.pos.y);
+        sumX += p.pos.x;
+        sumY += p.pos.y;
+        totalWeight += 1.0;
+      });
+
+      const centerX = sumX / totalWeight;
+      const centerY = sumY / totalWeight;
+
+      const spanX = maxX - minX;
+      const spanY = maxY - minY;
+
+      const viewW = dimensions.width;
+      const viewH = dimensions.height;
+
+      const paddingX = 260;
+      const paddingY = 200;
+      const requiredZoomX = viewW / (spanX + paddingX);
+      const requiredZoomY = viewH / (spanY + paddingY);
+      const calculatedZoom = Math.min(requiredZoomX, requiredZoomY);
+
+      // Clamp dynamic zoom between 0.52 (wide view for distant players) and 0.88 (close-up)
+      const targetZoom = Math.max(0.52, Math.min(0.88, calculatedZoom));
+
+      // Smooth Lerp Camera Position & Dynamic Zoom
+      cameraRef.current.x = cameraRef.current.x * 0.92 + centerX * 0.08;
+      cameraRef.current.y = cameraRef.current.y * 0.92 + centerY * 0.08;
+      cameraRef.current.zoom = cameraRef.current.zoom * 0.94 + targetZoom * 0.06;
     }
 
     setMatchState({ ...rules.state });
 
     const viewW = dimensions.width;
     const viewH = dimensions.height;
-    const halfVisibleW = viewW / (2 * CAMERA_ZOOM);
-    const halfVisibleH = viewH / (2 * CAMERA_ZOOM);
+    const currentZoom = cameraRef.current.zoom;
+
+    const halfVisibleW = viewW / (2 * currentZoom);
+    const halfVisibleH = viewH / (2 * currentZoom);
 
     const clampedCamX = Math.max(halfVisibleW, Math.min(WORLD_WIDTH - halfVisibleW, cameraRef.current.x));
     const clampedCamY = Math.max(halfVisibleH, Math.min(WORLD_HEIGHT - halfVisibleH, cameraRef.current.y));
@@ -399,7 +436,7 @@ export const GameView: React.FC<GameViewProps> = ({
 
     ctx.save();
     ctx.translate(viewW / 2, viewH / 2);
-    ctx.scale(CAMERA_ZOOM, CAMERA_ZOOM);
+    ctx.scale(currentZoom, currentZoom);
     ctx.translate(-clampedCamX, -clampedCamY);
 
     field.draw(ctx);
