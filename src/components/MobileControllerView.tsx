@@ -120,9 +120,9 @@ export const MobileControllerView: React.FC = () => {
           lsClick: false,
           rsClick: false,
         },
-      });
+      }, roomId);
     }
-  }, [isConnected]);
+  }, [isConnected, roomId]);
 
   // Dynamic Floating Joystick Handlers (Spawns on Pointer Down anywhere on left half)
   const handleLeftZonePointerDown = (e: React.PointerEvent) => {
