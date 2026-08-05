@@ -589,12 +589,9 @@ export class Player implements PlayerEntity {
         this.spawnTurfParticle(currentSpeed / this.speed);
       }
     } else {
-      this.vel.x *= 0.78;
-      this.vel.y *= 0.78;
-      this.bodyTiltAngle *= 0.80;
-
-      if (Math.abs(this.vel.x) < 0.05) this.vel.x = 0;
-      if (Math.abs(this.vel.y) < 0.05) this.vel.y = 0;
+      this.vel.x = 0;
+      this.vel.y = 0;
+      this.bodyTiltAngle = 0;
     }
 
     this.pos.x += this.vel.x;
