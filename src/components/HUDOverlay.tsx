@@ -11,6 +11,7 @@ interface HUDOverlayProps {
   onToggleMode: (mode: '1v1_local' | '2v2_coop') => void;
   peerRoomId?: string;
   isPeerConnected?: boolean;
+  goalBannerText?: string | null;
 }
 
 export const HUDOverlay: React.FC<HUDOverlayProps> = ({
@@ -20,6 +21,7 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
   onResetMatch,
   peerRoomId = '8492',
   isPeerConnected = false,
+  goalBannerText = null,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
@@ -153,24 +155,60 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
           </button>
         </div>
 
-        {/* High-Contrast Clear Live Debug Input Text Banner */}
+        {/* Compact Neon Text Pill Live Input Banner (Autohide / Shrink on Idle) */}
         {showHUD && (
-          <div className="max-w-xl w-full flex flex-col gap-2 mt-1 pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-150">
-            <div className="bg-slate-900/95 border-2 border-cyan-400/80 rounded-xl px-5 py-2.5 font-mono text-xs text-cyan-300 flex items-center justify-between shadow-2xl backdrop-blur-xl">
-              <span className="font-extrabold tracking-wide">
-                ⚡ [LIVE INPUT]:{' '}
-                <span className="text-emerald-300 font-bold bg-slate-950 border border-emerald-500/50 px-2.5 py-0.5 rounded-md ml-1 shadow-inner">
-                  {matchState.debugInputText || 'Menunggu Tombol Controller...'}
+          <div className="flex flex-col items-center gap-1.5 mt-0.5 pointer-events-auto transition-all duration-200">
+            {matchState.debugInputText && !matchState.debugInputText.includes('Menunggu') ? (
+              /* Active Input Glow Badge */
+              <div className="bg-[#0b0f0c]/95 border-2 border-cyan-400/90 px-4 py-1.5 rounded-full text-cyan-300 font-mono text-xs font-extrabold tracking-wide backdrop-blur-xl transition-all duration-150 flex items-center gap-2 shadow-2xl shadow-cyan-500/30 animate-in fade-in zoom-in-95">
+                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400 animate-pulse" />
+                <span className="text-emerald-300 font-bold bg-slate-950/90 border border-emerald-500/60 px-3 py-0.5 rounded-lg shadow-inner">
+                  {matchState.debugInputText}
                 </span>
-              </span>
-              <span className="text-slate-400 text-[11px] font-semibold">
-                {isPeerConnected ? '📱 HP Remote Connected!' : 'P1 Ctrl 0 | P2 Teammate'}
-              </span>
-            </div>
+                <span className="text-slate-400 text-[10px] font-semibold ml-1">
+                  {isPeerConnected ? '📱 HP Remote' : '🎮 Xbox Ctrl'}
+                </span>
+              </div>
+            ) : (
+              /* Idle Subtle Ready Pill */
+              <div className="bg-[#0b0f0c]/60 border border-slate-800/80 px-3 py-0.5 rounded-full text-slate-500 font-mono text-[11px] font-medium tracking-wider backdrop-blur-md transition-all duration-300 flex items-center gap-1.5 shadow-sm opacity-75 hover:opacity-100">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/60" />
+                <span>[READY]</span>
+              </div>
+            )}
 
-            <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-1.5 font-mono text-[11px] text-slate-300 flex items-center justify-between shadow-xl backdrop-blur-md">
-              <span className="font-semibold text-slate-200">[LOG]: {matchState.logMessage}</span>
-              <span className="text-amber-400 font-bold">RB/R1/LB = ReqPass | Start = HUD</span>
+            {/* Sub-log Bar */}
+            {matchState.logMessage && (
+              <div className="bg-[#0b0f0c]/80 border border-slate-800/90 rounded-lg px-3 py-0.5 font-mono text-[10px] text-slate-400 flex items-center gap-3 shadow-md backdrop-blur-md">
+                <span className="font-medium text-slate-300">[LOG]: {matchState.logMessage}</span>
+                <span className="text-amber-400/90 font-semibold hidden sm:inline">RB/R1/LB = ReqPass</span>
+              </div>
+            )}
+
+            {/* Keyboard Controls Quick Legend */}
+            <div className="bg-[#0b0f0c]/85 border border-slate-800/90 rounded-lg px-3 py-0.5 font-mono text-[10px] text-slate-300 flex flex-wrap items-center justify-center gap-2 shadow-md backdrop-blur-md">
+              <span className="text-cyan-400 font-bold flex items-center gap-1">⌨️ Keyboard:</span>
+              <span><strong className="text-emerald-400">WASD</strong> Move</span>
+              <span>•</span>
+              <span><strong className="text-emerald-400">J</strong> Pass</span>
+              <span>•</span>
+              <span><strong className="text-cyan-400">K</strong> Shoot</span>
+              <span>•</span>
+              <span><strong className="text-amber-400">L</strong> Through</span>
+              <span>•</span>
+              <span><strong className="text-teal-400">Shift</strong> Sprint</span>
+            </div>
+          </div>
+        )}
+
+        {/* 2-Second Goal Celebration Banner Overlay */}
+        {goalBannerText && (
+          <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center p-4">
+            <div className="bg-[#0b0f0c]/95 border-4 border-emerald-400 px-10 py-6 rounded-3xl shadow-2xl backdrop-blur-2xl flex flex-col items-center gap-2 animate-in zoom-in-75 duration-200">
+              <span className="text-6xl animate-bounce">⚽</span>
+              <span className="text-3xl font-black text-emerald-400 font-mono tracking-wider drop-shadow-xl">
+                {goalBannerText}
+              </span>
             </div>
           </div>
         )}
@@ -183,19 +221,23 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
                 ⚽
               </div>
 
-              <h2 className="text-2xl font-extrabold text-slate-100 tracking-tight">GAME OVER</h2>
+              <h2 className="text-2xl font-extrabold text-slate-100 tracking-tight">FULL TIME - GAME OVER</h2>
               <p className="text-lg font-bold text-emerald-400 font-mono">{matchState.winnerTitle}</p>
 
               <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 w-full text-center font-mono text-sm">
-                <div className="text-slate-500 text-xs font-bold">TOTAL GOALS SCORED</div>
-                <div className="text-cyan-400 font-extrabold text-3xl mt-1">{matchState.scoreHome}</div>
+                <div className="text-slate-500 text-xs font-bold mb-1.5">SKOR AKHIR PERTANDINGAN</div>
+                <div className="text-3xl font-black tracking-wider flex items-center justify-center gap-4">
+                  <span className="text-red-500">{matchState.scoreHome}</span>
+                  <span className="text-slate-400">-</span>
+                  <span className="text-blue-400">{matchState.scoreAway}</span>
+                </div>
               </div>
 
               <button
                 onClick={onResetMatch}
                 className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-extrabold rounded-xl text-sm shadow-xl hover:brightness-110 transition cursor-pointer"
               >
-                🎮 Reset Arena
+                🎮 Reset Pertandingan
               </button>
             </div>
           </div>

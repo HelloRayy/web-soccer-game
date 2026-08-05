@@ -82,7 +82,7 @@ export class Player implements PlayerEntity {
     this.pos = { x: startX, y: startY };
     this.vel = { x: 0, y: 0 };
     this.radius = 18;
-    this.speed = 4.2;
+    this.speed = 3.2;
     this.color = color;
     this.facingAngle = team === 'home' ? 0 : Math.PI;
     this.isSprinting = false;
@@ -491,7 +491,8 @@ export class Player implements PlayerEntity {
       }
     }
 
-    const currentSpeed = (this.isSprinting ? this.speed * 1.6 : this.speed) * moveMultiplier;
+    const dribbleMultiplier = this.hasPossession ? 0.88 : 1.0;
+    const currentSpeed = (this.isSprinting ? this.speed * 1.45 : this.speed) * moveMultiplier * dribbleMultiplier;
     const stickMagnitude = Math.hypot(moveX, moveY);
 
     let aimAngle = this.facingAngle;
@@ -554,12 +555,11 @@ export class Player implements PlayerEntity {
     const reqPassTriggered = (isPressingRB && !this.prevRB) || (isPressingLB && !this.prevLB);
     if (reqPassTriggered) {
       const targetTeammate = teammates.find((t) => t.id !== this.id);
+      this.triggerFeedback('🙋 PASS SINI!');
+      this.debugInputString = `🙋 R1 (RB/E/R) REQUEST BALL -> ${this.name}!`;
+
       if (targetTeammate && targetTeammate.hasPossession) {
         targetTeammate.executePassTo(this, ball);
-        this.triggerFeedback('⚡ REQUEST BALL!');
-        this.debugInputString = `⚡ R1 (RB) REQUEST BALL -> TEAMMATE PASSED TO ${this.name}!`;
-      } else {
-        this.triggerFeedback('⚡ REQUEST BALL!');
       }
     }
 
@@ -812,16 +812,61 @@ export class Player implements PlayerEntity {
 
     if (this.duelFeedbackTimer > 0) {
       ctx.save();
-      ctx.globalAlpha = Math.min(1.0, this.duelFeedbackTimer * 1.5);
-      ctx.fillStyle = this.duelFeedbackText.includes('EXHAUSTED') ? '#ef4444' : this.duelFeedbackText.includes('GOCEK') ? '#fbbf24' : '#06b6d4';
-      ctx.font = '900 16px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 3.5;
+      const alpha = Math.min(1.0, this.duelFeedbackTimer * 1.5);
+      ctx.globalAlpha = alpha;
 
-      const animY = this.pos.y - 32 - this.radius - this.duelFeedbackYOffset;
-      ctx.strokeText(this.duelFeedbackText, this.pos.x, animY);
-      ctx.fillText(this.duelFeedbackText, this.pos.x, animY);
+      const isPassReq = this.duelFeedbackText.includes('PASS SINI') || this.duelFeedbackText.includes('REQUEST');
+
+      if (isPassReq) {
+        // Render 2D Speech Bubble for Request Ball Callout
+        const animY = this.pos.y - 36 - this.radius - this.duelFeedbackYOffset;
+        const text = '🙋 PASS SINI!';
+        ctx.font = '900 13px sans-serif';
+        const textWidth = ctx.measureText(text).width;
+        const bubbleW = textWidth + 24;
+        const bubbleH = 26;
+        const bubbleX = this.pos.x - bubbleW / 2;
+        const bubbleY = animY - bubbleH;
+
+        // Glowing Shadow & Dark Card
+        ctx.shadowColor = '#10b981';
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = 'rgba(11, 15, 12, 0.95)';
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+        ctx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        // Tail Pointer
+        ctx.fillStyle = '#10b981';
+        ctx.beginPath();
+        ctx.moveTo(this.pos.x - 5, bubbleY + bubbleH);
+        ctx.lineTo(this.pos.x + 5, bubbleY + bubbleH);
+        ctx.lineTo(this.pos.x, bubbleY + bubbleH + 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // Speech Bubble Text
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#34d399';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, this.pos.x, bubbleY + bubbleH / 2);
+      } else {
+        ctx.fillStyle = this.duelFeedbackText.includes('EXHAUSTED') ? '#ef4444' : this.duelFeedbackText.includes('GOCEK') ? '#fbbf24' : '#06b6d4';
+        ctx.font = '900 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3.5;
+
+        const animY = this.pos.y - 32 - this.radius - this.duelFeedbackYOffset;
+        ctx.strokeText(this.duelFeedbackText, this.pos.x, animY);
+        ctx.fillText(this.duelFeedbackText, this.pos.x, animY);
+      }
+
       ctx.restore();
     }
   }

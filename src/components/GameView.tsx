@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useGamepad } from '../hooks/useGamepad';
+import { useKeyboardInput } from '../hooks/useKeyboardInput';
 import { useGameLoop } from '../hooks/useGameLoop';
 import { Field } from '../game/Field';
 import { Ball } from '../game/Ball';
@@ -18,6 +19,7 @@ const CAMERA_ZOOM = 0.92;
 export const GameView: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const { gamepads } = useGamepad();
+  const keyboardGamepadState = useKeyboardInput();
 
   // Screen Viewport dimensions
   const [dimensions, setDimensions] = useState({
@@ -35,6 +37,7 @@ export const GameView: React.FC = () => {
   // WebRTC PeerJS Smartphone Remote Controller State
   const [peerRoomId, setPeerRoomId] = useState('8492');
   const [isPeerConnected, setIsPeerConnected] = useState(false);
+  const [goalBannerText, setGoalBannerText] = useState<string | null>(null);
   const peerServiceRef = useRef<HostPeerService | null>(null);
   const remoteGamepadStateRef = useRef<GamepadState | null>(null);
 
@@ -195,7 +198,11 @@ export const GameView: React.FC = () => {
     // 1. Update Match Rules & Timer
     const goalScored = rules.update(dt, ball, field);
     if (goalScored) {
-      resetMatchPositions();
+      setGoalBannerText('⚽ GOAL SCORED!');
+      setTimeout(() => {
+        resetMatchPositions();
+        setGoalBannerText(null);
+      }, 1500);
     }
 
     if (rules.state.state !== 'GAME_OVER') {
@@ -204,16 +211,34 @@ export const GameView: React.FC = () => {
         const teammates = players.filter((p) => p.team === player.team && p.id !== player.id);
         const opponents = players.filter((p) => p.team !== player.team);
 
-        if (player.id === 'p1' && remoteGamepadStateRef.current && isPeerConnected) {
-          const remoteGp = remoteGamepadStateRef.current;
-          const { toggleHUDRequested } = player.updateFromGamepad(remoteGp, ball, field, teammates, opponents);
-          if (toggleHUDRequested) {
-            setShowHUD((prev) => !prev);
+        const isKeyboardActive =
+          keyboardGamepadState.axes.leftStickX !== 0 ||
+          keyboardGamepadState.axes.leftStickY !== 0 ||
+          keyboardGamepadState.buttons.a ||
+          keyboardGamepadState.buttons.b ||
+          keyboardGamepadState.buttons.x ||
+          keyboardGamepadState.buttons.y ||
+          keyboardGamepadState.buttons.rt > 0 ||
+          keyboardGamepadState.buttons.lb ||
+          keyboardGamepadState.buttons.rb;
+
+        let activeGp: GamepadState | null = null;
+        if (player.id === 'p1') {
+          if (isKeyboardActive) {
+            activeGp = keyboardGamepadState;
+          } else if (remoteGamepadStateRef.current && isPeerConnected) {
+            activeGp = remoteGamepadStateRef.current;
+          } else if (player.controllerIndex !== null && gamepads[player.controllerIndex]) {
+            activeGp = gamepads[player.controllerIndex];
+          } else {
+            activeGp = keyboardGamepadState;
           }
         } else if (player.controllerIndex !== null && gamepads[player.controllerIndex]) {
-          const gp = gamepads[player.controllerIndex];
-          const { toggleHUDRequested } = player.updateFromGamepad(gp, ball, field, teammates, opponents);
+          activeGp = gamepads[player.controllerIndex];
+        }
 
+        if (activeGp) {
+          const { toggleHUDRequested } = player.updateFromGamepad(activeGp, ball, field, teammates, opponents);
           if (toggleHUDRequested) {
             setShowHUD((prev) => !prev);
           }
@@ -495,6 +520,7 @@ export const GameView: React.FC = () => {
         onToggleMode={handleToggleMode}
         peerRoomId={peerRoomId}
         isPeerConnected={isPeerConnected}
+        goalBannerText={goalBannerText}
       />
 
       <canvas
