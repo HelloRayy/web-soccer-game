@@ -1,13 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { GamepadState } from '../types/game';
 
-export function useKeyboardInput(): GamepadState {
+export interface DualKeyboardState {
+  p1Input: GamepadState;
+  p2Input: GamepadState;
+}
+
+export function useKeyboardInput(): DualKeyboardState {
   const keysPressedRef = useRef<{ [key: string]: boolean }>({});
   const [, setTick] = useState(0);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Prevent page scrolling on Space / Arrow keys
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
         e.preventDefault();
       }
@@ -38,55 +42,91 @@ export function useKeyboardInput(): GamepadState {
 
   const keys = keysPressedRef.current;
 
-  // WASD / Arrow Keys Movement Vector Calculation
-  let moveX = 0;
-  let moveY = 0;
+  // --- P1 CONTROLS: WASD + J/K/L/Space/Shift ---
+  let p1MoveX = 0;
+  let p1MoveY = 0;
+  if (keys['keyw']) p1MoveY -= 1;
+  if (keys['keys']) p1MoveY += 1;
+  if (keys['keya']) p1MoveX -= 1;
+  if (keys['keyd']) p1MoveX += 1;
 
-  if (keys['keyw'] || keys['arrowup']) moveY -= 1;
-  if (keys['keys'] || keys['arrowdown']) moveY += 1;
-  if (keys['keya'] || keys['arrowleft']) moveX -= 1;
-  if (keys['keyd'] || keys['arrowright']) moveX += 1;
-
-  // Normalize diagonal movement vector
-  if (moveX !== 0 && moveY !== 0) {
-    const len = Math.sqrt(moveX * moveX + moveY * moveY);
-    moveX /= len;
-    moveY /= len;
+  if (p1MoveX !== 0 && p1MoveY !== 0) {
+    const len = Math.sqrt(p1MoveX * p1MoveX + p1MoveY * p1MoveY);
+    p1MoveX /= len;
+    p1MoveY /= len;
   }
 
-  // Key Mappings
-  const isA = !!(keys['keyj'] || keys['numpad1']);
-  const isX = !!(keys['keyk'] || keys['numpad2']);
-  const isY = !!(keys['keyl'] || keys['numpad3']);
-  const isB = !!(keys['space'] || keys['numpad0']);
-  const isSprint = !!(keys['shiftleft'] || keys['shiftright'] || keys['keyi']);
-  const isLB = !!(keys['keye']);
-  const isRB = !!(keys['keyr']);
+  const p1A = !!keys['keyj'];
+  const p1X = !!keys['keyk'];
+  const p1Y = !!keys['keyl'];
+  const p1B = !!keys['space'];
+  const p1Sprint = !!keys['shiftleft'];
+  const p1RB = !!(keys['keye'] || keys['keyr']);
+
+  // --- P2 CONTROLS: Arrow Keys + Numpad / N/M/,/. ---
+  let p2MoveX = 0;
+  let p2MoveY = 0;
+  if (keys['arrowup']) p2MoveY -= 1;
+  if (keys['arrowdown']) p2MoveY += 1;
+  if (keys['arrowleft']) p2MoveX -= 1;
+  if (keys['arrowright']) p2MoveX += 1;
+
+  if (p2MoveX !== 0 && p2MoveY !== 0) {
+    const len = Math.sqrt(p2MoveX * p2MoveX + p2MoveY * p2MoveY);
+    p2MoveX /= len;
+    p2MoveY /= len;
+  }
+
+  const p2A = !!(keys['numpad1'] || keys['keyn']);
+  const p2X = !!(keys['numpad2'] || keys['keym']);
+  const p2Y = !!(keys['numpad3'] || keys['comma']);
+  const p2B = !!(keys['numpad0'] || keys['period']);
+  const p2Sprint = !!(keys['shiftright'] || keys['controlright']);
+  const p2RB = !!keys['numpad7'];
+
   const isStart = !!(keys['escape'] || keys['enter']);
 
-  return {
+  const p1Input: GamepadState = {
     index: 88,
-    id: 'Laptop Keyboard Input',
+    id: 'P1 Laptop Keyboard',
     connected: true,
-    axes: {
-      leftStickX: moveX,
-      leftStickY: moveY,
-      rightStickX: 0,
-      rightStickY: 0,
-    },
+    axes: { leftStickX: p1MoveX, leftStickY: p1MoveY, rightStickX: 0, rightStickY: 0 },
     buttons: {
-      a: isA,
-      b: isB,
-      x: isX,
-      y: isY,
-      lb: isLB,
-      rb: isRB,
+      a: p1A,
+      b: p1B,
+      x: p1X,
+      y: p1Y,
+      lb: false,
+      rb: p1RB,
       lt: 0,
-      rt: isSprint ? 1.0 : 0,
+      rt: p1Sprint ? 1.0 : 0,
       back: false,
       start: isStart,
       lsClick: false,
       rsClick: false,
     },
   };
+
+  const p2Input: GamepadState = {
+    index: 89,
+    id: 'P2 Keyboard / Numpad',
+    connected: true,
+    axes: { leftStickX: p2MoveX, leftStickY: p2MoveY, rightStickX: 0, rightStickY: 0 },
+    buttons: {
+      a: p2A,
+      b: p2B,
+      x: p2X,
+      y: p2Y,
+      lb: false,
+      rb: p2RB,
+      lt: 0,
+      rt: p2Sprint ? 1.0 : 0,
+      back: false,
+      start: false,
+      lsClick: false,
+      rsClick: false,
+    },
+  };
+
+  return { p1Input, p2Input };
 }

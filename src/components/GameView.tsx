@@ -31,7 +31,7 @@ export const GameView: React.FC<GameViewProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const { gamepads } = useGamepad();
-  const keyboardGamepadState = useKeyboardInput();
+  const { p1Input, p2Input } = useKeyboardInput();
 
   // Screen Viewport dimensions
   const [dimensions, setDimensions] = useState({
@@ -193,33 +193,34 @@ export const GameView: React.FC<GameViewProps> = ({
         const teammates = players.filter((p) => p.team === player.team && p.id !== player.id);
         const opponents = players.filter((p) => p.team !== player.team);
 
-        const isKeyboardActive =
-          keyboardGamepadState.axes.leftStickX !== 0 ||
-          keyboardGamepadState.axes.leftStickY !== 0 ||
-          keyboardGamepadState.buttons.a ||
-          keyboardGamepadState.buttons.b ||
-          keyboardGamepadState.buttons.x ||
-          keyboardGamepadState.buttons.y ||
-          keyboardGamepadState.buttons.rt > 0 ||
-          keyboardGamepadState.buttons.lb ||
-          keyboardGamepadState.buttons.rb;
-
         let activeGp: GamepadState | null = null;
         if (player.id === 'p1') {
-          if (isKeyboardActive) {
-            activeGp = keyboardGamepadState;
-          } else if (remoteGamepadStateRef.current && isPeerConnected) {
-            activeGp = remoteGamepadStateRef.current;
-          } else if (player.controllerIndex !== null && gamepads[player.controllerIndex]) {
-            activeGp = gamepads[player.controllerIndex];
+          const isP1KeyboardActive =
+            p1Input.axes.leftStickX !== 0 ||
+            p1Input.axes.leftStickY !== 0 ||
+            p1Input.buttons.a || p1Input.buttons.b || p1Input.buttons.x || p1Input.buttons.y || p1Input.buttons.rt > 0;
+
+          if (isP1KeyboardActive) {
+            activeGp = p1Input;
+          } else if (gamepads[0]) {
+            activeGp = gamepads[0];
           } else {
-            activeGp = keyboardGamepadState;
+            activeGp = p1Input;
           }
         } else if (player.id === 'p2') {
+          const isP2KeyboardActive =
+            p2Input.axes.leftStickX !== 0 ||
+            p2Input.axes.leftStickY !== 0 ||
+            p2Input.buttons.a || p2Input.buttons.b || p2Input.buttons.x || p2Input.buttons.y || p2Input.buttons.rt > 0;
+
           if (remoteGamepadStateRef.current && isPeerConnected) {
             activeGp = remoteGamepadStateRef.current;
-          } else if (player.controllerIndex !== null && gamepads[player.controllerIndex]) {
-            activeGp = gamepads[player.controllerIndex];
+          } else if (isP2KeyboardActive) {
+            activeGp = p2Input;
+          } else if (gamepads[1]) {
+            activeGp = gamepads[1];
+          } else {
+            activeGp = p2Input;
           }
         }
 
