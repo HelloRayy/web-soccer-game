@@ -70,32 +70,40 @@ export class Ball {
     this.attachedPlayerId = playerId;
     const playerSpeed = Math.hypot(playerVel.x, playerVel.y);
 
-    const phaseInc = playerSpeed > 3.8 ? 0.35 : 0.20;
-    this.dribblePhase += phaseInc;
-
     if (playerSpeed > 0.1) {
+      const phaseInc = playerSpeed > 3.8 ? 0.35 : 0.20;
+      this.dribblePhase += phaseInc;
       this.rollDirAngle = Math.atan2(playerVel.y, playerVel.x);
       this.rotationAngle += Math.min(0.12, playerSpeed * 0.035);
+
+      // FIFA/PES Micro-Touch Push Gap:
+      // Walking: 12-16px gap ahead of feet
+      // Sprinting: 24-34px soft push gap ahead
+      const isSprinting = playerSpeed > 4.0;
+      const baseGap = isSprinting ? playerRadius + this.radius + 18 : playerRadius + this.radius + 7;
+      const microTouchPush = Math.sin(this.dribblePhase) * (isSprinting ? 8 : 3);
+      const microGap = baseGap + microTouchPush;
+
+      const targetX = playerPos.x + Math.cos(facingAngle) * microGap;
+      const targetY = playerPos.y + Math.sin(facingAngle) * microGap;
+
+      // Organic Lerp Follow: Soft follow speed when sprinting for realistic ball touches
+      const lerpRate = isSprinting ? 0.35 : 0.50;
+      this.pos.x = this.pos.x * (1 - lerpRate) + targetX * lerpRate;
+      this.pos.y = this.pos.y * (1 - lerpRate) + targetY * lerpRate;
+
+      this.vel.x = playerVel.x;
+      this.vel.y = playerVel.y;
+    } else {
+      // Player is standing still / idle -> Ball rests firmly at feet without oscillation
+      this.dribblePhase = 0;
+      const restGap = playerRadius + this.radius + 6;
+      this.pos.x = playerPos.x + Math.cos(facingAngle) * restGap;
+      this.pos.y = playerPos.y + Math.sin(facingAngle) * restGap;
+
+      this.vel.x = 0;
+      this.vel.y = 0;
     }
-
-    // FIFA/PES Micro-Touch Push Gap:
-    // Walking: 12-16px gap ahead of feet
-    // Sprinting: 24-34px soft push gap ahead
-    const isSprinting = playerSpeed > 4.0;
-    const baseGap = isSprinting ? playerRadius + this.radius + 18 : playerRadius + this.radius + 7;
-    const microTouchPush = Math.sin(this.dribblePhase) * (isSprinting ? 8 : 3);
-    const microGap = baseGap + microTouchPush;
-
-    const targetX = playerPos.x + Math.cos(facingAngle) * microGap;
-    const targetY = playerPos.y + Math.sin(facingAngle) * microGap;
-
-    // Organic Lerp Follow: Soft follow speed when sprinting for realistic ball touches
-    const lerpRate = isSprinting ? 0.35 : 0.50;
-    this.pos.x = this.pos.x * (1 - lerpRate) + targetX * lerpRate;
-    this.pos.y = this.pos.y * (1 - lerpRate) + targetY * lerpRate;
-
-    this.vel.x = playerVel.x;
-    this.vel.y = playerVel.y;
   }
 
   /**
