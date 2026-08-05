@@ -61,8 +61,9 @@ export class Player implements PlayerEntity {
   // Debug State Tracker
   debugInputString: string;
 
-  // Patrol / Walking Simulation Timer
+  // Patrol / Walking Simulation & AI Cooldown Timers
   private walkTimer: number;
+  private aiGocekCooldownTimer: number;
 
   // Previous button states for single-press edge detection
   private prevX: boolean;
@@ -144,6 +145,7 @@ export class Player implements PlayerEntity {
     this.duelFeedbackTimer = 0;
     this.duelFeedbackYOffset = 0;
     this.dribbleSpinAngle = 0;
+    this.aiGocekCooldownTimer = 0;
 
     this.debugInputString = 'RESET - Position Cleared';
     this.prevX = false;
@@ -240,15 +242,9 @@ export class Player implements PlayerEntity {
     this.updateParticles();
 
     if (!this.isSprinting) {
-      this.stamina = Math.min(1.0, this.stamina + 0.003);
+      this.stamina = Math.min(1.0, this.stamina + 0.0025);
       if (this.isExhausted && this.stamina >= 0.20) {
         this.isExhausted = false;
-      }
-    } else {
-      this.stamina = Math.max(0, this.stamina - 0.0035);
-      if (this.stamina === 0) {
-        this.isExhausted = true;
-        this.isSprinting = false;
       }
     }
 
@@ -263,13 +259,14 @@ export class Player implements PlayerEntity {
 
     if (this.skillDodgeInvincibleTimer > 0) {
       this.skillDodgeInvincibleTimer -= 0.016;
-      this.dribbleSpinAngle += 0.38;
+      this.dribbleSpinAngle += 0.35;
     } else {
       this.isDribbleSkillActive = false;
       this.dribbleSpinAngle = 0;
     }
 
     if (this.stumbleTimer > 0) this.stumbleTimer -= 0.016;
+    if (this.aiGocekCooldownTimer > 0) this.aiGocekCooldownTimer -= 0.016;
     if (this.duelFeedbackTimer > 0) {
       this.duelFeedbackTimer -= 0.016;
       this.duelFeedbackYOffset += 0.4;
@@ -285,87 +282,61 @@ export class Player implements PlayerEntity {
       const dyToGoal = targetY - this.pos.y;
       const distToGoal = Math.hypot(dxToGoal, dyToGoal) || 1;
 
-      // 1. AI PRECISION SHOOTING INTEL (< 450px Range)
-      if (distToGoal < 450 && ball.releaseTimer <= 0) {
+      // 1. AI SHOOTING INTEL: If within 380px from Home Goal, shoot!
+      if (distToGoal < 380 && ball.releaseTimer <= 0) {
         this.hasPossession = false;
-        this.isSprinting = false;
-        const shootPower = 11.5;
-        const topOrBottomCorner = Math.random() > 0.5 ? targetGoal.top + 30 : targetGoal.bottom - 30;
-        const aimY = topOrBottomCorner - this.pos.y;
-        const shootDist = Math.hypot(dxToGoal, aimY) || 1;
+        const shootPower = 11.0;
+        const aimOffset = (Math.random() - 0.5) * 40;
+        const shootDirX = dxToGoal / distToGoal;
+        const shootDirY = (dyToGoal + aimOffset) / distToGoal;
 
-        ball.kick({ x: dxToGoal / shootDist, y: aimY / shootDist }, shootPower, this.id);
-        this.triggerFeedback('⚽ POWER SHOOT!');
-        this.debugInputString = '⚽ P3 PRO AI SHOOT AT CORNER GOAL!';
+        ball.kick({ x: shootDirX, y: shootDirY }, shootPower, this.id);
+        this.triggerFeedback('⚽ SHOOT!');
+        this.debugInputString = '⚽ P3 AI SHOOT AT GOAL!';
       } else {
-        // 2. PRO 250px RAYCAST OBSTACLE SCANNER & DYNAMIC WING CUTTING
-        let moveDirX = dxToGoal / distToGoal;
-        let moveDirY = dyToGoal / distToGoal;
+        // 2. OBSTACLE AVOIDANCE & GOCEK DODGE: Check if defender (P1) is blocking direct path
+        let moveX = dxToGoal / distToGoal;
+        let moveY = dyToGoal / distToGoal;
 
-        const blockingDefender = opponents.find((opp) => {
+        const blockingOpponent = opponents.find((opp) => {
           const oppDist = Math.hypot(opp.pos.x - this.pos.x, opp.pos.y - this.pos.y);
-          if (oppDist > 260) return false;
-          const dx = opp.pos.x - this.pos.x;
-          const dy = opp.pos.y - this.pos.y;
-          const dot = dx * moveDirX + dy * moveDirY;
+          if (oppDist > 90) return false; // Trigger only when close (< 90px)
+          const dot = (opp.pos.x - this.pos.x) * moveX + (opp.pos.y - this.pos.y) * moveY;
           return dot > 0;
         });
 
-        if (blockingDefender) {
-          const oppDist = Math.hypot(blockingDefender.pos.x - this.pos.x, blockingDefender.pos.y - this.pos.y);
+        if (blockingOpponent) {
+          // Sidestep dodge vector (perpendicular cut to evade defender)
+          const sideSign = this.pos.y < blockingOpponent.pos.y ? -1 : 1;
+          const perpX = -moveY * sideSign;
+          const perpY = moveX * sideSign;
 
-          // Choose top wing or bottom wing based on open field space
-          const pitchCenterY = field.height * 0.5;
-          const preferredSide = this.pos.y > pitchCenterY ? -1 : 1;
-          const perpX = -moveDirY * preferredSide;
-          const perpY = moveDirX * preferredSide;
+          moveX = moveX * 0.35 + perpX * 0.65;
+          moveY = moveY * 0.35 + perpY * 0.65;
 
-          // Dynamic Steering Blend
-          const avoidanceWeight = Math.min(1.0, (260 - oppDist) / 180);
-          moveDirX = moveDirX * (1 - avoidanceWeight) + perpX * avoidanceWeight;
-          moveDirY = moveDirY * (1 - avoidanceWeight) + perpY * avoidanceWeight;
+          const norm = Math.hypot(moveX, moveY) || 1;
+          moveX /= norm;
+          moveY /= norm;
 
-          const norm = Math.hypot(moveDirX, moveDirY) || 1;
-          moveDirX /= norm;
-          moveDirY /= norm;
-
-          // Trigger Skill Gocek Spin when close (< 160px)
-          if (oppDist < 160 && !this.isDribbleSkillActive) {
+          // Trigger Gocek skill ONLY if not on cooldown
+          if (!this.isDribbleSkillActive && this.aiGocekCooldownTimer <= 0) {
             this.isDribbleSkillActive = true;
-            this.skillDodgeInvincibleTimer = 0.45;
-            this.triggerFeedback('⚡ SKILL GOCEK!');
-          }
-
-          // Explosive Sprint Acceleration when evading
-          if (!this.isExhausted && oppDist < 200) {
-            this.isSprinting = true;
-          } else {
-            this.isSprinting = false;
-          }
-        } else {
-          // Open Path -> Sprint Burst towards Goal!
-          if (!this.isExhausted && distToGoal < 800) {
-            this.isSprinting = true;
-          } else {
-            this.isSprinting = false;
+            this.skillDodgeInvincibleTimer = 0.4;
+            this.aiGocekCooldownTimer = 2.5; // 2.5s Cooldown to prevent spamming!
+            this.triggerFeedback('⚡ GOCEK!');
           }
         }
 
-        const moveSpeed = (this.isSprinting ? this.speed * 1.35 : this.speed * 0.70);
-        this.vel.x = moveDirX * moveSpeed;
-        this.vel.y = moveDirY * moveSpeed;
+        const walkSpeed = this.speed * 0.45;
+        this.vel.x = moveX * walkSpeed;
+        this.vel.y = moveY * walkSpeed;
 
         const targetAngle = Math.atan2(this.vel.y, this.vel.x);
         this.facingAngle = lerpAngle(this.facingAngle, targetAngle, 0.22);
 
-        if (this.isSprinting) {
-          this.spawnTurfParticle(1.4);
-        }
-
         ball.attachToPlayer(this.pos, this.facingAngle, this.radius, this.vel, this.id);
       }
     } else {
-      // 3. DEFENSIVE PRESSING & SLIDE TACKLE AI
       const ballCarrier = opponents.find((p) => p.hasPossession);
       const targetPos = ballCarrier ? ballCarrier.pos : ball.pos;
 
@@ -373,28 +344,12 @@ export class Player implements PlayerEntity {
       const dy = targetPos.y - this.pos.y;
       const dist = Math.hypot(dx, dy) || 1;
 
-      // Defensive Sprint Chase
-      if (!this.isExhausted && dist > 80) {
-        this.isSprinting = true;
-      } else {
-        this.isSprinting = false;
-      }
-
-      const chaseSpeed = this.isSprinting ? this.speed * 1.30 : this.speed * 0.75;
+      const chaseSpeed = this.speed * 0.65;
       this.vel.x = (dx / dist) * chaseSpeed;
       this.vel.y = (dy / dist) * chaseSpeed;
 
       const targetAngle = Math.atan2(dy, dx);
       this.facingAngle = lerpAngle(this.facingAngle, targetAngle, 0.22);
-
-      // AI SLIDE TACKLE TRIGGER (When close to ball carrier)
-      if (ballCarrier && dist < 75 && !this.isTackling && !this.isExhausted && Math.random() < 0.15) {
-        this.isTackling = true;
-        this.tackleTimer = 0.45;
-        this.tackleSlideAngle = targetAngle;
-        this.triggerFeedback('⚡ SLIDE TACKLE!');
-        this.spawnTurfParticle(3.0, true);
-      }
 
       if (ball.releaseTimer <= 0 && distToBall < this.radius + ball.radius + 25) {
         this.hasPossession = true;
