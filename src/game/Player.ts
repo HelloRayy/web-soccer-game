@@ -340,14 +340,27 @@ export class Player implements PlayerEntity {
         ball.attachToPlayer(this.pos, this.facingAngle, this.radius, this.vel, this.id);
       }
     } else {
+      // NON-POSSESSION STATE:
+      // Priority 1: If ball is loose / free, ALWAYS target ball.pos!
+      // Priority 2: Only target opponent if opponent actually has possession!
       const ballCarrier = opponents.find((p) => p.hasPossession);
-      const targetPos = ballCarrier ? ballCarrier.pos : ball.pos;
+      const isLooseBall = !ballCarrier || ball.releaseTimer > 0;
+      const targetPos = isLooseBall ? ball.pos : ballCarrier.pos;
 
       const dx = targetPos.x - this.pos.x;
       const dy = targetPos.y - this.pos.y;
       const dist = Math.hypot(dx, dy) || 1;
 
-      const chaseSpeed = this.speed * 0.65;
+      // Smart Slide Tackle Trigger when pressing an opponent holding the ball
+      if (ballCarrier && !isLooseBall && dist < 85 && !this.isTackling && this.stamina > 0.25) {
+        this.isTackling = true;
+        this.tackleTimer = 0.45;
+        this.tackleSlideAngle = Math.atan2(dy, dx);
+        this.stamina = Math.max(0, this.stamina - 0.20);
+        this.triggerFeedback('⚡ SLIDE TACKLE!');
+      }
+
+      const chaseSpeed = isLooseBall ? this.speed * 0.90 : this.speed * 0.65;
       this.vel.x = (dx / dist) * chaseSpeed;
       this.vel.y = (dy / dist) * chaseSpeed;
 
