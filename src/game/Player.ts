@@ -666,18 +666,38 @@ export class Player implements PlayerEntity {
       this.isChargingSlide = false;
       this.slidePower = 0;
 
-      // X Button = Shoot (Goal Shot)
+      // X Button = Shoot (Goal / Directional Shot)
       if (isPressingX && !this.prevX) {
-        const targetGoal = this.team === 'home' ? field.goals.awayGoal : field.goals.homeGoal;
-        const targetY = targetGoal.top + (targetGoal.bottom - targetGoal.top) * 0.5;
+        const stickMag = Math.hypot(moveX, moveY);
+        let dirX = 0;
+        let dirY = 0;
 
-        const shootDx = targetGoal.x - this.pos.x;
-        const shootDy = targetY - this.pos.y;
-        const len = Math.hypot(shootDx, shootDy) || 1;
+        if (stickMag > 0.15) {
+          // Player is actively aiming with stick/keys -> Shoot in precise stick direction
+          dirX = moveX / stickMag;
+          dirY = moveY / stickMag;
+        } else {
+          // No stick input -> Default to opponent goal center
+          const targetGoal = this.team === 'home' ? field.goals.awayGoal : field.goals.homeGoal;
+          const targetY = targetGoal.top + (targetGoal.bottom - targetGoal.top) * 0.5;
+          const shootDx = targetGoal.x - this.pos.x;
+          const shootDy = targetY - this.pos.y;
+          const goalLen = Math.hypot(shootDx, shootDy) || 1;
+
+          dirX = shootDx / goalLen;
+          dirY = shootDy / goalLen;
+        }
+
+        // Update player facing angle to match shot direction instantly
+        this.facingAngle = Math.atan2(dirY, dirX);
+
+        // Consistent Power Rocket Shot (Base 16.0, Sprint Boost 17.5)
+        const shotPower = this.isSprinting ? 17.5 : 16.0;
 
         this.hasPossession = false;
-        ball.kick({ x: shootDx / len, y: shootDy / len }, 14.5, this.id, null, null);
-        this.debugInputString = '🔥 GOAL SHOOT TRIGGERED (Tombol X)!';
+        ball.kick({ x: dirX, y: dirY }, shotPower, this.id, null, null);
+        this.triggerFeedback('⚽ SHOOT!');
+        this.debugInputString = `🔥 DIRECTIONAL SHOOT (Power: ${shotPower.toFixed(1)})!`;
       }
 
       // A Button = Pass (Passing)
