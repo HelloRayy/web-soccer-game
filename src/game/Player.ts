@@ -275,18 +275,62 @@ export class Player implements PlayerEntity {
       const targetGoal = field.goals.homeGoal;
       const targetY = targetGoal.top + (targetGoal.bottom - targetGoal.top) * 0.5;
 
-      const dx = targetGoal.x - this.pos.x;
-      const dy = targetY - this.pos.y;
-      const dist = Math.hypot(dx, dy) || 1;
+      const dxToGoal = targetGoal.x - this.pos.x;
+      const dyToGoal = targetY - this.pos.y;
+      const distToGoal = Math.hypot(dxToGoal, dyToGoal) || 1;
 
-      const walkSpeed = this.speed * 0.40;
-      this.vel.x = (dx / dist) * walkSpeed;
-      this.vel.y = (dy / dist) * walkSpeed;
+      // 1. AI SHOOTING INTEL: If within 380px from Home Goal, shoot!
+      if (distToGoal < 380 && ball.releaseTimer <= 0) {
+        this.hasPossession = false;
+        const shootPower = 11.0;
+        const aimOffset = (Math.random() - 0.5) * 40;
+        const shootDirX = dxToGoal / distToGoal;
+        const shootDirY = (dyToGoal + aimOffset) / distToGoal;
 
-      const targetAngle = Math.atan2(this.vel.y, this.vel.x);
-      this.facingAngle = lerpAngle(this.facingAngle, targetAngle, 0.22);
+        ball.kick({ x: shootDirX, y: shootDirY }, shootPower, this.id);
+        this.triggerFeedback('⚽ SHOOT!');
+        this.debugInputString = '⚽ P3 AI SHOOT AT GOAL!';
+      } else {
+        // 2. OBSTACLE AVOIDANCE & GOCEK DODGE: Check if defender (P1) is blocking direct path
+        let moveX = dxToGoal / distToGoal;
+        let moveY = dyToGoal / distToGoal;
 
-      ball.attachToPlayer(this.pos, this.facingAngle, this.radius, this.vel, this.id);
+        const blockingOpponent = opponents.find((opp) => {
+          const oppDist = Math.hypot(opp.pos.x - this.pos.x, opp.pos.y - this.pos.y);
+          if (oppDist > 140) return false;
+          const dot = (opp.pos.x - this.pos.x) * moveX + (opp.pos.y - this.pos.y) * moveY;
+          return dot > 0;
+        });
+
+        if (blockingOpponent) {
+          // Sidestep dodge vector (perpendicular cut to evade defender)
+          const sideSign = this.pos.y < blockingOpponent.pos.y ? -1 : 1;
+          const perpX = -moveY * sideSign;
+          const perpY = moveX * sideSign;
+
+          moveX = moveX * 0.40 + perpX * 0.60;
+          moveY = moveY * 0.40 + perpY * 0.60;
+
+          const norm = Math.hypot(moveX, moveY) || 1;
+          moveX /= norm;
+          moveY /= norm;
+
+          if (!this.isDribbleSkillActive) {
+            this.isDribbleSkillActive = true;
+            this.skillDodgeInvincibleTimer = 0.4;
+            this.triggerFeedback('⚡ GOCEK!');
+          }
+        }
+
+        const walkSpeed = this.speed * 0.45;
+        this.vel.x = moveX * walkSpeed;
+        this.vel.y = moveY * walkSpeed;
+
+        const targetAngle = Math.atan2(this.vel.y, this.vel.x);
+        this.facingAngle = lerpAngle(this.facingAngle, targetAngle, 0.22);
+
+        ball.attachToPlayer(this.pos, this.facingAngle, this.radius, this.vel, this.id);
+      }
     } else {
       const ballCarrier = opponents.find((p) => p.hasPossession);
       const targetPos = ballCarrier ? ballCarrier.pos : ball.pos;

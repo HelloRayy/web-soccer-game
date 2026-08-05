@@ -280,17 +280,17 @@ export const GameView: React.FC = () => {
           const dx = pB.pos.x - pA.pos.x;
           const dy = pB.pos.y - pA.pos.y;
           const dist = Math.hypot(dx, dy) || 1;
-          const minDist = pA.radius + pB.radius;
+          const minDist = pA.radius + pB.radius + 6;
 
           if (dist < minDist) {
             const overlap = minDist - dist;
             const nx = dx / dist;
             const ny = dy / dist;
 
-            pA.pos.x -= nx * overlap * 0.5;
-            pA.pos.y -= ny * overlap * 0.5;
-            pB.pos.x += nx * overlap * 0.5;
-            pB.pos.y += ny * overlap * 0.5;
+            pA.pos.x -= nx * overlap * 0.55;
+            pA.pos.y -= ny * overlap * 0.55;
+            pB.pos.x += nx * overlap * 0.55;
+            pB.pos.y += ny * overlap * 0.55;
 
             const kx = pA.vel.x - pB.vel.x;
             const ky = pA.vel.y - pB.vel.y;
