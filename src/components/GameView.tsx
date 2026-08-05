@@ -69,25 +69,22 @@ export const GameView: React.FC<GameViewProps> = ({
     ballRef.current.reset(WORLD_WIDTH * 0.5, WORLD_HEIGHT * 0.5);
 
     const players = playersRef.current;
+    players.forEach((p) => {
+      p.hasPossession = false;
+    });
+
     if (selectedMode === '1v1') {
       if (players.length >= 2) {
-        players[0].reset(WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5);
-        players[1].reset(WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.5);
-        // Kickoff ball to P1
-        players[0].hasPossession = true;
-        ballRef.current.attachToPlayer(players[0].pos, players[0].facingAngle, players[0].radius, players[0].vel, players[0].id);
+        players[0].reset(WORLD_WIDTH * 0.42, WORLD_HEIGHT * 0.5);
+        players[1].reset(WORLD_WIDTH * 0.58, WORLD_HEIGHT * 0.5);
       }
     } else {
       // 2 vs BOT Mode
       if (players.length >= 4) {
-        players[0].reset(WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.42);
-        players[1].reset(WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.58);
-        players[2].reset(WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.42);
-        players[3].reset(WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.58);
-
-        // Kickoff ball starts with Bot 1
-        players[2].hasPossession = true;
-        ballRef.current.attachToPlayer(players[2].pos, players[2].facingAngle, players[2].radius, players[2].vel, players[2].id);
+        players[0].reset(WORLD_WIDTH * 0.38, WORLD_HEIGHT * 0.42);
+        players[1].reset(WORLD_WIDTH * 0.38, WORLD_HEIGHT * 0.58);
+        players[2].reset(WORLD_WIDTH * 0.62, WORLD_HEIGHT * 0.42);
+        players[3].reset(WORLD_WIDTH * 0.62, WORLD_HEIGHT * 0.58);
       }
     }
 
