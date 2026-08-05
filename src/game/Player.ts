@@ -53,6 +53,7 @@ export class Player implements PlayerEntity {
   isDribbleSkillActive: boolean;
   skillDodgeInvincibleTimer: number;
   stumbleTimer: number;
+  dispossessProtectionTimer: number;
   duelFeedbackText: string;
   duelFeedbackTimer: number;
   duelFeedbackYOffset: number;
@@ -146,6 +147,7 @@ export class Player implements PlayerEntity {
     this.duelFeedbackYOffset = 0;
     this.dribbleSpinAngle = 0;
     this.aiGocekCooldownTimer = 0;
+    this.dispossessProtectionTimer = 0;
 
     this.debugInputString = 'RESET - Position Cleared';
     this.prevX = false;
@@ -267,6 +269,7 @@ export class Player implements PlayerEntity {
 
     if (this.stumbleTimer > 0) this.stumbleTimer -= 0.016;
     if (this.aiGocekCooldownTimer > 0) this.aiGocekCooldownTimer -= 0.016;
+    if (this.dispossessProtectionTimer > 0) this.dispossessProtectionTimer -= 0.016;
     if (this.duelFeedbackTimer > 0) {
       this.duelFeedbackTimer -= 0.016;
       this.duelFeedbackYOffset += 0.4;

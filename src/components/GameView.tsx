@@ -313,13 +313,16 @@ export const GameView: React.FC = () => {
           const distToCarrier = Math.hypot(tackler.pos.x - ballCarrier.pos.x, tackler.pos.y - ballCarrier.pos.y);
           const distToBall = Math.hypot(tackler.pos.x - ball.pos.x, tackler.pos.y - ball.pos.y);
 
-          const touchDistanceThreshold = tackler.radius + ballCarrier.radius + 18;
+          const touchDistanceThreshold = tackler.radius + ballCarrier.radius + 14;
           const slideReachThreshold = tackler.radius + ballCarrier.radius + 75;
 
-          const isBodyTouching = distToCarrier < touchDistanceThreshold || distToBall < (tackler.radius + ball.radius + 18);
+          const isBodyTouching = distToCarrier < touchDistanceThreshold || distToBall < (tackler.radius + ball.radius + 14);
           const isSlideReaching = tackler.isTackling && (distToCarrier < slideReachThreshold || distToBall < slideReachThreshold);
 
-          if (isBodyTouching || isSlideReaching) {
+          // Prevent rapid 60FPS back-and-forth dispossess jittering using dispossessProtectionTimer
+          const canDispossess = (isSlideReaching || (isBodyTouching && ballCarrier.dispossessProtectionTimer <= 0)) && tackler.dispossessProtectionTimer <= 0;
+
+          if (canDispossess) {
             if (ballCarrier.skillDodgeInvincibleTimer > 0) {
               ballCarrier.triggerFeedback('🔥 GOCEK SUCCESS!');
               tackler.stumbleTimer = 0.55;
@@ -328,6 +331,7 @@ export const GameView: React.FC = () => {
             } else {
               ballCarrier.hasPossession = false;
               tackler.hasPossession = true;
+              tackler.dispossessProtectionTimer = 0.60; // 0.6s possession protection timer!
 
               ball.releaseTimer = 0;
               ball.homingTargetPlayer = null;
@@ -341,6 +345,33 @@ export const GameView: React.FC = () => {
           }
         }
       });
+
+      // 5b. Sandwiched Loose Ball Squeeze Pop-Out Solver (Prevents ball vibration when squished)
+      for (let i = 0; i < players.length; i++) {
+        for (let j = i + 1; j < players.length; j++) {
+          const pA = players[i];
+          const pB = players[j];
+          const distBetween = Math.hypot(pB.pos.x - pA.pos.x, pB.pos.y - pA.pos.y) || 1;
+
+          if (distBetween < pA.radius + pB.radius + 12) {
+            const midX = (pA.pos.x + pB.pos.x) * 0.5;
+            const midY = (pA.pos.y + pB.pos.y) * 0.5;
+            const distBallToMid = Math.hypot(ball.pos.x - midX, ball.pos.y - midY);
+
+            if (distBallToMid < 32) {
+              const lineDx = (pB.pos.x - pA.pos.x) / distBetween;
+              const lineDy = (pB.pos.y - pA.pos.y) / distBetween;
+              const popDirX = -lineDy;
+              const popDirY = lineDx;
+
+              pA.hasPossession = false;
+              pB.hasPossession = false;
+              ball.kick({ x: popDirX, y: popDirY }, 5.5, 'none');
+              ball.releaseTimer = 0.35;
+            }
+          }
+        }
+      }
 
       // 6. Check Loose Ball Collision Bounce for all Non-Carrying Players
       players.forEach((p) => {
