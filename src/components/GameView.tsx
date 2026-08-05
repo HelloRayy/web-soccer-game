@@ -240,7 +240,7 @@ export const GameView: React.FC<GameViewProps> = ({
       // 3. FRAME-PERFECT RECEPTION POSSESSION ATTACHMENT SOLVER & SINGLE SOURCE OF TRUTH
       players.forEach((p) => {
         const distToBall = Math.hypot(p.pos.x - ball.pos.x, p.pos.y - ball.pos.y);
-        const receptionRadius = p.radius + ball.radius + 22;
+        const receptionRadius = p.radius + ball.radius + 28;
 
         if (ball.releaseTimer <= 0 && distToBall < receptionRadius) {
           if (ball.homingTargetPlayer && ball.homingTargetPlayer.id === p.id) {
@@ -359,9 +359,9 @@ export const GameView: React.FC<GameViewProps> = ({
         }
       }
 
-      // 6. Check Loose Ball Collision Bounce
+      // 6. Check Loose Ball Collision Bounce (ONLY during active releaseTimer flight!)
       players.forEach((p) => {
-        if (!p.hasPossession && ball.releaseTimer <= 0) {
+        if (!p.hasPossession && ball.releaseTimer > 0) {
           ball.checkPlayerCollision(p);
         }
       });
