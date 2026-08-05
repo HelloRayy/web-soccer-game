@@ -16,8 +16,12 @@ const WORLD_HEIGHT = 1350;
 // Wide Broadcast Tactical Viewport Zoom
 const CAMERA_ZOOM = 0.92;
 
+import { DeviceType } from './ControllerSelectModal';
+
 interface GameViewProps {
   selectedMode?: '1v1' | '2vBot';
+  p1Device?: DeviceType;
+  p2Device?: DeviceType;
   onReturnToLobby?: () => void;
   peerRoomId?: string;
   isPeerConnected?: boolean;
@@ -25,6 +29,8 @@ interface GameViewProps {
 
 export const GameView: React.FC<GameViewProps> = ({
   selectedMode = '1v1',
+  p1Device = 'keyboard1',
+  p2Device = 'keyboard2',
   onReturnToLobby,
   peerRoomId = '8492',
   isPeerConnected = false,
@@ -193,30 +199,22 @@ export const GameView: React.FC<GameViewProps> = ({
 
         let activeGp: GamepadState | null = null;
         if (player.id === 'p1') {
-          const isP1KeyboardActive =
-            p1Input.axes.leftStickX !== 0 ||
-            p1Input.axes.leftStickY !== 0 ||
-            p1Input.buttons.a || p1Input.buttons.b || p1Input.buttons.x || p1Input.buttons.y || p1Input.buttons.rt > 0;
-
-          if (isP1KeyboardActive) {
+          if (p1Device === 'keyboard1') {
             activeGp = p1Input;
-          } else if (gamepads[0]) {
-            activeGp = gamepads[0];
+          } else if (p1Device === 'gamepad0') {
+            activeGp = gamepads[0] || p1Input;
+          } else if (p1Device === 'hp_remote') {
+            activeGp = (remoteGamepadStateRef.current && isPeerConnected) ? remoteGamepadStateRef.current : p1Input;
           } else {
             activeGp = p1Input;
           }
         } else if (player.id === 'p2') {
-          const isP2KeyboardActive =
-            p2Input.axes.leftStickX !== 0 ||
-            p2Input.axes.leftStickY !== 0 ||
-            p2Input.buttons.a || p2Input.buttons.b || p2Input.buttons.x || p2Input.buttons.y || p2Input.buttons.rt > 0;
-
-          if (remoteGamepadStateRef.current && isPeerConnected) {
-            activeGp = remoteGamepadStateRef.current;
-          } else if (isP2KeyboardActive) {
+          if (p2Device === 'keyboard2') {
             activeGp = p2Input;
-          } else if (gamepads[1]) {
-            activeGp = gamepads[1];
+          } else if (p2Device === 'gamepad1') {
+            activeGp = gamepads[1] || gamepads[0] || p2Input;
+          } else if (p2Device === 'hp_remote') {
+            activeGp = (remoteGamepadStateRef.current && isPeerConnected) ? remoteGamepadStateRef.current : p2Input;
           } else {
             activeGp = p2Input;
           }

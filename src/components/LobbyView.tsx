@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Smartphone, Play, Swords, Bot, Sparkles, Shield, Info } from 'lucide-react';
 import { QRCodeModal } from './QRCodeModal';
+import { ControllerSelectModal, DeviceType } from './ControllerSelectModal';
 
 interface LobbyViewProps {
-  onStartMatch: (mode: '1v1' | '2vBot') => void;
+  onStartMatch: (mode: '1v1' | '2vBot', p1Device?: DeviceType, p2Device?: DeviceType) => void;
   peerRoomId: string;
   isPeerConnected: boolean;
 }
@@ -12,6 +13,16 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
   const [selectedMode, setSelectedMode] = useState<'1v1' | '2vBot'>('1v1');
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [showControlsModal, setShowControlsModal] = useState(false);
+  const [showControllerSelectModal, setShowControllerSelectModal] = useState(false);
+
+  const handleStartMatchClick = () => {
+    setShowControllerSelectModal(true);
+  };
+
+  const handleConfirmControllerStart = (p1Device: DeviceType, p2Device: DeviceType) => {
+    setShowControllerSelectModal(false);
+    onStartMatch(selectedMode, p1Device, p2Device);
+  };
 
   return (
     <div className="relative w-screen h-screen bg-[#09150b] text-slate-100 flex flex-col justify-between p-6 select-none overflow-hidden font-sans">
@@ -37,6 +48,15 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
         isConnected={isPeerConnected}
       />
 
+      {/* FIFA/PES Style Controller Assignment Modal */}
+      <ControllerSelectModal
+        isOpen={showControllerSelectModal}
+        onClose={() => setShowControllerSelectModal(false)}
+        onConfirmStart={handleConfirmControllerStart}
+        peerRoomId={peerRoomId}
+        isPeerConnected={isPeerConnected}
+      />
+
       {/* Controls Spec Modal */}
       {showControlsModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -52,35 +72,27 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
             </h3>
             <div className="flex flex-col gap-2.5 text-xs text-slate-300 font-mono">
               <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
-                <span className="text-slate-400">Pindah / Lari:</span>
-                <span className="text-cyan-300 font-bold">WASD / Stick Analog</span>
+                <span className="text-slate-400">P1 Move / Action:</span>
+                <span className="text-cyan-300 font-bold">WASD + J/K/L + Space</span>
               </div>
               <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
-                <span className="text-slate-400">Pass (Operan):</span>
-                <span className="text-emerald-300 font-bold">Tombol J / Tombol A</span>
+                <span className="text-slate-400">P2 Move / Action:</span>
+                <span className="text-amber-300 font-bold">Arrow Keys + Numpad / N,M</span>
               </div>
               <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
-                <span className="text-slate-400">Shoot (Tembak Gawang):</span>
-                <span className="text-red-400 font-bold">Tombol K / Tombol X</span>
+                <span className="text-slate-400">Joystick / Gamepad:</span>
+                <span className="text-emerald-300 font-bold">Plug & Play Controller</span>
               </div>
               <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
-                <span className="text-slate-400">Through / Gocek:</span>
-                <span className="text-amber-300 font-bold">Tombol L / Tombol Y</span>
-              </div>
-              <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
-                <span className="text-slate-400">Slide Tackle:</span>
-                <span className="text-cyan-300 font-bold">Spacebar / Tombol B</span>
-              </div>
-              <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
-                <span className="text-slate-400">Sprint (Lari Kencang):</span>
-                <span className="text-blue-300 font-bold">Shift / Tombol RT</span>
+                <span className="text-slate-400">HP Remote Controller:</span>
+                <span className="text-cyan-300 font-bold">Scan QR Code HP</span>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* 2. Top Navigation Bar (Roblox Style Header) */}
+      {/* 2. Top Navigation Bar */}
       <div className="relative z-10 w-full flex items-center justify-between pointer-events-auto">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-emerald-500/20">
@@ -117,7 +129,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
         </div>
       </div>
 
-      {/* 3. Center Mode Selection Section (Roblox Style Cards) */}
+      {/* 3. Center Mode Selection Section */}
       <div className="relative z-10 my-auto flex flex-col items-center gap-6 w-full max-w-4xl mx-auto">
         <div className="text-center flex flex-col items-center gap-1">
           <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full">
@@ -154,13 +166,13 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
             <div className="mt-4">
               <h3 className="text-2xl font-black text-white tracking-tight">1 vs 1</h3>
               <p className="text-xs text-slate-300 mt-1 font-medium leading-relaxed">
-                Tanding 1 lawan 1 antara Player 1 (Keyboard) vs Player 2 (Local / HP Remote).
+                Tanding 1 lawan 1 antara Player 1 vs Player 2 (Keyboard, Joystick, atau HP Remote).
               </p>
             </div>
 
             <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-bold text-slate-400">
               <span>Pemain: 2 Human</span>
-              <span className="text-emerald-400">Tanpa AI</span>
+              <span className="text-emerald-400">Pilih Kontroler</span>
             </div>
           </div>
 
@@ -205,7 +217,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
       {/* 4. Bottom Start Match CTA Bar */}
       <div className="relative z-10 w-full flex flex-col items-center gap-3 pb-2 pointer-events-auto">
         <button
-          onClick={() => onStartMatch(selectedMode)}
+          onClick={handleStartMatchClick}
           className="w-full max-w-md py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 text-slate-950 font-black text-lg tracking-wide shadow-2xl shadow-emerald-500/40 hover:brightness-110 active:scale-95 transition cursor-pointer flex items-center justify-center gap-3"
         >
           <Play className="w-6 h-6 fill-slate-950" />
@@ -213,7 +225,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
         </button>
 
         <p className="text-[11px] text-slate-500 font-mono">
-          Game Version v1.4.0 • Built with Vite, React & PeerJS
+          Game Version v1.5.0 • Built with Vite, React & PeerJS
         </p>
       </div>
     </div>
