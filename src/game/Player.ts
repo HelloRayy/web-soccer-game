@@ -52,20 +52,20 @@ export class Player implements PlayerEntity {
   // Gocek & Stumble Properties
   isDribbleSkillActive: boolean;
   skillDodgeInvincibleTimer: number;
-  stumbleTimer: number;
-  dispossessProtectionTimer: number;
-  duelFeedbackText: string;
-  duelFeedbackTimer: number;
-  duelFeedbackYOffset: number;
-  dribbleSpinAngle: number;
+  stumbleTimer: number = 0;
+  dispossessProtectionTimer: number = 0;
+  duelFeedbackText: string = '';
+  duelFeedbackTimer: number = 0;
+  duelFeedbackYOffset: number = 0;
+  dribbleSpinAngle: number = 0;
 
   // Debug State Tracker
-  debugInputString: string;
+  debugInputString: string = '';
 
   // Patrol / Walking Simulation & AI Cooldown Timers
-  private walkTimer: number;
-  private aiGocekCooldownTimer: number;
-  private aiTackleCooldownTimer: number;
+  private walkTimer: number = 0;
+  private aiGocekCooldownTimer: number = 0;
+  private aiTackleCooldownTimer: number = 0;
 
   // Previous button states for single-press edge detection
   private prevX: boolean;
@@ -241,33 +241,6 @@ export class Player implements PlayerEntity {
     ball.kick({ x: dx / dist, y: dy / dist }, passPower, this.id, targetPlayer);
   }
 
-  updateEnemyBotAI(ball: Ball, field: Field, opponents: Player[]) {
-    this.updateParticles();
-
-    if (!this.isSprinting) {
-      this.stamina = Math.min(1.0, this.stamina + 0.0025);
-      if (this.isExhausted && this.stamina >= 0.20) {
-        this.isExhausted = false;
-      }
-    }
-
-    if (this.tackleTimer > 0) {
-      this.tackleTimer -= 0.016;
-      this.vel.x *= 0.94;
-      this.vel.y *= 0.94;
-      this.spawnTurfParticle(2.5, true);
-    } else {
-      this.isTackling = false;
-    }
-
-    if (this.skillDodgeInvincibleTimer > 0) {
-      this.skillDodgeInvincibleTimer -= 0.016;
-      this.dribbleSpinAngle += 0.35;
-    } else {
-      this.isDribbleSkillActive = false;
-      this.dribbleSpinAngle = 0;
-    }
-
   updateEnemyBotAI(ball: Ball, field: Field, opponents: Player[], teammates: Player[] = []) {
     this.walkTimer += 0.02;
     this.updateParticles();
@@ -357,7 +330,8 @@ export class Player implements PlayerEntity {
       this.vel.x = (dx / dist) * runSpeed;
       this.vel.y = (dy / dist) * runSpeed;
 
-      const targetAngle = Math.atan2(field.goals.homeGoal.y - this.pos.y, field.goals.homeGoal.x - this.pos.x);
+      const homeGoalCenterY = (field.goals.homeGoal.top + field.goals.homeGoal.bottom) * 0.5;
+      const targetAngle = Math.atan2(homeGoalCenterY - this.pos.y, field.goals.homeGoal.x - this.pos.x);
       this.facingAngle = lerpAngle(this.facingAngle, targetAngle, 0.18);
     } else if (opponentCarrier) {
       // 3. DEFENDING OPPONENT: One bot presses gently, second bot covers
@@ -386,8 +360,9 @@ export class Player implements PlayerEntity {
         this.vel.y = (dy / dist) * chaseSpeed;
         this.facingAngle = lerpAngle(this.facingAngle, Math.atan2(dy, dx), 0.22);
       } else {
+        const awayGoalCenterY = (field.goals.awayGoal.top + field.goals.awayGoal.bottom) * 0.5;
         const targetCoverX = (opponentCarrier.pos.x + field.goals.awayGoal.x) * 0.5;
-        const targetCoverY = (opponentCarrier.pos.y + field.goals.awayGoal.y) * 0.5;
+        const targetCoverY = (opponentCarrier.pos.y + awayGoalCenterY) * 0.5;
 
         const dx = targetCoverX - this.pos.x;
         const dy = targetCoverY - this.pos.y;
