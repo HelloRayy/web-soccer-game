@@ -52,9 +52,9 @@ export const GameView: React.FC<GameViewProps> = ({
   // Smooth Camera Position & Dynamic Zoom Tracking State
   const cameraRef = useRef({
     x: WORLD_WIDTH * 0.5,
-    y: WORLD_HEIGHT * 0.5,
-    zoom: 0.85
+    y: WORLD_HEIGHT * 0.5
   });
+  const zoomRef = useRef(0.92);
 
   // Core Game Engine instances
   const fieldRef = useRef(new Field(WORLD_WIDTH, WORLD_HEIGHT));
@@ -376,55 +376,46 @@ export const GameView: React.FC<GameViewProps> = ({
       // 7. Update Ball Physics
       ball.update(dt, field);
 
-      // 8. Dynamic Multi-Player Broadcast Camera Tracking & Auto-Zoom
-      let minX = ball.pos.x;
-      let maxX = ball.pos.x;
-      let minY = ball.pos.y;
-      let maxY = ball.pos.y;
-      let sumX = ball.pos.x * 1.5;
-      let sumY = ball.pos.y * 1.5;
-      let totalWeight = 1.5;
+      // 8. DYNAMIC AUTO-FIT BROADCAST CAMERA & DYNAMIC ZOOM SYSTEM
+      const allX = [...players.map((p) => p.pos.x), ball.pos.x];
+      const allY = [...players.map((p) => p.pos.y), ball.pos.y];
 
-      players.forEach((p) => {
-        minX = Math.min(minX, p.pos.x);
-        maxX = Math.max(maxX, p.pos.x);
-        minY = Math.min(minY, p.pos.y);
-        maxY = Math.max(maxY, p.pos.y);
-        sumX += p.pos.x;
-        sumY += p.pos.y;
-        totalWeight += 1.0;
-      });
+      const minX = Math.min(...allX);
+      const maxX = Math.max(...allX);
+      const minY = Math.min(...allY);
+      const maxY = Math.max(...allY);
 
-      const centerX = sumX / totalWeight;
-      const centerY = sumY / totalWeight;
+      // Midpoint Target (Center between P1, P2, and Ball)
+      const targetCamX = (minX + maxX) * 0.5;
+      const targetCamY = (minY + maxY) * 0.5;
 
-      const spanX = maxX - minX;
-      const spanY = maxY - minY;
+      // Calculate required viewport span + safety padding buffer
+      const padding = 280;
+      const spanX = Math.max(500, (maxX - minX) + padding);
+      const spanY = Math.max(350, (maxY - minY) + padding);
 
       const viewW = dimensions.width;
       const viewH = dimensions.height;
 
-      const paddingX = 260;
-      const paddingY = 200;
-      const requiredZoomX = viewW / (spanX + paddingX);
-      const requiredZoomY = viewH / (spanY + paddingY);
-      const calculatedZoom = Math.min(requiredZoomX, requiredZoomY);
+      const reqZoomX = viewW / spanX;
+      const reqZoomY = viewH / spanY;
 
-      // Clamp dynamic zoom between 0.52 (wide view for distant players) and 0.88 (close-up)
-      const targetZoom = Math.max(0.52, Math.min(0.88, calculatedZoom));
+      // Pick tighter zoom constraint to fit both width & height comfortably
+      const targetZoomRaw = Math.min(reqZoomX, reqZoomY);
+      // Clamp Zoom between 0.52 (super wide dynamic zoom-out) and 0.92 (close-up action zoom-in)
+      const targetZoom = Math.max(0.52, Math.min(0.92, targetZoomRaw));
 
-      // Smooth Lerp Camera Position & Dynamic Zoom
-      cameraRef.current.x = cameraRef.current.x * 0.92 + centerX * 0.08;
-      cameraRef.current.y = cameraRef.current.y * 0.92 + centerY * 0.08;
-      cameraRef.current.zoom = cameraRef.current.zoom * 0.94 + targetZoom * 0.06;
+      // Exponential Smooth Lerp for Camera Position and Zoom
+      cameraRef.current.x = cameraRef.current.x * 0.90 + targetCamX * 0.10;
+      cameraRef.current.y = cameraRef.current.y * 0.90 + targetCamY * 0.10;
+      zoomRef.current = zoomRef.current * 0.92 + targetZoom * 0.08;
     }
 
     setMatchState({ ...rules.state });
 
     const viewW = dimensions.width;
     const viewH = dimensions.height;
-    const currentZoom = cameraRef.current.zoom;
-
+    const currentZoom = zoomRef.current;
     const halfVisibleW = viewW / (2 * currentZoom);
     const halfVisibleH = viewH / (2 * currentZoom);
 
