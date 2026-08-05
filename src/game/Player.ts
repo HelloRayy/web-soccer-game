@@ -240,9 +240,15 @@ export class Player implements PlayerEntity {
     this.updateParticles();
 
     if (!this.isSprinting) {
-      this.stamina = Math.min(1.0, this.stamina + 0.0025);
+      this.stamina = Math.min(1.0, this.stamina + 0.003);
       if (this.isExhausted && this.stamina >= 0.20) {
         this.isExhausted = false;
+      }
+    } else {
+      this.stamina = Math.max(0, this.stamina - 0.0035);
+      if (this.stamina === 0) {
+        this.isExhausted = true;
+        this.isSprinting = false;
       }
     }
 
@@ -257,7 +263,7 @@ export class Player implements PlayerEntity {
 
     if (this.skillDodgeInvincibleTimer > 0) {
       this.skillDodgeInvincibleTimer -= 0.016;
-      this.dribbleSpinAngle += 0.35;
+      this.dribbleSpinAngle += 0.38;
     } else {
       this.isDribbleSkillActive = false;
       this.dribbleSpinAngle = 0;
@@ -279,59 +285,87 @@ export class Player implements PlayerEntity {
       const dyToGoal = targetY - this.pos.y;
       const distToGoal = Math.hypot(dxToGoal, dyToGoal) || 1;
 
-      // 1. AI SHOOTING INTEL: If within 380px from Home Goal, shoot!
-      if (distToGoal < 380 && ball.releaseTimer <= 0) {
+      // 1. AI PRECISION SHOOTING INTEL (< 450px Range)
+      if (distToGoal < 450 && ball.releaseTimer <= 0) {
         this.hasPossession = false;
-        const shootPower = 11.0;
-        const aimOffset = (Math.random() - 0.5) * 40;
-        const shootDirX = dxToGoal / distToGoal;
-        const shootDirY = (dyToGoal + aimOffset) / distToGoal;
+        this.isSprinting = false;
+        const shootPower = 11.5;
+        const topOrBottomCorner = Math.random() > 0.5 ? targetGoal.top + 30 : targetGoal.bottom - 30;
+        const aimY = topOrBottomCorner - this.pos.y;
+        const shootDist = Math.hypot(dxToGoal, aimY) || 1;
 
-        ball.kick({ x: shootDirX, y: shootDirY }, shootPower, this.id);
-        this.triggerFeedback('⚽ SHOOT!');
-        this.debugInputString = '⚽ P3 AI SHOOT AT GOAL!';
+        ball.kick({ x: dxToGoal / shootDist, y: aimY / shootDist }, shootPower, this.id);
+        this.triggerFeedback('⚽ POWER SHOOT!');
+        this.debugInputString = '⚽ P3 PRO AI SHOOT AT CORNER GOAL!';
       } else {
-        // 2. OBSTACLE AVOIDANCE & GOCEK DODGE: Check if defender (P1) is blocking direct path
-        let moveX = dxToGoal / distToGoal;
-        let moveY = dyToGoal / distToGoal;
+        // 2. PRO 250px RAYCAST OBSTACLE SCANNER & DYNAMIC WING CUTTING
+        let moveDirX = dxToGoal / distToGoal;
+        let moveDirY = dyToGoal / distToGoal;
 
-        const blockingOpponent = opponents.find((opp) => {
+        const blockingDefender = opponents.find((opp) => {
           const oppDist = Math.hypot(opp.pos.x - this.pos.x, opp.pos.y - this.pos.y);
-          if (oppDist > 140) return false;
-          const dot = (opp.pos.x - this.pos.x) * moveX + (opp.pos.y - this.pos.y) * moveY;
+          if (oppDist > 260) return false;
+          const dx = opp.pos.x - this.pos.x;
+          const dy = opp.pos.y - this.pos.y;
+          const dot = dx * moveDirX + dy * moveDirY;
           return dot > 0;
         });
 
-        if (blockingOpponent) {
-          // Sidestep dodge vector (perpendicular cut to evade defender)
-          const sideSign = this.pos.y < blockingOpponent.pos.y ? -1 : 1;
-          const perpX = -moveY * sideSign;
-          const perpY = moveX * sideSign;
+        if (blockingDefender) {
+          const oppDist = Math.hypot(blockingDefender.pos.x - this.pos.x, blockingDefender.pos.y - this.pos.y);
 
-          moveX = moveX * 0.40 + perpX * 0.60;
-          moveY = moveY * 0.40 + perpY * 0.60;
+          // Choose top wing or bottom wing based on open field space
+          const pitchCenterY = field.height * 0.5;
+          const preferredSide = this.pos.y > pitchCenterY ? -1 : 1;
+          const perpX = -moveDirY * preferredSide;
+          const perpY = moveDirX * preferredSide;
 
-          const norm = Math.hypot(moveX, moveY) || 1;
-          moveX /= norm;
-          moveY /= norm;
+          // Dynamic Steering Blend
+          const avoidanceWeight = Math.min(1.0, (260 - oppDist) / 180);
+          moveDirX = moveDirX * (1 - avoidanceWeight) + perpX * avoidanceWeight;
+          moveDirY = moveDirY * (1 - avoidanceWeight) + perpY * avoidanceWeight;
 
-          if (!this.isDribbleSkillActive) {
+          const norm = Math.hypot(moveDirX, moveDirY) || 1;
+          moveDirX /= norm;
+          moveDirY /= norm;
+
+          // Trigger Skill Gocek Spin when close (< 160px)
+          if (oppDist < 160 && !this.isDribbleSkillActive) {
             this.isDribbleSkillActive = true;
-            this.skillDodgeInvincibleTimer = 0.4;
-            this.triggerFeedback('⚡ GOCEK!');
+            this.skillDodgeInvincibleTimer = 0.45;
+            this.triggerFeedback('⚡ SKILL GOCEK!');
+          }
+
+          // Explosive Sprint Acceleration when evading
+          if (!this.isExhausted && oppDist < 200) {
+            this.isSprinting = true;
+          } else {
+            this.isSprinting = false;
+          }
+        } else {
+          // Open Path -> Sprint Burst towards Goal!
+          if (!this.isExhausted && distToGoal < 800) {
+            this.isSprinting = true;
+          } else {
+            this.isSprinting = false;
           }
         }
 
-        const walkSpeed = this.speed * 0.45;
-        this.vel.x = moveX * walkSpeed;
-        this.vel.y = moveY * walkSpeed;
+        const moveSpeed = (this.isSprinting ? this.speed * 1.35 : this.speed * 0.70);
+        this.vel.x = moveDirX * moveSpeed;
+        this.vel.y = moveDirY * moveSpeed;
 
         const targetAngle = Math.atan2(this.vel.y, this.vel.x);
         this.facingAngle = lerpAngle(this.facingAngle, targetAngle, 0.22);
 
+        if (this.isSprinting) {
+          this.spawnTurfParticle(1.4);
+        }
+
         ball.attachToPlayer(this.pos, this.facingAngle, this.radius, this.vel, this.id);
       }
     } else {
+      // 3. DEFENSIVE PRESSING & SLIDE TACKLE AI
       const ballCarrier = opponents.find((p) => p.hasPossession);
       const targetPos = ballCarrier ? ballCarrier.pos : ball.pos;
 
@@ -339,12 +373,28 @@ export class Player implements PlayerEntity {
       const dy = targetPos.y - this.pos.y;
       const dist = Math.hypot(dx, dy) || 1;
 
-      const chaseSpeed = this.speed * 0.65;
+      // Defensive Sprint Chase
+      if (!this.isExhausted && dist > 80) {
+        this.isSprinting = true;
+      } else {
+        this.isSprinting = false;
+      }
+
+      const chaseSpeed = this.isSprinting ? this.speed * 1.30 : this.speed * 0.75;
       this.vel.x = (dx / dist) * chaseSpeed;
       this.vel.y = (dy / dist) * chaseSpeed;
 
       const targetAngle = Math.atan2(dy, dx);
       this.facingAngle = lerpAngle(this.facingAngle, targetAngle, 0.22);
+
+      // AI SLIDE TACKLE TRIGGER (When close to ball carrier)
+      if (ballCarrier && dist < 75 && !this.isTackling && !this.isExhausted && Math.random() < 0.15) {
+        this.isTackling = true;
+        this.tackleTimer = 0.45;
+        this.tackleSlideAngle = targetAngle;
+        this.triggerFeedback('⚡ SLIDE TACKLE!');
+        this.spawnTurfParticle(3.0, true);
+      }
 
       if (ball.releaseTimer <= 0 && distToBall < this.radius + ball.radius + 25) {
         this.hasPossession = true;
