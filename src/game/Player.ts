@@ -606,12 +606,13 @@ export class Player implements PlayerEntity {
 
     const distToBall = Math.hypot(this.pos.x - ball.pos.x, this.pos.y - ball.pos.y);
 
-    if (ball.releaseTimer <= 0 && distToBall < this.radius + ball.radius + 25 && !ball.homingTargetPlayer) {
+    if (ball.releaseTimer <= 0 && distToBall < this.radius + ball.radius + 25 && !ball.homingTargetPlayer && !ball.attachedPlayerId) {
       this.hasPossession = true;
       ball.attachToPlayer(this.pos, this.facingAngle, this.radius, this.vel, this.id);
-    } else if (ball.homingTargetPlayer && ball.homingTargetPlayer.id !== this.id) {
-      this.hasPossession = false;
     }
+    
+    // Single Source of Truth Enforcer:
+    this.hasPossession = (ball.attachedPlayerId === this.id);
 
     // BUTTON MAPPING SPEC: A = Pass, B = Tackle, Y = Through/Gocek, X = Shoot, R1 (RB) = Request Ball, R2 (RT) = Sprint
     const isPressingA = gp.buttons.a;

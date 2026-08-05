@@ -103,7 +103,7 @@ export class Ball {
    */
   kick(dir: Vector2D, power: number, kickerId: string, homingTarget: Player | null = null, throughPos: Vector2D | null = null) {
     this.attachedPlayerId = null;
-    this.releaseTimer = 0.15;
+    this.releaseTimer = 0.35;
     this.homingTargetPlayer = homingTarget;
     this.throughPassTargetPos = throughPos;
 

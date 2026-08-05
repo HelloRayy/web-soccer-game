@@ -250,7 +250,7 @@ export const GameView: React.FC = () => {
         }
       });
 
-      // 3. FRAME-PERFECT RECEPTION POSSESSION ATTACHMENT SOLVER
+      // 3. FRAME-PERFECT RECEPTION POSSESSION ATTACHMENT SOLVER & SINGLE SOURCE OF TRUTH
       players.forEach((p) => {
         const distToBall = Math.hypot(p.pos.x - ball.pos.x, p.pos.y - ball.pos.y);
         const receptionRadius = p.radius + ball.radius + 22;
@@ -264,11 +264,14 @@ export const GameView: React.FC = () => {
             ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
           }
           // Case B: Loose ball is claimed by player
-          else if (!ball.homingTargetPlayer && !players.some(other => other.id !== p.id && other.hasPossession)) {
+          else if (!ball.homingTargetPlayer && !ball.attachedPlayerId) {
             p.hasPossession = true;
             ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
           }
         }
+
+        // Enforce Single Source of Truth: player.hasPossession MUST match ball.attachedPlayerId
+        p.hasPossession = (ball.attachedPlayerId === p.id);
       });
 
       // 4. SOLID PLAYER-TO-PLAYER BODY COLLISION PHYSICS SOLVER
