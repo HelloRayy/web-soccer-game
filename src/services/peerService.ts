@@ -104,11 +104,15 @@ export class ControllerPeerService {
 
   public onConnectionStateChange?: (connected: boolean) => void;
 
-  public connectToHost(roomId: string): Promise<boolean> {
+  public connectToHost(roomId: string, retryCount = 0): Promise<boolean> {
     const hostPeerId = `${ROOM_PREFIX}${roomId}`;
 
     return new Promise((resolve, reject) => {
       try {
+        if (this.peer) {
+          this.peer.destroy();
+        }
+
         this.peer = new Peer(PEER_CONFIG);
 
         this.peer.on('open', () => {
@@ -118,8 +122,11 @@ export class ControllerPeerService {
           const conn = this.peer.connect(hostPeerId, { reliable: true });
           this.connection = conn;
 
+          let isResolved = false;
+
           conn.on('open', () => {
             console.log('[ControllerPeerService] Connected to host!');
+            isResolved = true;
             if (this.onConnectionStateChange) {
               this.onConnectionStateChange(true);
             }
@@ -140,13 +147,28 @@ export class ControllerPeerService {
             if (this.onConnectionStateChange) {
               this.onConnectionStateChange(false);
             }
-            reject(err);
+
+            if (!isResolved && retryCount < 3) {
+              console.log(`[ControllerPeerService] Retrying connection attempt ${retryCount + 1}...`);
+              setTimeout(() => {
+                this.connectToHost(roomId, retryCount + 1).then(resolve).catch(reject);
+              }, 1200);
+            } else {
+              reject(err);
+            }
           });
         });
 
         this.peer.on('error', (err: any) => {
           console.error('[ControllerPeerService] Peer error:', err);
-          reject(err);
+          if (retryCount < 3) {
+            console.log(`[ControllerPeerService] Retrying after peer error attempt ${retryCount + 1}...`);
+            setTimeout(() => {
+              this.connectToHost(roomId, retryCount + 1).then(resolve).catch(reject);
+            }, 1200);
+          } else {
+            reject(err);
+          }
         });
       } catch (err) {
         reject(err);
