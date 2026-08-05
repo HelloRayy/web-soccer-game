@@ -226,8 +226,8 @@ export const GameView: React.FC<GameViewProps> = ({
             setShowHUD((prev) => !prev);
           }
         } else if (player.id === 'p3' || player.id === 'p4') {
-          // AI Enemy Bot Intelligence Loop
-          player.updateEnemyBotAI(ball, field, opponents);
+          // AI Enemy Bot Intelligence Loop (Cooperative Team AI)
+          player.updateEnemyBotAI(ball, field, opponents, teammates);
         } else {
           player.updatePassiveReception(ball, field);
         }
