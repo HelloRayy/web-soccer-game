@@ -201,31 +201,47 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
         {/* Integrated HP QR Code Section if HP Remote is selected */}
         {isHpSelected && (
-          <div className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-5">
-            <div className="bg-white p-3 rounded-xl shadow-lg flex-shrink-0">
-              <QRCodeSVG value={controllerUrl} size={110} />
+          <div className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-4 flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-5">
+              <div className="bg-white p-3 rounded-xl shadow-lg flex-shrink-0">
+                <QRCodeSVG value={controllerUrl} size={110} />
+              </div>
+
+              <div className="flex flex-col gap-2 w-full text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-black text-emerald-400 flex items-center gap-1.5">
+                    <Smartphone className="w-4 h-4" /> SCAN DENGAN HP ANDA
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    isPeerConnected ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                  }`}>
+                    {isPeerConnected ? '🟢 HP CONNECTED' : '⏳ MENUNGGU SCAN...'}
+                  </span>
+                </div>
+
+                <p className="text-slate-300">
+                  Scan QR Code di atas dengan kamera HP Anda, atau ketik URL berikut di browser HP:
+                </p>
+
+                <div className="bg-slate-950 p-2 rounded border border-slate-800 font-mono text-[11px] text-cyan-300 flex justify-between items-center">
+                  <span className="truncate">{controllerUrl}</span>
+                  <span className="text-slate-400 font-bold ml-2 shrink-0">ROOM: {peerRoomId}</span>
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-2 w-full text-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-black text-emerald-400 flex items-center gap-1.5">
-                  <Smartphone className="w-4 h-4" /> SCAN DENGAN HP ANDA
-                </span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                  isPeerConnected ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                }`}>
-                  {isPeerConnected ? '🟢 HP CONNECTED' : '⏳ MENUNGGU SCAN...'}
-                </span>
+            {/* Local Network IP Helper Input */}
+            <div className="bg-slate-950/80 border border-cyan-500/30 rounded-xl p-3 flex flex-col gap-1.5 text-xs">
+              <div className="flex items-center justify-between text-cyan-400 font-bold">
+                <span>💡 Masukkan IP Wi-Fi Laptop Anda (jika QR gagal di-scan):</span>
               </div>
-
-              <p className="text-slate-300">
-                Scan QR Code di atas menggunakan kamera HP Anda, atau ketik alamat berikut di browser HP:
-              </p>
-
-              <div className="bg-slate-950 p-2 rounded border border-slate-800 font-mono text-[11px] text-cyan-300 flex justify-between items-center">
-                <span>{controllerUrl}</span>
-                <span className="text-slate-400 font-bold ml-2">ROOM: {peerRoomId}</span>
-              </div>
+              <input
+                type="text"
+                value={ipAddress}
+                onChange={(e) => setIpAddress(e.target.value)}
+                placeholder="Contoh IP Wi-Fi Laptop: 192.168.1.15"
+                className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-emerald-300 font-mono text-xs focus:outline-none focus:border-cyan-400"
+              />
             </div>
           </div>
         )}
