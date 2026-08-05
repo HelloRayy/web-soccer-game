@@ -606,7 +606,10 @@ export class Player implements PlayerEntity {
 
     const distToBall = Math.hypot(this.pos.x - ball.pos.x, this.pos.y - ball.pos.y);
 
-    if (ball.releaseTimer <= 0 && distToBall < this.radius + ball.radius + 25 && !ball.homingTargetPlayer && !ball.attachedPlayerId) {
+    if (ball.attachedPlayerId === this.id || this.hasPossession) {
+      this.hasPossession = true;
+      ball.attachToPlayer(this.pos, this.facingAngle, this.radius, this.vel, this.id);
+    } else if (ball.releaseTimer <= 0 && distToBall < this.radius + ball.radius + 28 && !ball.homingTargetPlayer && !ball.attachedPlayerId) {
       this.hasPossession = true;
       ball.attachToPlayer(this.pos, this.facingAngle, this.radius, this.vel, this.id);
     }

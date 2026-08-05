@@ -239,18 +239,23 @@ export const GameView: React.FC<GameViewProps> = ({
 
       // 3. FRAME-PERFECT RECEPTION POSSESSION ATTACHMENT SOLVER & SINGLE SOURCE OF TRUTH
       players.forEach((p) => {
-        const distToBall = Math.hypot(p.pos.x - ball.pos.x, p.pos.y - ball.pos.y);
-        const receptionRadius = p.radius + ball.radius + 28;
+        if (ball.attachedPlayerId === p.id) {
+          p.hasPossession = true;
+          ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
+        } else {
+          const distToBall = Math.hypot(p.pos.x - ball.pos.x, p.pos.y - ball.pos.y);
+          const receptionRadius = p.radius + ball.radius + 28;
 
-        if (ball.releaseTimer <= 0 && distToBall < receptionRadius) {
-          if (ball.homingTargetPlayer && ball.homingTargetPlayer.id === p.id) {
-            p.hasPossession = true;
-            ball.homingTargetPlayer = null;
-            ball.throughPassTargetPos = null;
-            ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
-          } else if (!ball.homingTargetPlayer && !ball.attachedPlayerId) {
-            p.hasPossession = true;
-            ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
+          if (ball.releaseTimer <= 0 && distToBall < receptionRadius) {
+            if (ball.homingTargetPlayer && ball.homingTargetPlayer.id === p.id) {
+              p.hasPossession = true;
+              ball.homingTargetPlayer = null;
+              ball.throughPassTargetPos = null;
+              ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
+            } else if (!ball.homingTargetPlayer && !ball.attachedPlayerId) {
+              p.hasPossession = true;
+              ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
+            }
           }
         }
 
