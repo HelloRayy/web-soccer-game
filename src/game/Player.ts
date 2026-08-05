@@ -501,21 +501,31 @@ export class Player implements PlayerEntity {
       const targetVelX = moveX * currentSpeed;
       const targetVelY = moveY * currentSpeed;
 
-      this.vel.x = this.vel.x * 0.65 + targetVelX * 0.35;
-      this.vel.y = this.vel.y * 0.65 + targetVelY * 0.35;
+      // Turn Inertia: Damp velocity smoothly when making sharp turns
+      const currentVelMag = Math.hypot(this.vel.x, this.vel.y);
+      let turnFactor = 1.0;
+      if (currentVelMag > 0.5) {
+        const dot = (this.vel.x * targetVelX + this.vel.y * targetVelY) / (currentVelMag * currentSpeed);
+        if (dot < 0) {
+          turnFactor = Math.max(0.45, 1.0 + dot * 0.4);
+        }
+      }
+
+      this.vel.x = this.vel.x * 0.72 + targetVelX * 0.28 * turnFactor;
+      this.vel.y = this.vel.y * 0.72 + targetVelY * 0.28 * turnFactor;
 
       aimAngle = Math.atan2(moveY, moveX);
       const angleDiff = aimAngle - this.facingAngle;
-      this.facingAngle = lerpAngle(this.facingAngle, aimAngle, 0.25);
+      this.facingAngle = lerpAngle(this.facingAngle, aimAngle, 0.18);
 
-      this.bodyTiltAngle = Math.max(-0.22, Math.min(0.22, angleDiff * 0.35));
+      this.bodyTiltAngle = Math.max(-0.28, Math.min(0.28, angleDiff * 0.40));
 
       if (this.isSprinting) {
         this.spawnTurfParticle(currentSpeed / this.speed);
       }
     } else {
-      this.vel.x *= 0.76;
-      this.vel.y *= 0.76;
+      this.vel.x *= 0.78;
+      this.vel.y *= 0.78;
       this.bodyTiltAngle *= 0.80;
 
       if (Math.abs(this.vel.x) < 0.05) this.vel.x = 0;

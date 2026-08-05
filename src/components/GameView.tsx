@@ -362,9 +362,9 @@ export const GameView: React.FC = () => {
     const targetCamX = player1.pos.x * 0.40 + (player3 ? player3.pos.x * 0.30 : 0) + ball.pos.x * 0.30;
     const targetCamY = player1.pos.y * 0.40 + (player3 ? player3.pos.y * 0.30 : 0) + ball.pos.y * 0.30;
 
-    // Smooth Lerp Camera Follow
-    cameraRef.current.x = cameraRef.current.x * 0.88 + targetCamX * 0.12;
-    cameraRef.current.y = cameraRef.current.y * 0.88 + targetCamY * 0.12;
+    // Smooth Lerp Camera Follow (Ultra-fluid cinematic trailing)
+    cameraRef.current.x = cameraRef.current.x * 0.92 + targetCamX * 0.08;
+    cameraRef.current.y = cameraRef.current.y * 0.92 + targetCamY * 0.08;
 
     const viewW = dimensions.width;
     const viewH = dimensions.height;
