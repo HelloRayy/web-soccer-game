@@ -1,42 +1,72 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { LobbyView } from './components/LobbyView';
 import { GameView } from './components/GameView';
 import { MobileControllerView } from './components/MobileControllerView';
+import { HostPeerService } from './services/peerService';
 import { Agentation } from 'agentation';
 
-const Navigation: React.FC = () => {
-  const location = useLocation();
+const MainGameContainer: React.FC = () => {
+  const [currentView, setCurrentView] = useState<'lobby' | 'game'>('lobby');
+  const [selectedMode, setSelectedMode] = useState<'1v1' | '2vBot'>('1v1');
 
-  // Hide top header on game view `/` and controller `/controller` for full edge-to-edge screen
-  if (location.pathname === '/' || location.pathname === '/controller') {
-    return null;
+  // Shared WebRTC PeerJS Host Service across Lobby & Game Views
+  const [peerRoomId, setPeerRoomId] = useState('8492');
+  const [isPeerConnected, setIsPeerConnected] = useState(false);
+  const peerServiceRef = useRef<HostPeerService | null>(null);
+
+  useEffect(() => {
+    const hostService = new HostPeerService();
+    peerServiceRef.current = hostService;
+
+    hostService.onConnectionStateChange = (connected) => {
+      setIsPeerConnected(connected);
+    };
+
+    hostService.init().then((roomId) => {
+      setPeerRoomId(roomId);
+    });
+
+    return () => {
+      hostService.destroy();
+    };
+  }, []);
+
+  const handleStartMatch = (mode: '1v1' | '2vBot') => {
+    setSelectedMode(mode);
+    setCurrentView('game');
+  };
+
+  const handleReturnToLobby = () => {
+    setCurrentView('lobby');
+  };
+
+  if (currentView === 'lobby') {
+    return (
+      <LobbyView
+        onStartMatch={handleStartMatch}
+        peerRoomId={peerRoomId}
+        isPeerConnected={isPeerConnected}
+      />
+    );
   }
 
   return (
-    <nav className="bg-slate-900 border-b border-slate-800 text-slate-100 p-4 flex items-center justify-between shadow-lg">
-      <div className="flex items-center gap-6">
-        <Link to="/" className="font-extrabold text-xl tracking-tight text-cyan-400 hover:text-cyan-300">
-          ⚽ Soccer Web Game
-        </Link>
-        <Link to="/" className="text-sm font-semibold hover:text-cyan-400 transition">
-          Arena Game
-        </Link>
-        <Link to="/controller" className="text-sm font-semibold hover:text-cyan-400 transition">
-          📱 Mobile Remote
-        </Link>
-      </div>
-    </nav>
+    <GameView
+      selectedMode={selectedMode}
+      onReturnToLobby={handleReturnToLobby}
+      peerRoomId={peerRoomId}
+      isPeerConnected={isPeerConnected}
+    />
   );
 };
 
 export function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col select-none">
-        <Navigation />
-
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col select-none overflow-hidden">
         <Routes>
-          <Route path="/" element={<GameView />} />
+          <Route path="/" element={<MainGameContainer />} />
           <Route path="/controller" element={<MobileControllerView />} />
         </Routes>
 

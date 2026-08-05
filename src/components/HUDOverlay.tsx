@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MatchRulesState } from '../types/game';
-import { Maximize, Minimize, RotateCcw, Eye, EyeOff, Smartphone } from 'lucide-react';
+import { Maximize, Minimize, RotateCcw, Eye, EyeOff, Smartphone, Home } from 'lucide-react';
 import { QRCodeModal } from './QRCodeModal';
 
 interface HUDOverlayProps {
@@ -9,6 +9,7 @@ interface HUDOverlayProps {
   onToggleHUD: () => void;
   onResetMatch: () => void;
   onToggleMode: (mode: '1v1_local' | '2v2_coop') => void;
+  onReturnToLobby?: () => void;
   peerRoomId?: string;
   isPeerConnected?: boolean;
   goalBannerText?: string | null;
@@ -19,6 +20,7 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
   showHUD,
   onToggleHUD,
   onResetMatch,
+  onReturnToLobby,
   peerRoomId = '8492',
   isPeerConnected = false,
   goalBannerText = null,
@@ -145,6 +147,17 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
             </div>
           </div>
 
+          {/* Return to Lobby Button */}
+          {onReturnToLobby && (
+            <button
+              onClick={onReturnToLobby}
+              className="glass-card w-11 h-11 rounded-2xl border border-amber-500/40 bg-[#0b0f0c]/90 text-amber-400 hover:bg-amber-500 hover:text-slate-950 transition cursor-pointer shadow-2xl flex items-center justify-center"
+              title="Kembali ke Lobby"
+            >
+              <Home className="w-5 h-5" />
+            </button>
+          )}
+
           {/* Reset Match SVG Icon Button */}
           <button
             onClick={onResetMatch}
@@ -233,12 +246,23 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
                 </div>
               </div>
 
-              <button
-                onClick={onResetMatch}
-                className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-extrabold rounded-xl text-sm shadow-xl hover:brightness-110 transition cursor-pointer"
-              >
-                🎮 Reset Pertandingan
-              </button>
+              <div className="flex flex-col gap-2 w-full">
+                <button
+                  onClick={onResetMatch}
+                  className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-extrabold rounded-xl text-sm shadow-xl hover:brightness-110 transition cursor-pointer"
+                >
+                  🎮 Main Lagi
+                </button>
+                {onReturnToLobby && (
+                  <button
+                    onClick={onReturnToLobby}
+                    className="w-full py-3 bg-slate-900 border border-slate-700 text-slate-200 font-extrabold rounded-xl text-sm shadow-xl hover:bg-slate-800 transition cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Home className="w-4 h-4 text-amber-400" />
+                    <span>Kembali ke Lobby</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}

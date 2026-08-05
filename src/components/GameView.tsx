@@ -16,7 +16,19 @@ const WORLD_HEIGHT = 1350;
 // Wide Broadcast Tactical Viewport Zoom
 const CAMERA_ZOOM = 0.92;
 
-export const GameView: React.FC = () => {
+interface GameViewProps {
+  selectedMode?: '1v1' | '2vBot';
+  onReturnToLobby?: () => void;
+  peerRoomId?: string;
+  isPeerConnected?: boolean;
+}
+
+export const GameView: React.FC<GameViewProps> = ({
+  selectedMode = '1v1',
+  onReturnToLobby,
+  peerRoomId = '8492',
+  isPeerConnected = false,
+}) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const { gamepads } = useGamepad();
   const keyboardGamepadState = useKeyboardInput();
@@ -30,15 +42,11 @@ export const GameView: React.FC = () => {
   // Toggle HUD Overlay & Debugger State
   const [showHUD, setShowHUD] = useState(true);
 
-  // Mouse Cursor Visibility State (Toggleable via Ctrl Key or Xbox Back Button)
+  // Mouse Cursor Visibility State
   const [showCursor, setShowCursor] = useState(false);
   const prevBackBtnRef = useRef(false);
 
-  // WebRTC PeerJS Smartphone Remote Controller State
-  const [peerRoomId, setPeerRoomId] = useState('8492');
-  const [isPeerConnected, setIsPeerConnected] = useState(false);
   const [goalBannerText, setGoalBannerText] = useState<string | null>(null);
-  const peerServiceRef = useRef<HostPeerService | null>(null);
   const remoteGamepadStateRef = useRef<GamepadState | null>(null);
 
   // Smooth Camera Position Tracking State
@@ -47,69 +55,69 @@ export const GameView: React.FC = () => {
     y: WORLD_HEIGHT * 0.5
   });
 
-  // Core Game Engine instances (Large World Pitch)
+  // Core Game Engine instances
   const fieldRef = useRef(new Field(WORLD_WIDTH, WORLD_HEIGHT));
   const ballRef = useRef(new Ball(WORLD_WIDTH * 0.5, WORLD_HEIGHT * 0.5));
   const matchRulesRef = useRef(new MatchRules('1v1_local'));
 
-  // 3 Team Players (P1 User, P2 Teammate, P3 Enemy Bot) in World Space
-  const playersRef = useRef<Player[]>([
-    new Player('p1', 'Player 1 (Kamu)', 'home', 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5),
-    new Player('p2', 'Player 2 (Rekan)', 'home', 1, '#34d399', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.35),
-    new Player('p3', 'Musuh (P3)', 'away', null, '#f59e0b', WORLD_WIDTH * 0.46, WORLD_HEIGHT * 0.5)
-  ]);
+  // Players Array dynamically initialized based on mode
+  const playersRef = useRef<Player[]>([]);
 
   const [matchState, setMatchState] = useState<MatchRulesState>(matchRulesRef.current.state);
 
-  // Initialize WebRTC Host PeerJS Service for HP Remote Gamepad
-  useEffect(() => {
-    const hostService = new HostPeerService();
-    peerServiceRef.current = hostService;
+  const resetMatchPositions = useCallback(() => {
+    ballRef.current.reset(WORLD_WIDTH * 0.5, WORLD_HEIGHT * 0.5);
 
-    hostService.onConnectionStateChange = (connected) => {
-      setIsPeerConnected(connected);
-    };
-
-    hostService.onInputReceived = (input) => {
-      if (input) {
-        remoteGamepadStateRef.current = {
-          index: 99,
-          id: 'Smartphone Remote Controller',
-          connected: true,
-          axes: {
-            leftStickX: input.axes?.leftStickX || 0,
-            leftStickY: input.axes?.leftStickY || 0,
-            rightStickX: 0,
-            rightStickY: 0,
-          },
-          buttons: {
-            a: input.buttons?.a || false,
-            b: input.buttons?.b || false,
-            x: input.buttons?.x || false,
-            y: input.buttons?.y || false,
-            lb: input.buttons?.lb || false,
-            rb: input.buttons?.rb || false,
-            lt: 0,
-            rt: input.buttons?.rt || 0,
-            back: false,
-            start: input.buttons?.start || false,
-            lsClick: false,
-            rsClick: false,
-          },
-        };
+    const players = playersRef.current;
+    if (selectedMode === '1v1') {
+      if (players.length >= 2) {
+        players[0].reset(WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5);
+        players[1].reset(WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.5);
+        // Kickoff ball to P1
+        players[0].hasPossession = true;
+        ballRef.current.attachToPlayer(players[0].pos, players[0].facingAngle, players[0].radius, players[0].vel, players[0].id);
       }
+    } else {
+      // 2 vs BOT Mode
+      if (players.length >= 4) {
+        players[0].reset(WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.42);
+        players[1].reset(WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.58);
+        players[2].reset(WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.42);
+        players[3].reset(WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.58);
+
+        // Kickoff ball starts with Bot 1
+        players[2].hasPossession = true;
+        ballRef.current.attachToPlayer(players[2].pos, players[2].facingAngle, players[2].radius, players[2].vel, players[2].id);
+      }
+    }
+
+    cameraRef.current = {
+      x: WORLD_WIDTH * 0.5,
+      y: WORLD_HEIGHT * 0.5
     };
+  }, [selectedMode]);
 
-    hostService.init().then((roomId) => {
-      setPeerRoomId(roomId);
-    });
+  // Re-instantiate players whenever selectedMode changes
+  useEffect(() => {
+    if (selectedMode === '1v1') {
+      playersRef.current = [
+        new Player('p1', 'Player 1 (Home)', 'home', 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5),
+        new Player('p2', 'Player 2 (Away)', 'away', 1, '#f59e0b', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.5)
+      ];
+    } else {
+      // 2 vs BOT
+      playersRef.current = [
+        new Player('p1', 'Player 1 (Home)', 'home', 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.42),
+        new Player('p2', 'Player 2 (Home)', 'home', 1, '#34d399', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.58),
+        new Player('p3', 'Bot AI 1 (Away)', 'away', null, '#f59e0b', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.42),
+        new Player('p4', 'Bot AI 2 (Away)', 'away', null, '#ef4444', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.58)
+      ];
+    }
+    matchRulesRef.current.resetMatch();
+    resetMatchPositions();
+  }, [selectedMode, resetMatchPositions]);
 
-    return () => {
-      hostService.destroy();
-    };
-  }, []);
-
-  // Window Resize & Keyboard Ctrl Listener for Cursor Visibility
+  // Window Resize & Keyboard Ctrl Listener
   useEffect(() => {
     const handleResize = () => {
       setDimensions({
@@ -133,28 +141,6 @@ export const GameView: React.FC = () => {
     };
   }, []);
 
-  const resetMatchPositions = useCallback(() => {
-    ballRef.current.reset(WORLD_WIDTH * 0.46, WORLD_HEIGHT * 0.5);
-    playersRef.current[0].reset(WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5);
-    playersRef.current[1].reset(WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.35);
-
-    // Reset P3 Enemy Bot right in front of P1 with Initial Ball Possession!
-    const p3 = playersRef.current[2];
-    p3.reset(WORLD_WIDTH * 0.46, WORLD_HEIGHT * 0.5);
-    p3.hasPossession = true;
-    ballRef.current.attachToPlayer(p3.pos, p3.facingAngle, p3.radius, p3.vel, 'p3');
-
-    cameraRef.current = {
-      x: WORLD_WIDTH * 0.5,
-      y: WORLD_HEIGHT * 0.5
-    };
-  }, []);
-
-  // Mount initial positions with P3 starting with ball
-  useEffect(() => {
-    resetMatchPositions();
-  }, [resetMatchPositions]);
-
   const handleResetMatch = useCallback(() => {
     matchRulesRef.current.resetMatch();
     resetMatchPositions();
@@ -171,7 +157,7 @@ export const GameView: React.FC = () => {
     setShowHUD((prev) => !prev);
   }, []);
 
-  // Main 60 FPS Game Loop with Accelerating Homing Pass & Frame-Perfect Possession Attachment
+  // Main 60 FPS Game Loop
   useGameLoop((dt) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -182,11 +168,7 @@ export const GameView: React.FC = () => {
     const ball = ballRef.current;
     const rules = matchRulesRef.current;
     const players = playersRef.current;
-    const player1 = players[0];
-    const player2 = players[1];
-    const player3 = players[2]; // P3 Enemy Bot
 
-    // Check Controller 0 Back Button for Cursor Toggle
     if (gamepads[0]) {
       const isPressingBack = gamepads[0].buttons.back;
       if (isPressingBack && !prevBackBtnRef.current) {
@@ -206,7 +188,7 @@ export const GameView: React.FC = () => {
     }
 
     if (rules.state.state !== 'GAME_OVER') {
-      // 2. Update All 3 Players (P1 User, P2 Teammate, P3 Enemy Bot)
+      // 2. Update Players (P1, P2, AI Bots)
       players.forEach((player) => {
         const teammates = players.filter((p) => p.team === player.team && p.id !== player.id);
         const opponents = players.filter((p) => p.team !== player.team);
@@ -233,8 +215,12 @@ export const GameView: React.FC = () => {
           } else {
             activeGp = keyboardGamepadState;
           }
-        } else if (player.controllerIndex !== null && gamepads[player.controllerIndex]) {
-          activeGp = gamepads[player.controllerIndex];
+        } else if (player.id === 'p2') {
+          if (remoteGamepadStateRef.current && isPeerConnected) {
+            activeGp = remoteGamepadStateRef.current;
+          } else if (player.controllerIndex !== null && gamepads[player.controllerIndex]) {
+            activeGp = gamepads[player.controllerIndex];
+          }
         }
 
         if (activeGp) {
@@ -242,8 +228,8 @@ export const GameView: React.FC = () => {
           if (toggleHUDRequested) {
             setShowHUD((prev) => !prev);
           }
-        } else if (player.id === 'p3') {
-          // AI Enemy Bot (P3) Intelligence Loop
+        } else if (player.id === 'p3' || player.id === 'p4') {
+          // AI Enemy Bot Intelligence Loop
           player.updateEnemyBotAI(ball, field, opponents);
         } else {
           player.updatePassiveReception(ball, field);
@@ -256,21 +242,18 @@ export const GameView: React.FC = () => {
         const receptionRadius = p.radius + ball.radius + 22;
 
         if (ball.releaseTimer <= 0 && distToBall < receptionRadius) {
-          // Case A: Ball was homing to this receiver via Pass or R1 Request
           if (ball.homingTargetPlayer && ball.homingTargetPlayer.id === p.id) {
             p.hasPossession = true;
             ball.homingTargetPlayer = null;
             ball.throughPassTargetPos = null;
             ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
-          }
-          // Case B: Loose ball is claimed by player
-          else if (!ball.homingTargetPlayer && !ball.attachedPlayerId) {
+          } else if (!ball.homingTargetPlayer && !ball.attachedPlayerId) {
             p.hasPossession = true;
             ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
           }
         }
 
-        // Enforce Single Source of Truth: player.hasPossession MUST match ball.attachedPlayerId
+        // Single Source of Truth Enforcer
         p.hasPossession = (ball.attachedPlayerId === p.id);
       });
 
@@ -322,7 +305,6 @@ export const GameView: React.FC = () => {
           const isBodyTouching = distToCarrier < touchDistanceThreshold || distToBall < (tackler.radius + ball.radius + 14);
           const isSlideReaching = tackler.isTackling && (distToCarrier < slideReachThreshold || distToBall < slideReachThreshold);
 
-          // Prevent rapid 60FPS back-and-forth dispossess jittering using dispossessProtectionTimer
           const canDispossess = (isSlideReaching || (isBodyTouching && ballCarrier.dispossessProtectionTimer <= 0)) && tackler.dispossessProtectionTimer <= 0;
 
           if (canDispossess) {
@@ -334,7 +316,7 @@ export const GameView: React.FC = () => {
             } else {
               ballCarrier.hasPossession = false;
               tackler.hasPossession = true;
-              tackler.dispossessProtectionTimer = 0.60; // 0.6s possession protection timer!
+              tackler.dispossessProtectionTimer = 0.60;
 
               ball.releaseTimer = 0;
               ball.homingTargetPlayer = null;
@@ -349,7 +331,7 @@ export const GameView: React.FC = () => {
         }
       });
 
-      // 5b. Sandwiched Loose Ball Squeeze Pop-Out Solver (Prevents ball vibration when squished)
+      // 5b. Sandwiched Loose Ball Squeeze Pop-Out Solver
       for (let i = 0; i < players.length; i++) {
         for (let j = i + 1; j < players.length; j++) {
           const pA = players[i];
@@ -376,7 +358,7 @@ export const GameView: React.FC = () => {
         }
       }
 
-      // 6. Check Loose Ball Collision Bounce for all Non-Carrying Players
+      // 6. Check Loose Ball Collision Bounce
       players.forEach((p) => {
         if (!p.hasPossession && ball.releaseTimer <= 0) {
           ball.checkPlayerCollision(p);
@@ -384,21 +366,22 @@ export const GameView: React.FC = () => {
       });
 
       const controllerSource = isPeerConnected ? '📱 HP Remote' : 'P1 Controller 0';
-      rules.state.debugInputText = `${players[0].debugInputString} | SRC: ${controllerSource}`;
+      const player1 = players[0];
+      rules.state.debugInputText = player1 ? `${player1.debugInputString} | MODE: ${selectedMode} | SRC: ${controllerSource}` : `MODE: ${selectedMode}`;
 
-      // 7. Update Ball Physics & Shift Deflection
+      // 7. Update Ball Physics
       ball.update(dt, field);
+
+      // 8. Tactical Broadcast Camera Target
+      const p1Pos = players[0] ? players[0].pos : ball.pos;
+      const targetCamX = p1Pos.x * 0.60 + ball.pos.x * 0.40;
+      const targetCamY = p1Pos.y * 0.60 + ball.pos.y * 0.40;
+
+      cameraRef.current.x = cameraRef.current.x * 0.92 + targetCamX * 0.08;
+      cameraRef.current.y = cameraRef.current.y * 0.92 + targetCamY * 0.08;
     }
 
     setMatchState({ ...rules.state });
-
-    // 8. Tactical Broadcast Camera Target (Tracks P1, P3, & Ball)
-    const targetCamX = player1.pos.x * 0.40 + (player3 ? player3.pos.x * 0.30 : 0) + ball.pos.x * 0.30;
-    const targetCamY = player1.pos.y * 0.40 + (player3 ? player3.pos.y * 0.30 : 0) + ball.pos.y * 0.30;
-
-    // Smooth Lerp Camera Follow (Ultra-fluid cinematic trailing)
-    cameraRef.current.x = cameraRef.current.x * 0.92 + targetCamX * 0.08;
-    cameraRef.current.y = cameraRef.current.y * 0.92 + targetCamY * 0.08;
 
     const viewW = dimensions.width;
     const viewH = dimensions.height;
@@ -408,7 +391,7 @@ export const GameView: React.FC = () => {
     const clampedCamX = Math.max(halfVisibleW, Math.min(WORLD_WIDTH - halfVisibleW, cameraRef.current.x));
     const clampedCamY = Math.max(halfVisibleH, Math.min(WORLD_HEIGHT - halfVisibleH, cameraRef.current.y));
 
-    // 9. Render World with Camera Transform & Dynamic Passing Grid
+    // Render Canvas
     ctx.clearRect(0, 0, viewW, viewH);
 
     ctx.save();
@@ -418,125 +401,6 @@ export const GameView: React.FC = () => {
 
     field.draw(ctx);
 
-    if (showHUD) {
-      const passer = player1.hasPossession ? player1 : player2.hasPossession ? player2 : null;
-
-      if (passer) {
-        const ranges = [140, 280, 420];
-        ranges.forEach((r, idx) => {
-          ctx.strokeStyle = idx === 0 ? 'rgba(56, 189, 248, 0.35)' : idx === 1 ? 'rgba(52, 211, 153, 0.25)' : 'rgba(168, 85, 247, 0.20)';
-          ctx.lineWidth = 1.5;
-          ctx.setLineDash([6, 6]);
-          ctx.beginPath();
-          ctx.arc(passer.pos.x, passer.pos.y, r, 0, Math.PI * 2);
-          ctx.stroke();
-        });
-        ctx.setLineDash([]);
-
-        const coneAngle = Math.PI / 3;
-        const startAngle = passer.facingAngle - coneAngle / 2;
-        const endAngle = passer.facingAngle + coneAngle / 2;
-        const coneRadius = 320;
-
-        ctx.fillStyle = 'rgba(6, 182, 212, 0.08)';
-        ctx.strokeStyle = 'rgba(6, 182, 212, 0.3)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(passer.pos.x, passer.pos.y);
-        ctx.arc(passer.pos.x, passer.pos.y, coneRadius, startAngle, endAngle);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-
-        const teammates = players.filter((p) => p.team === passer.team && p.id !== passer.id);
-        const targetedTeammate = passer.findBestPassTarget(teammates, passer.facingAngle);
-
-        if (targetedTeammate) {
-          const dx = targetedTeammate.pos.x - passer.pos.x;
-          const dy = targetedTeammate.pos.y - passer.pos.y;
-          const dist = Math.hypot(dx, dy) || 1;
-
-          ctx.strokeStyle = '#06b6d4';
-          ctx.lineWidth = 2.5;
-          ctx.setLineDash([8, 6]);
-          ctx.beginPath();
-          ctx.moveTo(passer.pos.x, passer.pos.y);
-          ctx.lineTo(targetedTeammate.pos.x, targetedTeammate.pos.y);
-          ctx.stroke();
-          ctx.setLineDash([]);
-
-          const stepCount = Math.floor(dist / 50);
-          ctx.strokeStyle = '#38bdf8';
-          ctx.lineWidth = 2;
-
-          for (let i = 1; i <= stepCount; i++) {
-            const tickX = passer.pos.x + (dx / dist) * (i * 50);
-            const tickY = passer.pos.y + (dy / dist) * (i * 50);
-
-            const perpX = -(dy / dist) * 6;
-            const perpY = (dx / dist) * 6;
-
-            ctx.beginPath();
-            ctx.moveTo(tickX - perpX, tickY - perpY);
-            ctx.lineTo(tickX + perpX, tickY + perpY);
-            ctx.stroke();
-          }
-
-          const recX = targetedTeammate.pos.x;
-          const recY = targetedTeammate.pos.y;
-          const boxSize = 22;
-
-          ctx.strokeStyle = '#34d399';
-          ctx.lineWidth = 2.5;
-
-          ctx.beginPath();
-          ctx.moveTo(recX - boxSize, recY - boxSize + 6);
-          ctx.lineTo(recX - boxSize, recY - boxSize);
-          ctx.lineTo(recX - boxSize + 6, recY - boxSize);
-
-          ctx.moveTo(recX + boxSize - 6, recY - boxSize);
-          ctx.lineTo(recX + boxSize, recY - boxSize);
-          ctx.lineTo(recX + boxSize, recY - boxSize + 6);
-
-          ctx.moveTo(recX - boxSize, recY + boxSize - 6);
-          ctx.lineTo(recX - boxSize, recY + boxSize);
-          ctx.lineTo(recX - boxSize + 6, recY + boxSize);
-
-          ctx.moveTo(recX + boxSize - 6, recY + boxSize);
-          ctx.lineTo(recX + boxSize, recY + boxSize);
-          ctx.lineTo(recX + boxSize, recY + boxSize - 6);
-          ctx.stroke();
-        }
-      }
-
-      if (ball.homingTargetPlayer) {
-        const receiver = ball.homingTargetPlayer;
-
-        ctx.strokeStyle = ball.throughPassTargetPos ? '#f59e0b' : '#a855f7';
-        ctx.lineWidth = 3;
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.moveTo(ball.pos.x, ball.pos.y);
-        ctx.lineTo(receiver.pos.x, receiver.pos.y);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-
-      const speed = Math.hypot(ball.vel.x, ball.vel.y);
-      if (speed > 0.2) {
-        const arrowLen = Math.min(speed * 8, 40);
-        const arrowX = ball.pos.x + (ball.vel.x / speed) * arrowLen;
-        const arrowY = ball.pos.y + (ball.vel.y / speed) * arrowLen;
-
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(ball.pos.x, ball.pos.y);
-        ctx.lineTo(arrowX, arrowY);
-        ctx.stroke();
-      }
-    }
-
     players.forEach((p) => p.draw(ctx));
     ball.draw(ctx);
 
@@ -544,14 +408,18 @@ export const GameView: React.FC = () => {
   });
 
   return (
-    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-slate-950 flex flex-col items-center justify-center">
-      {/* Floating Toggleable HUD Overlay */}
+    <div
+      className={`fixed inset-0 w-screen h-screen overflow-hidden bg-slate-950 flex flex-col items-center justify-center ${
+        showCursor ? 'cursor-auto' : 'cursor-none'
+      }`}
+    >
       <HUDOverlay
         matchState={matchState}
         showHUD={showHUD}
         onToggleHUD={handleToggleHUD}
         onResetMatch={handleResetMatch}
         onToggleMode={handleToggleMode}
+        onReturnToLobby={onReturnToLobby}
         peerRoomId={peerRoomId}
         isPeerConnected={isPeerConnected}
         goalBannerText={goalBannerText}
@@ -561,7 +429,7 @@ export const GameView: React.FC = () => {
         ref={canvasRef}
         width={dimensions.width}
         height={dimensions.height}
-        className={`w-full h-full block ${showCursor ? 'cursor-default' : 'cursor-none'}`}
+        className="block w-full h-full"
       />
     </div>
   );
