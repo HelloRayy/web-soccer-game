@@ -268,23 +268,24 @@ export const GameView: React.FC<GameViewProps> = ({
         }
       }
 
-      // 4. FIFA/PES STYLE BALL COLLISION & DISPOSSESS RESOLUTION ENGINE
+      // 4. FIFA/PES STYLE PRECISE BALL HITBOX & DISPOSSESS RESOLUTION ENGINE
       players.forEach((tackler) => {
         const ballCarrier = players.find((p) => p.id !== tackler.id && (p.hasPossession || ball.attachedPlayerId === p.id));
         if (ballCarrier) {
           const distToCarrier = Math.hypot(tackler.pos.x - ballCarrier.pos.x, tackler.pos.y - ballCarrier.pos.y);
           const distToBall = Math.hypot(tackler.pos.x - ball.pos.x, tackler.pos.y - ball.pos.y);
 
-          // Responsive reach thresholds
-          const touchDistanceThreshold = tackler.radius + ballCarrier.radius + 40;
-          const ballTouchThreshold = tackler.radius + ball.radius + 45;
-          const slideReachThreshold = tackler.radius + ballCarrier.radius + 85;
+          // 100% Precise Hitbox Radii
+          const ballHitboxRadius = tackler.radius + ball.radius + 18; // 48px direct ball contact
+          const bodyHitboxRadius = tackler.radius + ballCarrier.radius + 12; // 48px body-to-body collision
+          const slideHitboxRadius = tackler.radius + ballCarrier.radius + 75; // Extended slide tackle reach
 
-          const isBodyTouching = distToCarrier < touchDistanceThreshold || distToBall < ballTouchThreshold;
-          const isSlideReaching = tackler.isTackling && (distToCarrier < slideReachThreshold || distToBall < slideReachThreshold);
+          const isDirectBallHit = distToBall < ballHitboxRadius;
+          const isBodyContactHit = distToCarrier < bodyHitboxRadius;
+          const isSlideHit = tackler.isTackling && (distToCarrier < slideHitboxRadius || distToBall < slideHitboxRadius);
 
-          // Dispossess occurs whenever carrier's protection has expired (tackler is allowed to steal!)
-          const canDispossess = (isSlideReaching || isBodyTouching) && ballCarrier.dispossessProtectionTimer <= 0;
+          // 100% Clear & Deterministic Dispossess Condition
+          const canDispossess = (isDirectBallHit || isBodyContactHit || isSlideHit) && ballCarrier.dispossessProtectionTimer <= 0;
 
           if (canDispossess) {
             if (ballCarrier.skillDodgeInvincibleTimer > 0) {
@@ -295,8 +296,8 @@ export const GameView: React.FC<GameViewProps> = ({
             } else {
               ballCarrier.hasPossession = false;
               tackler.hasPossession = true;
-              ballCarrier.dispossessProtectionTimer = 0.35; // Prevents instant 1-frame ping-pong bounce back
-              tackler.dispossessProtectionTimer = 0.0;     // Tackler is fresh carrier
+              ballCarrier.dispossessProtectionTimer = 0.25; // Clean 250ms anti-flicker protection lock
+              tackler.dispossessProtectionTimer = 0.0;
 
               ball.releaseTimer = 0;
               ball.homingTargetPlayer = null;
