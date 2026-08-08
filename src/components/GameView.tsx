@@ -275,11 +275,15 @@ export const GameView: React.FC<GameViewProps> = ({
           const distToCarrier = Math.hypot(tackler.pos.x - ballCarrier.pos.x, tackler.pos.y - ballCarrier.pos.y);
           const distToBall = Math.hypot(tackler.pos.x - ball.pos.x, tackler.pos.y - ball.pos.y);
 
+          const touchDistanceThreshold = tackler.radius + ballCarrier.radius + 18;
+          const ballTouchThreshold = tackler.radius + ball.radius + 18;
           const slideReachThreshold = tackler.radius + ballCarrier.radius + 75;
+
+          const isBodyTouching = distToCarrier < touchDistanceThreshold || distToBall < ballTouchThreshold;
           const isSlideReaching = tackler.isTackling && (distToCarrier < slideReachThreshold || distToBall < slideReachThreshold);
 
-          // Dispossess occurs ONLY on active slide tackle input (not passive body bumping!)
-          const canDispossess = isSlideReaching && ballCarrier.dispossessProtectionTimer <= 0 && tackler.dispossessProtectionTimer <= 0;
+          // Dispossess occurs on Slide Tackle OR Direct Proximity Contact when protection timers have expired
+          const canDispossess = (isSlideReaching || isBodyTouching) && ballCarrier.dispossessProtectionTimer <= 0 && tackler.dispossessProtectionTimer <= 0;
 
           if (canDispossess) {
             if (ballCarrier.skillDodgeInvincibleTimer > 0) {
@@ -291,6 +295,7 @@ export const GameView: React.FC<GameViewProps> = ({
               ballCarrier.hasPossession = false;
               tackler.hasPossession = true;
               tackler.dispossessProtectionTimer = 0.60;
+              ballCarrier.dispossessProtectionTimer = 0.60; // Dual protection timer prevents ping-pong flickering!
 
               ball.releaseTimer = 0;
               ball.homingTargetPlayer = null;
