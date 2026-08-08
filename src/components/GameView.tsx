@@ -270,12 +270,12 @@ export const GameView: React.FC<GameViewProps> = ({
 
       // 4. FIFA/PES STYLE BALL COLLISION & DISPOSSESS RESOLUTION ENGINE
       players.forEach((tackler) => {
-        const ballCarrier = players.find((p) => p.id !== tackler.id && p.hasPossession);
+        const ballCarrier = players.find((p) => p.id !== tackler.id && (p.hasPossession || ball.attachedPlayerId === p.id));
         if (ballCarrier) {
           const distToCarrier = Math.hypot(tackler.pos.x - ballCarrier.pos.x, tackler.pos.y - ballCarrier.pos.y);
           const distToBall = Math.hypot(tackler.pos.x - ball.pos.x, tackler.pos.y - ball.pos.y);
 
-          // Expanded reach thresholds so body collision push never prevents standing steals
+          // Responsive reach thresholds
           const touchDistanceThreshold = tackler.radius + ballCarrier.radius + 40;
           const ballTouchThreshold = tackler.radius + ball.radius + 45;
           const slideReachThreshold = tackler.radius + ballCarrier.radius + 85;
@@ -283,8 +283,8 @@ export const GameView: React.FC<GameViewProps> = ({
           const isBodyTouching = distToCarrier < touchDistanceThreshold || distToBall < ballTouchThreshold;
           const isSlideReaching = tackler.isTackling && (distToCarrier < slideReachThreshold || distToBall < slideReachThreshold);
 
-          // Dispossess occurs on Slide Tackle OR Direct Proximity Contact when protection timers have expired
-          const canDispossess = (isSlideReaching || isBodyTouching) && ballCarrier.dispossessProtectionTimer <= 0 && tackler.dispossessProtectionTimer <= 0;
+          // Dispossess occurs whenever carrier's protection has expired (tackler is allowed to steal!)
+          const canDispossess = (isSlideReaching || isBodyTouching) && ballCarrier.dispossessProtectionTimer <= 0;
 
           if (canDispossess) {
             if (ballCarrier.skillDodgeInvincibleTimer > 0) {
@@ -295,8 +295,8 @@ export const GameView: React.FC<GameViewProps> = ({
             } else {
               ballCarrier.hasPossession = false;
               tackler.hasPossession = true;
-              tackler.dispossessProtectionTimer = 0.65;
-              ballCarrier.dispossessProtectionTimer = 0.65; // Dual protection timer prevents ping-pong flickering!
+              ballCarrier.dispossessProtectionTimer = 0.35; // Prevents instant 1-frame ping-pong bounce back
+              tackler.dispossessProtectionTimer = 0.0;     // Tackler is fresh carrier
 
               ball.releaseTimer = 0;
               ball.homingTargetPlayer = null;
