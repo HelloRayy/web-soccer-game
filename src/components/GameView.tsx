@@ -268,23 +268,35 @@ export const GameView: React.FC<GameViewProps> = ({
         }
       }
 
-      // 4. FIFA/PES STYLE PRECISE BALL HITBOX & DISPOSSESS RESOLUTION ENGINE
+      // 4. FIFA/PES STYLE DIRECTIONAL BODY SHIELDING & PRECISE BALL HITBOX ENGINE
       players.forEach((tackler) => {
         const ballCarrier = players.find((p) => p.id !== tackler.id && (p.hasPossession || ball.attachedPlayerId === p.id));
         if (ballCarrier) {
           const distToCarrier = Math.hypot(tackler.pos.x - ballCarrier.pos.x, tackler.pos.y - ballCarrier.pos.y);
           const distToBall = Math.hypot(tackler.pos.x - ball.pos.x, tackler.pos.y - ball.pos.y);
 
+          // Directional Body Shielding Check: Is tackler standing behind carrier's back?
+          const dxToTackler = tackler.pos.x - ballCarrier.pos.x;
+          const dyToTackler = tackler.pos.y - ballCarrier.pos.y;
+          const angleToTackler = Math.atan2(dyToTackler, dxToTackler);
+
+          let angleDiff = Math.abs(angleToTackler - ballCarrier.facingAngle);
+          while (angleDiff > Math.PI) angleDiff = Math.abs(angleDiff - Math.PI * 2);
+
+          // Tackler is behind carrier's back if angle difference is > 105 degrees (~1.83 radians)
+          const isTacklerBehindCarrier = angleDiff > 1.83;
+
           // 100% Precise Hitbox Radii
-          const ballHitboxRadius = tackler.radius + ball.radius + 18; // 48px direct ball contact
-          const bodyHitboxRadius = tackler.radius + ballCarrier.radius + 12; // 48px body-to-body collision
+          const ballHitboxRadius = tackler.radius + ball.radius + 14; // Direct ball contact
+          const bodyHitboxRadius = tackler.radius + ballCarrier.radius + 12; // Body-to-body contact
           const slideHitboxRadius = tackler.radius + ballCarrier.radius + 75; // Extended slide tackle reach
 
           const isDirectBallHit = distToBall < ballHitboxRadius;
-          const isBodyContactHit = distToCarrier < bodyHitboxRadius;
+          // Standing body contact steal ALLOWED ONLY if tackler is NOT behind carrier's back!
+          const isBodyContactHit = distToCarrier < bodyHitboxRadius && !isTacklerBehindCarrier;
           const isSlideHit = tackler.isTackling && (distToCarrier < slideHitboxRadius || distToBall < slideHitboxRadius);
 
-          // 100% Clear & Deterministic Dispossess Condition
+          // Dispossess condition: Can steal if direct ball contact, front/side body contact, or slide tackle!
           const canDispossess = (isDirectBallHit || isBodyContactHit || isSlideHit) && ballCarrier.dispossessProtectionTimer <= 0;
 
           if (canDispossess) {
@@ -307,6 +319,11 @@ export const GameView: React.FC<GameViewProps> = ({
               tackler.triggerFeedback('⚡ BOLA DIREBUT!');
               ballCarrier.triggerFeedback('💥 REBUT!');
               tackler.isTackling = false;
+            }
+          } else if (distToCarrier < bodyHitboxRadius && isTacklerBehindCarrier && !tackler.isTackling) {
+            // Trigger Visual Body Shield Feedback when opponent bumps into carrier's back!
+            if (Math.random() < 0.08) {
+              ballCarrier.triggerFeedback('🛡️ BODY SHIELD!');
             }
           }
         }
