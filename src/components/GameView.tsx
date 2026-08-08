@@ -233,33 +233,7 @@ export const GameView: React.FC<GameViewProps> = ({
         }
       });
 
-      // 3. FRAME-PERFECT RECEPTION POSSESSION ATTACHMENT SOLVER & SINGLE SOURCE OF TRUTH
-      players.forEach((p) => {
-        if (ball.attachedPlayerId === p.id) {
-          p.hasPossession = true;
-          ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
-        } else {
-          const distToBall = Math.hypot(p.pos.x - ball.pos.x, p.pos.y - ball.pos.y);
-          const receptionRadius = p.radius + ball.radius + 28;
-
-          if (ball.releaseTimer <= 0 && distToBall < receptionRadius) {
-            if (ball.homingTargetPlayer && ball.homingTargetPlayer.id === p.id) {
-              p.hasPossession = true;
-              ball.homingTargetPlayer = null;
-              ball.throughPassTargetPos = null;
-              ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
-            } else if (!ball.homingTargetPlayer && !ball.attachedPlayerId) {
-              p.hasPossession = true;
-              ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
-            }
-          }
-        }
-
-        // Single Source of Truth Enforcer
-        p.hasPossession = (ball.attachedPlayerId === p.id);
-      });
-
-      // 4. SOLID PLAYER-TO-PLAYER BODY COLLISION PHYSICS SOLVER
+      // 3. SOLID PLAYER-TO-PLAYER BODY COLLISION PHYSICS SOLVER (Runs FIRST before ball attachment!)
       for (let i = 0; i < players.length; i++) {
         for (let j = i + 1; j < players.length; j++) {
           const pA = players[i];
@@ -294,20 +268,18 @@ export const GameView: React.FC<GameViewProps> = ({
         }
       }
 
-      // 5. FIFA/PES STYLE BALL COLLISION & DISPOSSESS RESOLUTION ENGINE
+      // 4. FIFA/PES STYLE BALL COLLISION & DISPOSSESS RESOLUTION ENGINE
       players.forEach((tackler) => {
         const ballCarrier = players.find((p) => p.id !== tackler.id && p.hasPossession);
         if (ballCarrier) {
           const distToCarrier = Math.hypot(tackler.pos.x - ballCarrier.pos.x, tackler.pos.y - ballCarrier.pos.y);
           const distToBall = Math.hypot(tackler.pos.x - ball.pos.x, tackler.pos.y - ball.pos.y);
 
-          const touchDistanceThreshold = tackler.radius + ballCarrier.radius + 14;
           const slideReachThreshold = tackler.radius + ballCarrier.radius + 75;
-
-          const isBodyTouching = distToCarrier < touchDistanceThreshold || distToBall < (tackler.radius + ball.radius + 14);
           const isSlideReaching = tackler.isTackling && (distToCarrier < slideReachThreshold || distToBall < slideReachThreshold);
 
-          const canDispossess = (isSlideReaching || (isBodyTouching && ballCarrier.dispossessProtectionTimer <= 0)) && tackler.dispossessProtectionTimer <= 0;
+          // Dispossess occurs ONLY on active slide tackle input (not passive body bumping!)
+          const canDispossess = isSlideReaching && ballCarrier.dispossessProtectionTimer <= 0 && tackler.dispossessProtectionTimer <= 0;
 
           if (canDispossess) {
             if (ballCarrier.skillDodgeInvincibleTimer > 0) {
@@ -333,7 +305,7 @@ export const GameView: React.FC<GameViewProps> = ({
         }
       });
 
-      // 5b. Sandwiched Loose Ball Squeeze Pop-Out Solver
+      // 4b. Sandwiched Loose Ball Squeeze Pop-Out Solver (ONLY for unpossessed loose ball)
       for (let i = 0; i < players.length; i++) {
         for (let j = i + 1; j < players.length; j++) {
           const pA = players[i];
@@ -345,7 +317,8 @@ export const GameView: React.FC<GameViewProps> = ({
             const midY = (pA.pos.y + pB.pos.y) * 0.5;
             const distBallToMid = Math.hypot(ball.pos.x - midX, ball.pos.y - midY);
 
-            if (distBallToMid < 32) {
+            // Pop out ONLY if NO ONE currently holds the ball
+            if (distBallToMid < 32 && !ball.attachedPlayerId) {
               const lineDx = (pB.pos.x - pA.pos.x) / distBetween;
               const lineDy = (pB.pos.y - pA.pos.y) / distBetween;
               const popDirX = -lineDy;
@@ -353,12 +326,40 @@ export const GameView: React.FC<GameViewProps> = ({
 
               pA.hasPossession = false;
               pB.hasPossession = false;
+              pA.dispossessProtectionTimer = 0.50;
+              pB.dispossessProtectionTimer = 0.50;
               ball.kick({ x: popDirX, y: popDirY }, 5.5, 'none');
-              ball.releaseTimer = 0.35;
+              ball.releaseTimer = 0.50;
             }
           }
         }
       }
+
+      // 5. FRAME-PERFECT RECEPTION POSSESSION ATTACHMENT SOLVER (Runs LAST at final post-collision position!)
+      players.forEach((p) => {
+        if (ball.attachedPlayerId === p.id) {
+          p.hasPossession = true;
+          ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
+        } else {
+          const distToBall = Math.hypot(p.pos.x - ball.pos.x, p.pos.y - ball.pos.y);
+          const receptionRadius = p.radius + ball.radius + 28;
+
+          if (ball.releaseTimer <= 0 && distToBall < receptionRadius) {
+            if (ball.homingTargetPlayer && ball.homingTargetPlayer.id === p.id) {
+              p.hasPossession = true;
+              ball.homingTargetPlayer = null;
+              ball.throughPassTargetPos = null;
+              ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
+            } else if (!ball.homingTargetPlayer && !ball.attachedPlayerId) {
+              p.hasPossession = true;
+              ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
+            }
+          }
+        }
+
+        // Single Source of Truth Enforcer
+        p.hasPossession = (ball.attachedPlayerId === p.id);
+      });
 
       // 6. Check Loose Ball Collision Bounce (ONLY during active releaseTimer flight!)
       players.forEach((p) => {
