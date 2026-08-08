@@ -275,9 +275,10 @@ export const GameView: React.FC<GameViewProps> = ({
           const distToCarrier = Math.hypot(tackler.pos.x - ballCarrier.pos.x, tackler.pos.y - ballCarrier.pos.y);
           const distToBall = Math.hypot(tackler.pos.x - ball.pos.x, tackler.pos.y - ball.pos.y);
 
-          const touchDistanceThreshold = tackler.radius + ballCarrier.radius + 18;
-          const ballTouchThreshold = tackler.radius + ball.radius + 18;
-          const slideReachThreshold = tackler.radius + ballCarrier.radius + 75;
+          // Expanded reach thresholds so body collision push never prevents standing steals
+          const touchDistanceThreshold = tackler.radius + ballCarrier.radius + 40;
+          const ballTouchThreshold = tackler.radius + ball.radius + 45;
+          const slideReachThreshold = tackler.radius + ballCarrier.radius + 85;
 
           const isBodyTouching = distToCarrier < touchDistanceThreshold || distToBall < ballTouchThreshold;
           const isSlideReaching = tackler.isTackling && (distToCarrier < slideReachThreshold || distToBall < slideReachThreshold);
@@ -294,8 +295,8 @@ export const GameView: React.FC<GameViewProps> = ({
             } else {
               ballCarrier.hasPossession = false;
               tackler.hasPossession = true;
-              tackler.dispossessProtectionTimer = 0.60;
-              ballCarrier.dispossessProtectionTimer = 0.60; // Dual protection timer prevents ping-pong flickering!
+              tackler.dispossessProtectionTimer = 0.65;
+              ballCarrier.dispossessProtectionTimer = 0.65; // Dual protection timer prevents ping-pong flickering!
 
               ball.releaseTimer = 0;
               ball.homingTargetPlayer = null;
