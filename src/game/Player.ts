@@ -52,8 +52,10 @@ export class Player implements PlayerEntity {
   // Charged Shot Trajectory & Power Gauge Properties
   isChargingShot: boolean = false;
   shotPower: number = 0;
+  smoothShotPower: number = 0;
   shotAimAngle: number = 0;
   shotPowerDirection: number = 1;
+  smoothLineLength: number = 110;
 
   // Gocek & Stumble Properties
   isDribbleSkillActive: boolean;
@@ -724,6 +726,7 @@ export class Player implements PlayerEntity {
         if (!this.isChargingShot) {
           this.isChargingShot = true;
           this.shotPower = 0.05;
+          this.smoothShotPower = 0.05;
           this.shotPowerDirection = 1;
         }
 
@@ -739,35 +742,46 @@ export class Player implements PlayerEntity {
           this.shotPowerDirection = 1; // Reverse direction: increase power!
         }
 
+        // Smooth Lerp for power bar filling & laser line length (silky 60 FPS transitions!)
+        this.smoothShotPower += (this.shotPower - this.smoothShotPower) * 0.35;
+
         const stickMag = Math.hypot(moveX, moveY);
+        let targetAimAngle = this.facingAngle;
         if (stickMag > 0.15) {
-          this.shotAimAngle = Math.atan2(moveY, moveX);
+          targetAimAngle = Math.atan2(moveY, moveX);
         } else {
           const targetGoal = this.team === 'home' ? field.goals.awayGoal : field.goals.homeGoal;
           const targetY = targetGoal.top + (targetGoal.bottom - targetGoal.top) * 0.5;
-          this.shotAimAngle = Math.atan2(targetY - this.pos.y, targetGoal.x - this.pos.x);
+          targetAimAngle = Math.atan2(targetY - this.pos.y, targetGoal.x - this.pos.x);
         }
-        this.facingAngle = this.shotAimAngle;
+
+        // Smooth Angular Lerp for Shot Aim Trajectory (Fluid 60 FPS rotation!)
+        this.shotAimAngle = lerpAngle(this.shotAimAngle, targetAimAngle, 0.28);
+        this.facingAngle = lerpAngle(this.facingAngle, this.shotAimAngle, 0.28);
+
+        const targetLineLen = 110 + this.smoothShotPower * 260;
+        this.smoothLineLength += (targetLineLen - this.smoothLineLength) * 0.28;
       } else if (this.isChargingShot && !isPressingX) {
         // RELEASE SHOT BUTTON -> LAUNCH BALL AT EXACT RELEASED POWER!
         const dirX = Math.cos(this.shotAimAngle);
         const dirY = Math.sin(this.shotAimAngle);
-        const finalShotPower = 10.5 + this.shotPower * 15.5; // Range 10.5 to 26.0 Rocket Shot!
+        const finalShotPower = 10.5 + this.smoothShotPower * 15.5; // Range 10.5 to 26.0 Rocket Shot!
 
         this.hasPossession = false;
         ball.kick({ x: dirX, y: dirY }, finalShotPower, this.id, null, null);
 
-        if (this.shotPower >= 0.82) {
+        if (this.smoothShotPower >= 0.82) {
           this.triggerFeedback('💥 PERFECT ROCKET SHOT!');
-        } else if (this.shotPower >= 0.45) {
+        } else if (this.smoothShotPower >= 0.45) {
           this.triggerFeedback('🚀 POWER SHOT!');
         } else {
           this.triggerFeedback('⚽ SHOOT!');
         }
 
-        this.debugInputString = `🚀 SHOT RELEASED! Power: ${(this.shotPower * 100).toFixed(0)}% (${finalShotPower.toFixed(1)} Speed)`;
+        this.debugInputString = `🚀 SHOT RELEASED! Power: ${(this.smoothShotPower * 100).toFixed(0)}% (${finalShotPower.toFixed(1)} Speed)`;
         this.isChargingShot = false;
         this.shotPower = 0;
+        this.smoothShotPower = 0;
         this.shotPowerDirection = 1;
       }
 
@@ -907,14 +921,14 @@ export class Player implements PlayerEntity {
       ctx.save();
 
       const animTime = Date.now();
-      const lineLen = 110 + this.shotPower * 260; // 110px up to 370px trajectory line!
+      const lineLen = this.smoothLineLength; // Silky smooth 60 FPS lerped line length!
       const endX = this.pos.x + Math.cos(this.shotAimAngle) * lineLen;
       const endY = this.pos.y + Math.sin(this.shotAimAngle) * lineLen;
 
       // Color Palette Matrix (Cyan -> Electric Gold -> Hyper Crimson Red)
-      const mainColor = this.shotPower < 0.45 ? '#38bdf8' : this.shotPower < 0.80 ? '#fbbf24' : '#ff0055';
-      const glowColor = this.shotPower < 0.45 ? 'rgba(56, 189, 248, 0.45)' : this.shotPower < 0.80 ? 'rgba(251, 191, 36, 0.55)' : 'rgba(255, 0, 85, 0.75)';
-      const accentColor = this.shotPower < 0.80 ? '#ffffff' : '#ffd700';
+      const mainColor = this.smoothShotPower < 0.45 ? '#38bdf8' : this.smoothShotPower < 0.80 ? '#fbbf24' : '#ff0055';
+      const glowColor = this.smoothShotPower < 0.45 ? 'rgba(56, 189, 248, 0.45)' : this.smoothShotPower < 0.80 ? 'rgba(251, 191, 36, 0.55)' : 'rgba(255, 0, 85, 0.75)';
+      const accentColor = this.smoothShotPower < 0.80 ? '#ffffff' : '#ffd700';
 
       // 1. Spawns Ambient Energy Sparks around Ball & Feet while Charging
       if (Math.random() < 0.35) {
@@ -933,9 +947,9 @@ export class Player implements PlayerEntity {
 
       // 2. Outer Soft Neon Glow Beam
       ctx.shadowColor = mainColor;
-      ctx.shadowBlur = 16 + this.shotPower * 12;
+      ctx.shadowBlur = 16 + this.smoothShotPower * 12;
       ctx.strokeStyle = glowColor;
-      ctx.lineWidth = 14 + this.shotPower * 6;
+      ctx.lineWidth = 14 + this.smoothShotPower * 6;
       ctx.beginPath();
       ctx.moveTo(this.pos.x, this.pos.y);
       ctx.lineTo(endX, endY);
@@ -962,8 +976,9 @@ export class Player implements PlayerEntity {
       ctx.stroke();
       ctx.shadowBlur = 0; // Reset glow shadow for clean HUD UI
 
-      // 5. Rotating Next-Gen Target Reticle / Crosshair Icon
-      const reticleRadius = 14 + this.shotPower * 10;
+      // 5. Rotating Next-Gen Target Reticle / Crosshair Icon with Smooth Pulse
+      const pulse = Math.sin(animTime * 0.010) * 1.8;
+      const reticleRadius = 14 + this.smoothShotPower * 10 + pulse;
       const rotAngle = animTime * 0.003;
 
       // Outer Rotating Reticle Ring
@@ -1013,13 +1028,13 @@ export class Player implements PlayerEntity {
       ctx.stroke();
 
       // Metallic Linear Gradient Fill for Power Bar
-      const fillW = Math.max(4, (barW - 4) * this.shotPower);
+      const fillW = Math.max(4, (barW - 4) * this.smoothShotPower);
       const gradient = ctx.createLinearGradient(barX, barY, barX + barW, barY);
 
-      if (this.shotPower < 0.45) {
+      if (this.smoothShotPower < 0.45) {
         gradient.addColorStop(0, '#00f2fe');
         gradient.addColorStop(1, '#4facfe');
-      } else if (this.shotPower < 0.80) {
+      } else if (this.smoothShotPower < 0.80) {
         gradient.addColorStop(0, '#f6d365');
         gradient.addColorStop(1, '#fda085');
       } else {
@@ -1033,8 +1048,8 @@ export class Player implements PlayerEntity {
       ctx.fill();
 
       // Glowing Badge Label Text (% Power)
-      const powerPercent = (this.shotPower * 100).toFixed(0);
-      const badgeText = this.shotPower >= 0.82 ? `🔥 PERFECT ${powerPercent}%` : `⚡ POWER ${powerPercent}%`;
+      const powerPercent = (this.smoothShotPower * 100).toFixed(0);
+      const badgeText = this.smoothShotPower >= 0.82 ? `🔥 PERFECT ${powerPercent}%` : `⚡ POWER ${powerPercent}%`;
 
       ctx.fillStyle = accentColor;
       ctx.font = '900 11px sans-serif';
