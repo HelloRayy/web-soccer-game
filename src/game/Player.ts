@@ -672,16 +672,11 @@ export class Player implements PlayerEntity {
       toggleHUDRequested = true;
     }
 
-    // R1 / RB REQUEST BALL TRIGGER
+    // R1 / RB REQUEST BALL TRIGGER: Displays floating request text above player without forcing an automatic pass
     const reqPassTriggered = (isPressingRB && !this.prevRB) || (isPressingLB && !this.prevLB);
     if (reqPassTriggered) {
-      const targetTeammate = teammates.find((t) => t.id !== this.id);
-      this.triggerFeedback('🙋 PASS SINI!');
+      this.triggerFeedback('🙋 MINTA BOLA!');
       this.debugInputString = `🙋 R1 (RB/E/R) REQUEST BALL -> ${this.name}!`;
-
-      if (targetTeammate && targetTeammate.hasPossession) {
-        targetTeammate.executePassTo(this, ball);
-      }
     }
 
     const activeBtns: string[] = [];
