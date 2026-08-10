@@ -53,6 +53,7 @@ export class Player implements PlayerEntity {
   isChargingShot: boolean = false;
   shotPower: number = 0;
   shotAimAngle: number = 0;
+  shotPowerDirection: number = 1;
 
   // Gocek & Stumble Properties
   isDribbleSkillActive: boolean;
@@ -114,6 +115,7 @@ export class Player implements PlayerEntity {
     this.isChargingShot = false;
     this.shotPower = 0;
     this.shotAimAngle = 0;
+    this.shotPowerDirection = 1;
 
     this.isDribbleSkillActive = false;
     this.skillDodgeInvincibleTimer = 0;
@@ -717,10 +719,25 @@ export class Player implements PlayerEntity {
       this.isChargingSlide = false;
       this.slidePower = 0;
 
-      // X Button = Charged Aim Trajectory Shot (Hold to Aim & Charge Power)
+      // X Button = Oscillating Aim Trajectory Shot (Hold to Aim & Charge/Decrease Power, Release to Shoot)
       if (isPressingX) {
-        this.isChargingShot = true;
-        this.shotPower = Math.min(1.0, this.shotPower + 0.038); // Charge smoothly up to 100%
+        if (!this.isChargingShot) {
+          this.isChargingShot = true;
+          this.shotPower = 0.05;
+          this.shotPowerDirection = 1;
+        }
+
+        // Oscillate back and forth continuously (0% -> 100% -> 0% -> 100%)
+        const chargeSpeed = 0.045; // Smooth ~0.4s fill time per direction
+        this.shotPower += this.shotPowerDirection * chargeSpeed;
+
+        if (this.shotPower >= 1.0) {
+          this.shotPower = 1.0;
+          this.shotPowerDirection = -1; // Reverse direction: decrease power!
+        } else if (this.shotPower <= 0.05) {
+          this.shotPower = 0.05;
+          this.shotPowerDirection = 1; // Reverse direction: increase power!
+        }
 
         const stickMag = Math.hypot(moveX, moveY);
         if (stickMag > 0.15) {
@@ -732,15 +749,17 @@ export class Player implements PlayerEntity {
         }
         this.facingAngle = this.shotAimAngle;
       } else if (this.isChargingShot && !isPressingX) {
-        // RELEASE SHOT BUTTON -> LAUNCH BALL ALONG AIM TRAJECTORY!
+        // RELEASE SHOT BUTTON -> LAUNCH BALL AT EXACT RELEASED POWER!
         const dirX = Math.cos(this.shotAimAngle);
         const dirY = Math.sin(this.shotAimAngle);
-        const finalShotPower = 11.5 + this.shotPower * 14.5; // Range 11.5 to 26.0 Rocket Shot!
+        const finalShotPower = 10.5 + this.shotPower * 15.5; // Range 10.5 to 26.0 Rocket Shot!
 
         this.hasPossession = false;
         ball.kick({ x: dirX, y: dirY }, finalShotPower, this.id, null, null);
 
-        if (this.shotPower > 0.78) {
+        if (this.shotPower >= 0.82) {
+          this.triggerFeedback('💥 PERFECT ROCKET SHOT!');
+        } else if (this.shotPower >= 0.45) {
           this.triggerFeedback('🚀 POWER SHOT!');
         } else {
           this.triggerFeedback('⚽ SHOOT!');
@@ -749,6 +768,7 @@ export class Player implements PlayerEntity {
         this.debugInputString = `🚀 SHOT RELEASED! Power: ${(this.shotPower * 100).toFixed(0)}% (${finalShotPower.toFixed(1)} Speed)`;
         this.isChargingShot = false;
         this.shotPower = 0;
+        this.shotPowerDirection = 1;
       }
 
       // A Button = Pass (Passing)
