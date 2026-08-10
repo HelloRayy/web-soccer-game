@@ -728,7 +728,7 @@ export class Player implements PlayerEntity {
         }
 
         // Oscillate back and forth continuously (0% -> 100% -> 0% -> 100%)
-        const chargeSpeed = 0.045; // Smooth ~0.4s fill time per direction
+        const chargeSpeed = 0.020; // Comfortable ~0.85s fill time per direction for precise timing
         this.shotPower += this.shotPowerDirection * chargeSpeed;
 
         if (this.shotPower >= 1.0) {
@@ -802,8 +802,12 @@ export class Player implements PlayerEntity {
         this.debugInputString = `🔥 THROUGH / DRIBBLE GOCEK TRIGGERED (Tombol Y)!`;
       }
     }
-    // 2. DEFENDING ACTIONS: B Button = Slide Tackle with Charged Power Bar!
+    // 2. DEFENDING ACTIONS: Cancel any pending shot charging if ball is stolen by opponent!
     else {
+      this.isChargingShot = false;
+      this.shotPower = 0;
+      this.shotPowerDirection = 1;
+
       if (isPressingB) {
         this.isChargingSlide = true;
         this.slidePower = Math.min(1.0, this.slidePower + 0.035);
@@ -898,8 +902,8 @@ export class Player implements PlayerEntity {
       ctx.fill();
     }
 
-    // DYNAMIC SHOT AIM TRAJECTORY LINE & POWER GAUGE METER
-    if (this.isChargingShot) {
+    // DYNAMIC SHOT AIM TRAJECTORY LINE & POWER GAUGE METER (Rendered ONLY when carrying ball!)
+    if (this.isChargingShot && this.hasPossession) {
       ctx.save();
 
       const lineLen = 100 + this.shotPower * 240; // 100px up to 340px trajectory line!
