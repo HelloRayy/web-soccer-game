@@ -902,76 +902,147 @@ export class Player implements PlayerEntity {
       ctx.fill();
     }
 
-    // DYNAMIC SHOT AIM TRAJECTORY LINE & POWER GAUGE METER (Rendered ONLY when carrying ball!)
+    // NEXT-GEN ULTRA-PREMIUM POWER SHOT AIM & POWER METER RENDER ENGINE
     if (this.isChargingShot && this.hasPossession) {
       ctx.save();
 
-      const lineLen = 100 + this.shotPower * 240; // 100px up to 340px trajectory line!
+      const animTime = Date.now();
+      const lineLen = 110 + this.shotPower * 260; // 110px up to 370px trajectory line!
       const endX = this.pos.x + Math.cos(this.shotAimAngle) * lineLen;
       const endY = this.pos.y + Math.sin(this.shotAimAngle) * lineLen;
 
-      // Color Gradient according to power (Cyan/Green -> Amber -> Fiery Crimson)
-      const strokeColor = this.shotPower < 0.5 ? '#06b6d4' : this.shotPower < 0.85 ? '#f59e0b' : '#ef4444';
-      const glowColor = this.shotPower < 0.85 ? 'rgba(6, 182, 212, 0.35)' : 'rgba(239, 68, 68, 0.6)';
+      // Color Palette Matrix (Cyan -> Electric Gold -> Hyper Crimson Red)
+      const mainColor = this.shotPower < 0.45 ? '#38bdf8' : this.shotPower < 0.80 ? '#fbbf24' : '#ff0055';
+      const glowColor = this.shotPower < 0.45 ? 'rgba(56, 189, 248, 0.45)' : this.shotPower < 0.80 ? 'rgba(251, 191, 36, 0.55)' : 'rgba(255, 0, 85, 0.75)';
+      const accentColor = this.shotPower < 0.80 ? '#ffffff' : '#ffd700';
 
-      // 1. Outer Laser Glow Line
+      // 1. Spawns Ambient Energy Sparks around Ball & Feet while Charging
+      if (Math.random() < 0.35) {
+        const sparkAngle = Math.random() * Math.PI * 2;
+        const sparkDist = this.radius * (0.8 + Math.random() * 0.8);
+        this.turfParticles.push({
+          x: this.pos.x + Math.cos(sparkAngle) * sparkDist,
+          y: this.pos.y + Math.sin(sparkAngle) * sparkDist,
+          vx: (Math.random() - 0.5) * 1.5,
+          vy: (Math.random() - 0.5) * 1.5,
+          life: 0.6,
+          color: mainColor,
+          size: Math.random() * 3 + 1.5
+        });
+      }
+
+      // 2. Outer Soft Neon Glow Beam
+      ctx.shadowColor = mainColor;
+      ctx.shadowBlur = 16 + this.shotPower * 12;
       ctx.strokeStyle = glowColor;
-      ctx.lineWidth = 12;
+      ctx.lineWidth = 14 + this.shotPower * 6;
       ctx.beginPath();
       ctx.moveTo(this.pos.x, this.pos.y);
       ctx.lineTo(endX, endY);
       ctx.stroke();
 
-      // 2. Inner Dotted Laser Trajectory Line
-      ctx.strokeStyle = strokeColor;
+      // 3. Inner Animated Pulsing Dashed Laser Beam (Dashes slide forward continuously!)
+      const dashOffset = -(animTime * 0.035) % 18;
+      ctx.strokeStyle = mainColor;
       ctx.lineWidth = 4.5;
-      ctx.setLineDash([10, 6]);
+      ctx.lineDashOffset = dashOffset;
+      ctx.setLineDash([11, 7]);
       ctx.beginPath();
       ctx.moveTo(this.pos.x, this.pos.y);
       ctx.lineTo(endX, endY);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // 3. Target Crosshair Ring & Core at End Position
-      ctx.strokeStyle = strokeColor;
+      // 4. White-Hot Laser Center Core Line
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(this.pos.x, this.pos.y);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+      ctx.shadowBlur = 0; // Reset glow shadow for clean HUD UI
+
+      // 5. Rotating Next-Gen Target Reticle / Crosshair Icon
+      const reticleRadius = 14 + this.shotPower * 10;
+      const rotAngle = animTime * 0.003;
+
+      // Outer Rotating Reticle Ring
+      ctx.strokeStyle = mainColor;
       ctx.fillStyle = glowColor;
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(endX, endY, 14 + this.shotPower * 8, 0, Math.PI * 2);
+      ctx.arc(endX, endY, reticleRadius, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      ctx.beginPath();
-      ctx.arc(endX, endY, 5, 0, Math.PI * 2);
+      // Rotating Ticks / Crosshair Markers
+      ctx.save();
+      ctx.translate(endX, endY);
+      ctx.rotate(rotAngle);
+      ctx.strokeStyle = accentColor;
+      ctx.lineWidth = 2.5;
+
+      for (let k = 0; k < 4; k++) {
+        const tickAngle = (Math.PI / 2) * k;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(tickAngle) * (reticleRadius - 4), Math.sin(tickAngle) * (reticleRadius - 4));
+        ctx.lineTo(Math.cos(tickAngle) * (reticleRadius + 5), Math.sin(tickAngle) * (reticleRadius + 5));
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Inner Bullseye Core
       ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(endX, endY, 4.5, 0, Math.PI * 2);
       ctx.fill();
 
-      // 4. Floating FIFA-style Power Meter Bar above Player
-      const barW = 58;
-      const barH = 10;
+      // 6. Floating Glassmorphic Power Meter Capsule Bar above Player
+      const barW = 68;
+      const barH = 12;
       const barX = this.pos.x - barW / 2;
-      const barY = this.pos.y - this.radius - 38;
+      const barY = this.pos.y - this.radius - 42;
 
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = 1.8;
+      // Capsule Background with Glossy Shadow
+      ctx.fillStyle = 'rgba(7, 11, 15, 0.94)';
+      ctx.strokeStyle = mainColor;
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.roundRect(barX, barY, barW, barH, 5);
+      ctx.roundRect(barX, barY, barW, barH, 6);
       ctx.fill();
       ctx.stroke();
 
-      const fillW = Math.max(2, (barW - 2) * this.shotPower);
-      ctx.fillStyle = strokeColor;
+      // Metallic Linear Gradient Fill for Power Bar
+      const fillW = Math.max(4, (barW - 4) * this.shotPower);
+      const gradient = ctx.createLinearGradient(barX, barY, barX + barW, barY);
+
+      if (this.shotPower < 0.45) {
+        gradient.addColorStop(0, '#00f2fe');
+        gradient.addColorStop(1, '#4facfe');
+      } else if (this.shotPower < 0.80) {
+        gradient.addColorStop(0, '#f6d365');
+        gradient.addColorStop(1, '#fda085');
+      } else {
+        gradient.addColorStop(0, '#ff0844');
+        gradient.addColorStop(1, '#ffb199');
+      }
+
+      ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.roundRect(barX + 1, barY + 1, fillW, barH - 2, 4);
+      ctx.roundRect(barX + 2, barY + 2, fillW, barH - 4, 4);
       ctx.fill();
 
-      // Power Text % Label
-      ctx.fillStyle = '#ffffff';
+      // Glowing Badge Label Text (% Power)
+      const powerPercent = (this.shotPower * 100).toFixed(0);
+      const badgeText = this.shotPower >= 0.82 ? `🔥 PERFECT ${powerPercent}%` : `⚡ POWER ${powerPercent}%`;
+
+      ctx.fillStyle = accentColor;
       ctx.font = '900 11px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
-      ctx.fillText(`POWER ${(this.shotPower * 100).toFixed(0)}%`, this.pos.x, barY - 3);
+      ctx.shadowColor = mainColor;
+      ctx.shadowBlur = 8;
+      ctx.fillText(badgeText, this.pos.x, barY - 4);
 
       ctx.restore();
     }
