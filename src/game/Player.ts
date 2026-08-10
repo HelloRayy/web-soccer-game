@@ -40,6 +40,7 @@ export class Player implements PlayerEntity {
 
   // Realistic Micro-Movement Properties
   bodyTiltAngle: number;
+  currentAimAngle: number;
   turfParticles: TurfParticle[];
 
   // Charged Power Bar Slide Tackle Properties
@@ -88,6 +89,7 @@ export class Player implements PlayerEntity {
     this.speed = 3.2;
     this.color = color;
     this.facingAngle = team === 'home' ? 0 : Math.PI;
+    this.currentAimAngle = team === 'home' ? 0 : Math.PI;
     this.isSprinting = false;
     this.hasPossession = false;
 
@@ -128,6 +130,7 @@ export class Player implements PlayerEntity {
     this.pos = { x, y };
     this.vel = { x: 0, y: 0 };
     this.facingAngle = this.team === 'home' ? 0 : Math.PI;
+    this.currentAimAngle = this.team === 'home' ? 0 : Math.PI;
     this.stamina = 1.0;
     this.isExhausted = false;
     this.bodyTiltAngle = 0;
@@ -625,6 +628,7 @@ export class Player implements PlayerEntity {
       this.vel.y = this.vel.y * 0.72 + targetVelY * 0.28 * turnFactor;
 
       aimAngle = Math.atan2(moveY, moveX);
+      this.currentAimAngle = aimAngle;
       const angleDiff = aimAngle - this.facingAngle;
       this.facingAngle = lerpAngle(this.facingAngle, aimAngle, 0.18);
 
@@ -637,6 +641,7 @@ export class Player implements PlayerEntity {
       this.vel.x = 0;
       this.vel.y = 0;
       this.bodyTiltAngle = 0;
+      this.currentAimAngle = this.facingAngle;
     }
 
     this.pos.x += this.vel.x;
@@ -703,38 +708,22 @@ export class Player implements PlayerEntity {
       this.isChargingSlide = false;
       this.slidePower = 0;
 
-      // X Button = Shoot (Goal / Directional Shot)
+      // X Button = Shoot (100% Pure Manual Directional Aiming - No Auto Goal Lock)
       if (isPressingX && !this.prevX) {
-        const stickMag = Math.hypot(moveX, moveY);
-        let dirX = 0;
-        let dirY = 0;
+        const shotAngle = stickMagnitude > 0.15 ? Math.atan2(moveY, moveX) : this.facingAngle;
+        const dirX = Math.cos(shotAngle);
+        const dirY = Math.sin(shotAngle);
 
-        if (stickMag > 0.15) {
-          // Player is actively aiming with stick/keys -> Shoot in precise stick direction
-          dirX = moveX / stickMag;
-          dirY = moveY / stickMag;
-        } else {
-          // No stick input -> Default to opponent goal center
-          const targetGoal = this.team === 'home' ? field.goals.awayGoal : field.goals.homeGoal;
-          const targetY = targetGoal.top + (targetGoal.bottom - targetGoal.top) * 0.5;
-          const shootDx = targetGoal.x - this.pos.x;
-          const shootDy = targetY - this.pos.y;
-          const goalLen = Math.hypot(shootDx, shootDy) || 1;
-
-          dirX = shootDx / goalLen;
-          dirY = shootDy / goalLen;
-        }
-
-        // Update player facing angle to match shot direction instantly
-        this.facingAngle = Math.atan2(dirY, dirX);
+        this.facingAngle = shotAngle;
+        this.currentAimAngle = shotAngle;
 
         // Consistent Power Rocket Shot (Base 16.0, Sprint Boost 17.5)
         const shotPower = this.isSprinting ? 17.5 : 16.0;
 
         this.hasPossession = false;
         ball.kick({ x: dirX, y: dirY }, shotPower, this.id, null, null);
-        this.triggerFeedback('⚽ SHOOT!');
-        this.debugInputString = `🔥 DIRECTIONAL SHOOT (Power: ${shotPower.toFixed(1)})!`;
+        this.triggerFeedback('⚽ MANUAL SHOOT!');
+        this.debugInputString = `🔥 MANUAL SHOOT (Power: ${shotPower.toFixed(1)})!`;
       }
 
       // A Button = Pass (Passing)
