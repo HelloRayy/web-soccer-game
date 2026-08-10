@@ -40,7 +40,6 @@ export class Player implements PlayerEntity {
 
   // Realistic Micro-Movement Properties
   bodyTiltAngle: number;
-  currentAimAngle: number;
   turfParticles: TurfParticle[];
 
   // Charged Power Bar Slide Tackle Properties
@@ -49,6 +48,11 @@ export class Player implements PlayerEntity {
   isTackling: boolean;
   tackleTimer: number;
   tackleSlideAngle: number;
+
+  // Charged Shot Trajectory & Power Gauge Properties
+  isChargingShot: boolean = false;
+  shotPower: number = 0;
+  shotAimAngle: number = 0;
 
   // Gocek & Stumble Properties
   isDribbleSkillActive: boolean;
@@ -89,7 +93,6 @@ export class Player implements PlayerEntity {
     this.speed = 3.2;
     this.color = color;
     this.facingAngle = team === 'home' ? 0 : Math.PI;
-    this.currentAimAngle = team === 'home' ? 0 : Math.PI;
     this.isSprinting = false;
     this.hasPossession = false;
 
@@ -106,6 +109,11 @@ export class Player implements PlayerEntity {
     this.isTackling = false;
     this.tackleTimer = 0;
     this.tackleSlideAngle = 0;
+
+    // Charged Shot Trajectory & Power Defaults
+    this.isChargingShot = false;
+    this.shotPower = 0;
+    this.shotAimAngle = 0;
 
     this.isDribbleSkillActive = false;
     this.skillDodgeInvincibleTimer = 0;
@@ -130,7 +138,6 @@ export class Player implements PlayerEntity {
     this.pos = { x, y };
     this.vel = { x: 0, y: 0 };
     this.facingAngle = this.team === 'home' ? 0 : Math.PI;
-    this.currentAimAngle = this.team === 'home' ? 0 : Math.PI;
     this.stamina = 1.0;
     this.isExhausted = false;
     this.bodyTiltAngle = 0;
@@ -142,6 +149,10 @@ export class Player implements PlayerEntity {
     this.isTackling = false;
     this.tackleTimer = 0;
     this.tackleSlideAngle = 0;
+
+    this.isChargingShot = false;
+    this.shotPower = 0;
+    this.shotAimAngle = 0;
 
     this.isDribbleSkillActive = false;
     this.skillDodgeInvincibleTimer = 0;
@@ -628,7 +639,6 @@ export class Player implements PlayerEntity {
       this.vel.y = this.vel.y * 0.72 + targetVelY * 0.28 * turnFactor;
 
       aimAngle = Math.atan2(moveY, moveX);
-      this.currentAimAngle = aimAngle;
       const angleDiff = aimAngle - this.facingAngle;
       this.facingAngle = lerpAngle(this.facingAngle, aimAngle, 0.18);
 
@@ -641,7 +651,6 @@ export class Player implements PlayerEntity {
       this.vel.x = 0;
       this.vel.y = 0;
       this.bodyTiltAngle = 0;
-      this.currentAimAngle = this.facingAngle;
     }
 
     this.pos.x += this.vel.x;
@@ -708,22 +717,38 @@ export class Player implements PlayerEntity {
       this.isChargingSlide = false;
       this.slidePower = 0;
 
-      // X Button = Shoot (100% Pure Manual Directional Aiming - No Auto Goal Lock)
-      if (isPressingX && !this.prevX) {
-        const shotAngle = stickMagnitude > 0.15 ? Math.atan2(moveY, moveX) : this.facingAngle;
-        const dirX = Math.cos(shotAngle);
-        const dirY = Math.sin(shotAngle);
+      // X Button = Charged Aim Trajectory Shot (Hold to Aim & Charge Power)
+      if (isPressingX) {
+        this.isChargingShot = true;
+        this.shotPower = Math.min(1.0, this.shotPower + 0.038); // Charge smoothly up to 100%
 
-        this.facingAngle = shotAngle;
-        this.currentAimAngle = shotAngle;
-
-        // Consistent Power Rocket Shot (Base 16.0, Sprint Boost 17.5)
-        const shotPower = this.isSprinting ? 17.5 : 16.0;
+        const stickMag = Math.hypot(moveX, moveY);
+        if (stickMag > 0.15) {
+          this.shotAimAngle = Math.atan2(moveY, moveX);
+        } else {
+          const targetGoal = this.team === 'home' ? field.goals.awayGoal : field.goals.homeGoal;
+          const targetY = targetGoal.top + (targetGoal.bottom - targetGoal.top) * 0.5;
+          this.shotAimAngle = Math.atan2(targetY - this.pos.y, targetGoal.x - this.pos.x);
+        }
+        this.facingAngle = this.shotAimAngle;
+      } else if (this.isChargingShot && !isPressingX) {
+        // RELEASE SHOT BUTTON -> LAUNCH BALL ALONG AIM TRAJECTORY!
+        const dirX = Math.cos(this.shotAimAngle);
+        const dirY = Math.sin(this.shotAimAngle);
+        const finalShotPower = 11.5 + this.shotPower * 14.5; // Range 11.5 to 26.0 Rocket Shot!
 
         this.hasPossession = false;
-        ball.kick({ x: dirX, y: dirY }, shotPower, this.id, null, null);
-        this.triggerFeedback('⚽ MANUAL SHOOT!');
-        this.debugInputString = `🔥 MANUAL SHOOT (Power: ${shotPower.toFixed(1)})!`;
+        ball.kick({ x: dirX, y: dirY }, finalShotPower, this.id, null, null);
+
+        if (this.shotPower > 0.78) {
+          this.triggerFeedback('🚀 POWER SHOT!');
+        } else {
+          this.triggerFeedback('⚽ SHOOT!');
+        }
+
+        this.debugInputString = `🚀 SHOT RELEASED! Power: ${(this.shotPower * 100).toFixed(0)}% (${finalShotPower.toFixed(1)} Speed)`;
+        this.isChargingShot = false;
+        this.shotPower = 0;
       }
 
       // A Button = Pass (Passing)
@@ -851,6 +876,80 @@ export class Player implements PlayerEntity {
       ctx.beginPath();
       ctx.roundRect(barX + 1, barY + 1, fillW, barHeight - 2, 3);
       ctx.fill();
+    }
+
+    // DYNAMIC SHOT AIM TRAJECTORY LINE & POWER GAUGE METER
+    if (this.isChargingShot) {
+      ctx.save();
+
+      const lineLen = 100 + this.shotPower * 240; // 100px up to 340px trajectory line!
+      const endX = this.pos.x + Math.cos(this.shotAimAngle) * lineLen;
+      const endY = this.pos.y + Math.sin(this.shotAimAngle) * lineLen;
+
+      // Color Gradient according to power (Cyan/Green -> Amber -> Fiery Crimson)
+      const strokeColor = this.shotPower < 0.5 ? '#06b6d4' : this.shotPower < 0.85 ? '#f59e0b' : '#ef4444';
+      const glowColor = this.shotPower < 0.85 ? 'rgba(6, 182, 212, 0.35)' : 'rgba(239, 68, 68, 0.6)';
+
+      // 1. Outer Laser Glow Line
+      ctx.strokeStyle = glowColor;
+      ctx.lineWidth = 12;
+      ctx.beginPath();
+      ctx.moveTo(this.pos.x, this.pos.y);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+
+      // 2. Inner Dotted Laser Trajectory Line
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 4.5;
+      ctx.setLineDash([10, 6]);
+      ctx.beginPath();
+      ctx.moveTo(this.pos.x, this.pos.y);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 3. Target Crosshair Ring & Core at End Position
+      ctx.strokeStyle = strokeColor;
+      ctx.fillStyle = glowColor;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(endX, endY, 14 + this.shotPower * 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(endX, endY, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+
+      // 4. Floating FIFA-style Power Meter Bar above Player
+      const barW = 58;
+      const barH = 10;
+      const barX = this.pos.x - barW / 2;
+      const barY = this.pos.y - this.radius - 38;
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.roundRect(barX, barY, barW, barH, 5);
+      ctx.fill();
+      ctx.stroke();
+
+      const fillW = Math.max(2, (barW - 2) * this.shotPower);
+      ctx.fillStyle = strokeColor;
+      ctx.beginPath();
+      ctx.roundRect(barX + 1, barY + 1, fillW, barH - 2, 4);
+      ctx.fill();
+
+      // Power Text % Label
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(`POWER ${(this.shotPower * 100).toFixed(0)}%`, this.pos.x, barY - 3);
+
+      ctx.restore();
     }
 
     if (this.isTackling) {
