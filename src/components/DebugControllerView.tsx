@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { HostPeerService, GamepadState } from '../services/peerService';
-import { Smartphone, Wifi, Radio, Activity, CheckCircle, AlertTriangle, Play, Copy, ArrowLeft, RefreshCw, Terminal, Layers } from 'lucide-react';
+import { HostPeerService } from '../services/peerService';
+import { GamepadState } from '../types/game';
+import { useGamepad } from '../hooks/useGamepad';
+import { Smartphone, Wifi, Radio, Activity, CheckCircle, AlertTriangle, Play, Copy, ArrowLeft, RefreshCw, Terminal, Layers, Gamepad } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const createEmptyGamepadState = (): GamepadState => ({
@@ -14,6 +16,7 @@ const createEmptyGamepadState = (): GamepadState => ({
 
 export const DebugControllerView: React.FC = () => {
   const navigate = useNavigate();
+  const { gamepads: physicalGamepads, triggerVibration } = useGamepad();
 
   // Host Service & Connection States
   const [peerRoomId, setPeerRoomId] = useState<string>('8492');
@@ -21,7 +24,12 @@ export const DebugControllerView: React.FC = () => {
   const [connectionTransport, setConnectionTransport] = useState<string>('Initializing...');
   
   // Real-Time Mobile Controller Telemetry
-  const [latestGamepadState, setLatestGamepadState] = useState<GamepadState>(createEmptyGamepadState());
+  const [remoteGamepadState, setRemoteGamepadState] = useState<GamepadState>(createEmptyGamepadState());
+
+  // Use physical USB gamepad if active, otherwise use remote HP gamepad
+  const physicalGamepad0 = physicalGamepads[0];
+  const physicalGamepad1 = physicalGamepads[1];
+  const activeGamepadState = physicalGamepad0 || remoteGamepadState;
 
   // Local Wi-Fi IP helper for QR code
   const [wifiIp, setWifiIp] = useState<string>('');
@@ -55,7 +63,7 @@ export const DebugControllerView: React.FC = () => {
     };
 
     hostService.onGamepadStateUpdate = (state) => {
-      setLatestGamepadState(state);
+      setRemoteGamepadState(state);
       const activeBtns = Object.entries(state.buttons)
         .filter(([_, pressed]) => Boolean(pressed))
         .map(([btn]) => btn.toUpperCase())
@@ -102,12 +110,12 @@ export const DebugControllerView: React.FC = () => {
     else if (action === 'gocek') testState.buttons.y = true;
     else if (action === 'sprint') testState.buttons.rt = 1.0;
 
-    setLatestGamepadState(testState);
+    setRemoteGamepadState(testState);
     addLog('input', `🧪 Simulated Local Input Signal: ${action.toUpperCase()}`);
 
     // Reset back to idle after 400ms
     setTimeout(() => {
-      setLatestGamepadState(createEmptyGamepadState());
+      setRemoteGamepadState(createEmptyGamepadState());
     }, 400);
   };
 
@@ -211,6 +219,45 @@ export const DebugControllerView: React.FC = () => {
             </span>
           </div>
 
+          {/* Physical USB Gamepad Diagnostic Status Card */}
+          <div className="bg-slate-900 border border-cyan-500/40 rounded-xl p-3.5 flex flex-col gap-2.5 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-extrabold text-cyan-400 flex items-center gap-1.5">
+                <Gamepad className="w-4 h-4" /> Physical USB / Bluetooth Joystick:
+              </span>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                physicalGamepad0 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse' : 'bg-slate-800 text-slate-400 border border-slate-700'
+              }`}>
+                {physicalGamepad0 ? '🟢 STIK TERDETEKSI' : '🔴 MENUNGGU TOMBOL STIK DITEKAN'}
+              </span>
+            </div>
+
+            {physicalGamepad0 ? (
+              <div className="text-slate-300 font-mono text-[11px] bg-slate-950 p-2.5 rounded-lg border border-slate-800 flex flex-col gap-1.5">
+                <div>Device Name: <strong className="text-emerald-400">{physicalGamepad0.id || 'USB Gamepad Slot 0'}</strong></div>
+                <div className="flex justify-between items-center text-[10px] text-slate-400">
+                  <span>Slot Index: #{physicalGamepad0.index}</span>
+                  <button
+                    onClick={() => triggerVibration(0)}
+                    className="px-2 py-0.5 bg-cyan-950 border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 rounded text-[10px] cursor-pointer transition"
+                  >
+                    ⚡ Tes Getar Stik
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-[11px] text-amber-300 leading-relaxed bg-amber-950/40 border border-amber-500/30 p-2.5 rounded-lg flex flex-col gap-1">
+                <span className="font-bold flex items-center gap-1 text-amber-400">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> CARA MENGAKTIFKAN STIK USB DI BROWSER:
+                </span>
+                <span>
+                  Browser Chrome/Edge <strong>TIDAK AKAN mendeteksi stik USB</strong> jika Anda hanya mencolokkannya! 
+                  <strong className="text-white"> Anda WAJIB menekan salah satu tombol (misal tombol A, X, atau Start) di stik USB Anda</strong> agar browser mengaktifkan stik tersebut!
+                </span>
+              </div>
+            )}
+          </div>
+
           {/* Analog Stick Visualizer */}
           <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col items-center gap-3">
             <span className="text-xs text-slate-400 font-mono font-bold">ANALOG STICK VECTOR</span>
@@ -225,14 +272,14 @@ export const DebugControllerView: React.FC = () => {
               <div
                 className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-teal-600 shadow-lg shadow-cyan-500/50 transition-transform duration-75 border-2 border-white/40"
                 style={{
-                  transform: `translate(${latestGamepadState.axes.leftStickX * 45}px, ${latestGamepadState.axes.leftStickY * 45}px)`
+                  transform: `translate(${activeGamepadState.axes.leftStickX * 45}px, ${activeGamepadState.axes.leftStickY * 45}px)`
                 }}
               />
             </div>
 
             <div className="flex justify-between w-full font-mono text-xs text-slate-300 px-4">
-              <span>X: <strong className="text-cyan-400">{latestGamepadState.axes.leftStickX.toFixed(2)}</strong></span>
-              <span>Y: <strong className="text-cyan-400">{latestGamepadState.axes.leftStickY.toFixed(2)}</strong></span>
+              <span>X: <strong className="text-cyan-400">{activeGamepadState.axes.leftStickX.toFixed(2)}</strong></span>
+              <span>Y: <strong className="text-cyan-400">{activeGamepadState.axes.leftStickY.toFixed(2)}</strong></span>
             </div>
           </div>
 
@@ -242,38 +289,38 @@ export const DebugControllerView: React.FC = () => {
             
             <div className="grid grid-cols-2 gap-2 text-xs font-mono">
               <div className={`p-2 rounded-lg border flex justify-between items-center ${
-                latestGamepadState.buttons.a ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'
+                activeGamepadState.buttons.a ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'
               }`}>
                 <span>A (Pass):</span>
-                <span>{latestGamepadState.buttons.a ? 'PRESSED' : 'OFF'}</span>
+                <span>{activeGamepadState.buttons.a ? 'PRESSED' : 'OFF'}</span>
               </div>
 
               <div className={`p-2 rounded-lg border flex justify-between items-center ${
-                latestGamepadState.buttons.x ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'
+                activeGamepadState.buttons.x ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'
               }`}>
                 <span>X (Shoot):</span>
-                <span>{latestGamepadState.buttons.x ? 'PRESSED' : 'OFF'}</span>
+                <span>{activeGamepadState.buttons.x ? 'PRESSED' : 'OFF'}</span>
               </div>
 
               <div className={`p-2 rounded-lg border flex justify-between items-center ${
-                latestGamepadState.buttons.b ? 'bg-amber-500/20 border-amber-400 text-amber-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'
+                activeGamepadState.buttons.b ? 'bg-amber-500/20 border-amber-400 text-amber-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'
               }`}>
                 <span>B (Tackle):</span>
-                <span>{latestGamepadState.buttons.b ? 'PRESSED' : 'OFF'}</span>
+                <span>{activeGamepadState.buttons.b ? 'PRESSED' : 'OFF'}</span>
               </div>
 
               <div className={`p-2 rounded-lg border flex justify-between items-center ${
-                latestGamepadState.buttons.y ? 'bg-purple-500/20 border-purple-400 text-purple-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'
+                activeGamepadState.buttons.y ? 'bg-purple-500/20 border-purple-400 text-purple-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'
               }`}>
                 <span>Y (Gocek):</span>
-                <span>{latestGamepadState.buttons.y ? 'PRESSED' : 'OFF'}</span>
+                <span>{activeGamepadState.buttons.y ? 'PRESSED' : 'OFF'}</span>
               </div>
 
               <div className={`p-2 rounded-lg border flex justify-between items-center col-span-2 ${
-                latestGamepadState.buttons.rt > 0 ? 'bg-red-500/20 border-red-400 text-red-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'
+                activeGamepadState.buttons.rt > 0 ? 'bg-red-500/20 border-red-400 text-red-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-500'
               }`}>
                 <span>RT (Sprint):</span>
-                <span>{latestGamepadState.buttons.rt > 0 ? `ACTIVE (${latestGamepadState.buttons.rt.toFixed(1)})` : 'OFF'}</span>
+                <span>{activeGamepadState.buttons.rt > 0 ? `ACTIVE (${activeGamepadState.buttons.rt.toFixed(1)})` : 'OFF'}</span>
               </div>
             </div>
           </div>
