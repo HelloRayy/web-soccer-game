@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Smartphone, Play, Swords, Bot, Sparkles, Shield, Info } from 'lucide-react';
+import { Smartphone, Play, Swords, Bot, Sparkles, Shield, Info, Radio } from 'lucide-react';
 import { QRCodeModal } from './QRCodeModal';
 import { ControllerSelectModal, DeviceType } from './ControllerSelectModal';
 
@@ -107,6 +107,14 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => window.location.href = '/debug'}
+            className="px-3.5 py-2.5 rounded-2xl bg-slate-900/90 border border-amber-500/40 text-amber-300 hover:bg-amber-500 hover:text-slate-950 text-xs font-bold transition shadow-xl cursor-pointer flex items-center gap-1.5"
+          >
+            <Radio className="w-4 h-4 text-amber-400" />
+            <span className="hidden sm:inline">Debug HP</span>
+          </button>
+
           <button
             onClick={() => setShowControlsModal(true)}
             className="px-4 py-2.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 text-xs font-bold transition shadow-xl cursor-pointer flex items-center gap-2"

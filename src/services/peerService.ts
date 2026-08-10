@@ -1,6 +1,8 @@
 import Peer, { DataConnection } from 'peerjs';
 import { GamepadState } from '../types/game';
 
+export type { GamepadState } from '../types/game';
+
 const ROOM_PREFIX = 'soccer-game-room-';
 
 const PEER_CONFIG = {
@@ -24,6 +26,7 @@ export class HostPeerService {
   public roomId: string;
   public onConnectionStateChange?: (connected: boolean) => void;
   public onInputReceived?: (input: Partial<GamepadState>) => void;
+  public onGamepadStateUpdate?: (state: GamepadState) => void;
 
   constructor() {
     this.roomId = Math.floor(1000 + Math.random() * 9000).toString();
@@ -42,9 +45,10 @@ export class HostPeerService {
         if ('BroadcastChannel' in window) {
           this.bc = new BroadcastChannel(`soccer_game_${this.roomId}`);
           this.bc.onmessage = (e) => {
-            if (e.data && e.data.type === 'CONTROLLER_INPUT' && this.onInputReceived) {
+            if (e.data && e.data.type === 'CONTROLLER_INPUT') {
               if (this.onConnectionStateChange) this.onConnectionStateChange(true);
-              this.onInputReceived(e.data.input);
+              if (this.onInputReceived) this.onInputReceived(e.data.input);
+              if (this.onGamepadStateUpdate) this.onGamepadStateUpdate(e.data.input);
             }
           };
         }
@@ -53,9 +57,10 @@ export class HostPeerService {
           if (e.key === `soccer_game_input_${this.roomId}` && e.newValue) {
             try {
               const data = JSON.parse(e.newValue);
-              if (data && data.input && this.onInputReceived) {
+              if (data && data.input) {
                 if (this.onConnectionStateChange) this.onConnectionStateChange(true);
-                this.onInputReceived(data.input);
+                if (this.onInputReceived) this.onInputReceived(data.input);
+                if (this.onGamepadStateUpdate) this.onGamepadStateUpdate(data.input);
               }
             } catch (err) {}
           }
@@ -81,8 +86,9 @@ export class HostPeerService {
           }
 
           conn.on('data', (data: any) => {
-            if (this.onInputReceived && data && data.type === 'CONTROLLER_INPUT') {
-              this.onInputReceived(data.input);
+            if (data && data.type === 'CONTROLLER_INPUT') {
+              if (this.onInputReceived) this.onInputReceived(data.input);
+              if (this.onGamepadStateUpdate) this.onGamepadStateUpdate(data.input);
             }
           });
 

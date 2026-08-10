@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { LobbyView } from './components/LobbyView';
 import { GameView } from './components/GameView';
 import { MobileControllerView } from './components/MobileControllerView';
+import { DebugControllerView } from './components/DebugControllerView';
 import { DeviceType } from './components/ControllerSelectModal';
 import { HostPeerService } from './services/peerService';
 import { Agentation } from 'agentation';
@@ -75,6 +76,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<MainGameContainer />} />
           <Route path="/controller" element={<MobileControllerView />} />
+          <Route path="/debug" element={<DebugControllerView />} />
         </Routes>
 
         {/* Agentation Visual Feedback & Annotation Devtool */}
