@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Smartphone, Swords, Bot, Shield, Info, Settings, Menu as MenuIcon, Trophy, ChevronRight, Play } from 'lucide-react';
+import { Smartphone, Swords, Bot, Shield, Info, Settings, User, Music, Gem, Trophy, ChevronRight, Play } from 'lucide-react';
 import { QRCodeModal } from './QRCodeModal';
 import { ControllerSelectModal, DeviceType } from './ControllerSelectModal';
 
@@ -20,57 +20,52 @@ interface MenuItemConfig {
   tag: string;
   bgSymbol: string;
   icon: React.ComponentType<{ className?: string }>;
-  btnClass: string;
 }
 
 const MENU_ITEMS: MenuItemConfig[] = [
   {
     id: '1v1',
-    label: 'KICK OFF (1V1 MATCH)',
+    label: 'Kick Off',
     subtitle: 'Sharpen your skills in 1 vs 1 Head to Head Local & Remote PVP Match Engine',
     accentColor: '#17FFBF',
     tag: 'PVP STADIUM KICK OFF',
     bgSymbol: '⚽',
     icon: Swords,
-    btnClass: 'val-btn-emerald'
   },
   {
     id: '2vBot',
-    label: 'WORLD CUP (2VBOT)',
+    label: 'Master League',
     subtitle: 'Team up with a friend in 2 Players Co-Op vs AI Enemy Bots Tournament',
     accentColor: '#FFD13B',
     tag: 'CHAMPIONS CO-OP ARENA',
     bgSymbol: '🏆',
     icon: Bot,
-    btnClass: 'val-btn-gold'
   },
   {
     id: 'extras',
-    label: 'EXTRAS (KONTROL SPEC)',
+    label: 'Extras & Controls',
     subtitle: 'Configure Keyboard, Gamepad USB & HP Remote Control Mappings',
     accentColor: '#00D8F6',
     tag: 'TACTICAL CONTROLS & SCHEMATICS',
     bgSymbol: '🎮',
     icon: Info,
-    btnClass: 'val-btn-emerald'
   },
   {
     id: 'settings',
-    label: 'SETTINGS (CONNECT HP)',
+    label: 'Settings',
     subtitle: 'WebRTC PeerJS Mobile Remote Connection & Debug Telemetry Route',
     accentColor: '#A855F7',
     tag: 'WEBRTC PEER CONNECTIVITY',
     bgSymbol: '📱',
     icon: Smartphone,
-    btnClass: 'val-btn-emerald'
   }
 ];
 
 const FIFA_SPRING_TRANSITION = {
   type: 'spring' as const,
-  stiffness: 950,
-  damping: 45,
-  mass: 0.6
+  stiffness: 1000,
+  damping: 50,
+  mass: 0.5
 };
 
 export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, isPeerConnected }) => {
@@ -125,7 +120,10 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
   };
 
   return (
-    <div className="relative w-screen h-screen bg-[#060D17] bg-stadium-pattern text-[#E2F1F8] flex flex-col justify-between p-6 sm:p-10 select-none overflow-hidden font-['Inter',sans-serif]">
+    <div className="relative w-screen h-screen bg-[#05090C] text-[#E2F1F8] flex flex-col justify-between p-6 sm:p-10 select-none overflow-hidden font-['Inter',sans-serif]">
+      {/* BACKGROUND VIGNETTE GRADIENT (Authentic EA FC 25 Left Dark Overlay) */}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#05090C] via-[#05090C]/80 to-transparent z-0 pointer-events-none" />
+
       {/* System Modals */}
       <QRCodeModal
         isOpen={isQRModalOpen}
@@ -145,8 +143,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
 
       {/* Controls Spec Modal */}
       {showControlsModal && (
-        <div className="fixed inset-0 z-50 bg-[#060D17]/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-[#0A1526] border-2 border-[#17FFBF]/40 max-w-md w-full p-6 flex flex-col gap-4 text-[#E2F1F8] relative rounded-xl">
+        <div className="fixed inset-0 z-50 bg-[#05090C]/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-[#0A1526] border-2 border-[#17FFBF]/40 max-w-md w-full p-6 flex flex-col gap-4 text-[#E2F1F8] relative rounded-xl font-mono">
             <button
               onClick={() => setShowControlsModal(false)}
               className="absolute top-4 right-4 w-8 h-8 rounded-none bg-[#0F1E36] border border-[#17FFBF]/60 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
@@ -156,20 +154,20 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
             <h3 className="text-xl font-black text-white flex items-center gap-2 font-['Plus_Jakarta_Sans',sans-serif] uppercase tracking-wider">
               <Shield className="w-5 h-5 text-[#17FFBF]" /> PETUNJUK KONTROL GAME
             </h3>
-            <div className="flex flex-col gap-2.5 text-xs text-slate-300 font-mono">
-              <div className="bg-[#060D17] p-3 border border-[#142840] flex justify-between items-center">
+            <div className="flex flex-col gap-2.5 text-xs text-slate-300">
+              <div className="bg-[#05090C] p-3 border border-[#142840] flex justify-between items-center">
                 <span className="text-slate-400">P1 Move / Action:</span>
                 <span className="text-[#17FFBF] font-bold">WASD + J/K/L + Space</span>
               </div>
-              <div className="bg-[#060D17] p-3 border border-[#142840] flex justify-between items-center">
+              <div className="bg-[#05090C] p-3 border border-[#142840] flex justify-between items-center">
                 <span className="text-slate-400">P2 Move / Action:</span>
                 <span className="text-amber-400 font-bold">Arrow Keys + Numpad / N,M</span>
               </div>
-              <div className="bg-[#060D17] p-3 border border-[#142840] flex justify-between items-center">
+              <div className="bg-[#05090C] p-3 border border-[#142840] flex justify-between items-center">
                 <span className="text-slate-400">Joystick / Gamepad:</span>
                 <span className="text-[#17FFBF] font-bold">Plug & Play Controller</span>
               </div>
-              <div className="bg-[#060D17] p-3 border border-[#142840] flex justify-between items-center">
+              <div className="bg-[#05090C] p-3 border border-[#142840] flex justify-between items-center">
                 <span className="text-slate-400">HP Remote Controller:</span>
                 <span className="text-cyan-400 font-bold">Scan QR Code HP</span>
               </div>
@@ -178,36 +176,65 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
         </div>
       )}
 
-      {/* 1. TOP-LEFT BRANDING TITLE */}
+      {/* 1. TOP HEADER BAR (FL 25 / EA FC 25 Console Layout) */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
-        className="relative z-20 w-full flex justify-between items-start pointer-events-auto pl-2 sm:pl-6 pt-2"
+        className="relative z-20 w-full flex justify-between items-center pointer-events-auto pl-2 sm:pl-4"
       >
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-white text-[#060D17] rounded-xl flex items-center justify-center text-2xl font-black transform -rotate-3 shadow-lg">
-            ⚽
+        {/* TOP-LEFT ICONS & BRANDING LOGO */}
+        <div className="flex items-center gap-5">
+          {/* Vertical Stacked Icons: Settings Gear & Accessibility Person */}
+          <div className="flex flex-col gap-2 text-slate-400">
+            <button
+              onClick={() => setShowControlsModal(true)}
+              className="hover:text-white transition cursor-pointer"
+              title="Settings"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setIsQRModalOpen(true)}
+              className="hover:text-white transition cursor-pointer"
+              title="Accessibility & Connectivity"
+            >
+              <User className="w-5 h-5" />
+            </button>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black italic tracking-tighter text-white font-['Plus_Jakarta_Sans',sans-serif] leading-none uppercase drop-shadow-md">
-            FC<span className="text-[#17FFBF]">26</span> SOCCER™
+
+          {/* FL 25 / FC 26 Metallic Logo */}
+          <h1 className="text-3xl sm:text-5xl font-black italic tracking-tighter text-white font-['Plus_Jakarta_Sans',sans-serif] leading-none uppercase drop-shadow-lg flex items-center gap-1">
+            FL <span className="text-[#17FFBF]">25</span>
           </h1>
+        </div>
+
+        {/* TOP-RIGHT USER PROFILE BADGE (EferQ | Level 0 | EXP) */}
+        <div className="flex items-center gap-4 font-mono text-xs text-slate-300">
+          <span className="font-bold text-white">EferQ</span>
+          <span className="bg-[#0A1526] border border-[#142840] px-2.5 py-1 rounded text-slate-400 font-semibold">
+            Level 0
+          </span>
+          <div className="flex items-center gap-1 text-purple-400 font-bold bg-[#0A1526] border border-[#142840] px-2.5 py-1 rounded">
+            <Gem className="w-3.5 h-3.5 fill-purple-400" />
+            <span>0/1,000</span>
+          </div>
         </div>
       </motion.div>
 
-      {/* RIGHT SIDE: DYNAMIC PLAYER PORTAL PANELS */}
-      <div className="hidden md:block absolute right-6 sm:right-12 top-1/2 -translate-y-1/2 w-[540px] lg:w-[620px] h-[500px] pointer-events-none z-0">
+      {/* RIGHT SIDE: EA FC 25 DYNAMIC PLAYER PORTAL ARTWORK */}
+      <div className="hidden md:block absolute right-6 sm:right-12 top-1/2 -translate-y-1/2 w-[560px] lg:w-[640px] h-[520px] pointer-events-none z-0">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentConfig.id}
-            initial={{ opacity: 0, x: 15 }}
+            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -15 }}
-            transition={{ duration: 0.1, ease: 'easeOut' }}
-            className="w-full h-full relative"
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.12, ease: 'easeOut' }}
+            className="w-full h-full relative flex flex-col items-center justify-center"
           >
             <div
-              className="absolute right-12 top-10 w-[380px] h-[360px] rounded-[48px] border-4 bg-[#0A1526] overflow-hidden flex flex-col items-center justify-center text-center p-6"
+              className="w-[380px] h-[360px] rounded-[48px] border-4 bg-[#0A1526]/80 backdrop-blur-md overflow-hidden flex flex-col items-center justify-center text-center p-6 transition-colors duration-100 shadow-2xl"
               style={{ borderColor: currentConfig.accentColor }}
             >
               <div className="text-8xl mb-3">{currentConfig.bgSymbol}</div>
@@ -225,99 +252,62 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
         </AnimatePresence>
       </div>
 
-      {/* 2. CENTER-LEFT MENU NAVIGATION STACK (Electric Mint Teal Active Box #17FFBF) */}
-      <div className="relative z-10 my-auto w-full max-w-lg flex flex-col items-start justify-center pl-6 sm:pl-16">
-        <div className="flex flex-col gap-2 w-full max-w-sm sm:max-w-md relative">
+      {/* 2. CENTER-LEFT VERTICAL MENU STACK (Authentic EA FC 25 Console Geometric Font & Large Spacing) */}
+      <div className="relative z-10 my-auto w-full max-w-xl flex flex-col items-start justify-center pl-10 sm:pl-24">
+        <div className="flex flex-col gap-7 sm:gap-8 w-full max-w-md relative font-['Poppins',sans-serif]">
           {MENU_ITEMS.map((item) => {
             const isActive = activeItem === item.id;
-            const ItemIcon = item.icon;
 
-            if (isActive) {
-              return (
-                <motion.div
-                  key={item.id}
-                  layoutId="activeFifaBox"
-                  transition={FIFA_SPRING_TRANSITION}
-                  className="w-full relative cursor-pointer"
-                  onClick={() => handleItemClick(item)}
-                >
-                  {/* Outer Parallelogram Border Frame (#17FFBF) */}
-                  <div className="w-full bg-[#17FFBF] p-[2px] clip-parallelogram">
-                    {/* Inner Parallelogram Fill */}
-                    <div className={`${item.btnClass} clip-parallelogram w-full py-3.5 px-7 text-left group overflow-hidden`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="flex items-center mr-3">
-                            <ItemIcon className="w-5 h-5 text-[#060D17] shrink-0" />
-                          </div>
-
-                          <span className="text-lg sm:text-xl font-black tracking-wider uppercase font-['Plus_Jakarta_Sans',sans-serif] text-[#060D17]">
-                            {item.label}
-                          </span>
-                        </div>
-
-                        <Play className="w-5 h-5 fill-[#060D17] text-[#060D17]" />
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            }
-
-            // UNSELECTED ITEM: Plain Text Line (Clean & Muted, direct Mint Teal hover #17FFBF)
             return (
               <div
                 key={item.id}
                 onMouseEnter={() => setActiveItem(item.id)}
                 onClick={() => handleItemClick(item)}
-                className="py-2.5 px-4 cursor-pointer group flex items-center justify-between text-slate-400 hover:text-[#17FFBF] transition-colors"
+                className="relative cursor-pointer group flex items-center"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-1.5 h-1.5 bg-slate-600 group-hover:bg-[#17FFBF] transition-colors" />
-                  <span className="text-lg sm:text-xl font-bold tracking-wider uppercase font-['Plus_Jakarta_Sans',sans-serif]">
-                    {item.label}
-                  </span>
-                </div>
+                {/* ACTIVE ITEM SELECTION: Large Geometric White Text ONLY */}
+                <span
+                  className={`text-3xl sm:text-5xl tracking-tight transition-all duration-120 ${
+                    isActive
+                      ? 'text-white font-black drop-shadow-2xl'
+                      : 'text-slate-400/50 font-medium hover:text-slate-200'
+                  }`}
+                >
+                  {item.label}
+                </span>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* 3. BOTTOM HUD */}
-      <div className="relative z-10 w-full flex items-center justify-between pointer-events-auto pt-4 border-t border-[#142840]/80 font-mono text-xs pl-2 sm:pl-6">
-        <div className="flex items-center gap-6 font-bold text-slate-300 uppercase">
-          <div className="flex items-center gap-2">
-            <span className="controller-btn-b">B</span>
-            <span>BACK</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="controller-btn-a">A</span>
-            <span>SELECT</span>
-          </div>
-
-          <div className="hidden sm:flex items-center gap-2 text-slate-400">
-            <span className="px-1.5 py-0.5 bg-[#0A1526] border border-[#142840] text-[10px]">NAV: ▲ ▼ ARROWS / ENTER</span>
-          </div>
+      {/* 3. BOTTOM HUD BAR (FL 25 Soundtrack Widget & Helpers) */}
+      <div className="relative z-10 w-full flex items-center justify-between pointer-events-auto pt-4 font-mono text-xs pl-2 sm:pl-6">
+        {/* Bottom-Left Helper Badge */}
+        <div className="flex items-center gap-2 text-slate-400 font-semibold">
+          <span className="w-5 h-5 rounded-full bg-[#0A1526] border border-[#142840] flex items-center justify-center text-[10px] font-bold text-white">
+            ◄ L
+          </span>
+          <span>Settings / Accessibility Settings</span>
         </div>
 
+        {/* Bottom-Right Soundtrack & Social HUD Widget */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => window.location.href = '/debug'}
-            className="w-9 h-9 bg-[#0A1526] border border-[#142840] hover:border-[#17FFBF] text-slate-300 hover:text-white flex items-center justify-center cursor-pointer transition"
-            title="Debug Joysticks"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
+          {/* Track Banner Pill */}
+          <div className="bg-[#0A1526]/90 border border-[#17FFBF]/40 px-4 py-2 rounded-xl flex items-center gap-6 text-xs text-white shadow-lg backdrop-blur-md">
+            <div className="flex items-center gap-2">
+              <Music className="w-4 h-4 text-[#17FFBF] animate-pulse" />
+              <span className="font-bold tracking-wide">Stick Around You</span>
+            </div>
+            <span className="font-black text-[#17FFBF] tracking-widest uppercase">JINXSPRO</span>
+          </div>
 
-          <button
-            onClick={() => setShowControlsModal(true)}
-            className="w-9 h-9 bg-[#0A1526] border border-[#142840] hover:border-[#17FFBF] text-slate-300 hover:text-white flex items-center justify-center cursor-pointer transition"
-            title="Game Menu"
-          >
-            <MenuIcon className="w-4 h-4" />
-          </button>
+          {/* Controller HUD Badges */}
+          <div className="flex items-center gap-1.5 text-slate-400 bg-[#0A1526] border border-[#142840] px-3 py-2 rounded-xl text-[11px] font-bold">
+            <span className="text-white">RT</span>
+            <span>1</span>
+            <span>👥 0</span>
+          </div>
         </div>
       </div>
     </div>
