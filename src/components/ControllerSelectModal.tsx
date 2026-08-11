@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Gamepad, Keyboard, Smartphone, Bot, ChevronRight, ChevronLeft, Play, X, Plus, UserPlus } from 'lucide-react';
+import { Gamepad, Keyboard, Smartphone, Bot, ChevronRight, ChevronLeft, Play, X, Plus } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 export type DeviceType = 'keyboard1' | 'keyboard2' | 'gamepad0' | 'gamepad1' | 'hp_remote' | 'ai_bot';
@@ -67,7 +67,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
   const p3Dev = P3_OPTIONS[p3Index];
   const p4Dev = P4_OPTIONS[p4Index];
 
-  // Keyboard navigation
+  // Keyboard D-Pad Navigation for Select Sides
   useEffect(() => {
     if (!isOpen) return;
 
@@ -92,11 +92,13 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
   const controllerUrl = `http://${ipAddress}:5173/controller`;
   const isHpSelected = p1Dev.id === 'hp_remote' || p2Dev.id === 'hp_remote' || (hasHomeExtra && p3Dev.id === 'hp_remote') || (hasAwayExtra && p4Dev.id === 'hp_remote');
 
+  // Authentic 6 Rows of Controller Silhouettes
   const SILHOUETTE_SLOTS = [0, 1, 2, 3, 4, 5];
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#05090C]/96 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150 select-none font-['Poppins',sans-serif]">
-      <div className="bg-[#0f1412] border border-white/10 max-w-4xl w-full p-6 sm:p-8 shadow-2xl flex flex-col gap-5 text-[#E2F1F8] relative max-h-[95vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-[#05090C]/96 backdrop-blur-lg flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-150 select-none font-['Poppins',sans-serif]">
+      {/* AAA CONSOLE MODAL CONTAINER */}
+      <div className="bg-[#0e1311] border border-white/10 max-w-4xl w-full p-6 sm:p-8 shadow-2xl flex flex-col gap-6 text-[#E2F1F8] relative max-h-[95vh] overflow-y-auto rounded-none">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -105,41 +107,49 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
           <X className="w-5 h-5" />
         </button>
 
-        {/* 2-COLUMN EA FC 25 SELECT SIDES BOARD */}
-        <div className="w-full bg-[#131916] border border-white/10 shadow-2xl overflow-hidden relative min-h-[380px]">
+        {/* AUTHENTIC EA FC 25 / FL 25 SELECT SIDES BOARD */}
+        <div className="w-full bg-[#111614] border border-white/10 shadow-2xl overflow-hidden relative">
           {/* HEADER BAR: Home (Left) | Away (Right) */}
-          <div className="grid grid-cols-2 text-white font-bold text-2xl px-12 py-4 border-b border-white/10">
-            <div className="text-left pl-6 font-['Poppins',sans-serif]">Home</div>
-            <div className="text-right pr-6 font-['Poppins',sans-serif]">Away</div>
+          <div className="grid grid-cols-2 text-white font-bold text-2xl px-8 py-4 border-b border-white/10 bg-[#0c100e]">
+            <div className="text-left font-['Outfit',sans-serif] tracking-tight">Home</div>
+            <div className="text-right font-['Outfit',sans-serif] tracking-tight">Away</div>
           </div>
 
-          {/* 2-COLUMN GRID BODY */}
-          <div className="relative w-full p-4 sm:p-6 grid grid-cols-2 divide-x divide-white/10 min-h-[320px]">
-            {/* LEFT SIDE: HOME */}
-            <div className="flex flex-col gap-4 items-start pl-6">
+          {/* 2-COLUMN BOARD BODY */}
+          <div className="relative w-full p-6 grid grid-cols-2 divide-x divide-white/10 min-h-[360px]">
+            {/* LEFT COLUMN: HOME */}
+            <div className="flex flex-col gap-5 items-start pl-4 sm:pl-8">
               {SILHOUETTE_SLOTS.map((slotIndex) => {
                 if (slotIndex === 0) {
-                  // User 1 Slot
+                  // User 1 Active Slot
                   return (
                     <div key={slotIndex} className="flex flex-col items-start relative group my-1">
-                      <span className="text-xs font-mono text-slate-400 mb-1.5 tracking-wider">User 1</span>
-                      <div className="flex items-center gap-2 p-2 bg-[#1b2420] border-2 border-[#17FFBF] rounded-2xl shadow-lg shadow-[#17FFBF]/20">
+                      <span className="text-[11px] font-medium text-slate-400 mb-1 tracking-wide">
+                        User 1
+                      </span>
+
+                      {/* EA FC 25 Style Active Controller Capsule */}
+                      <div className="flex items-center gap-1.5 p-1.5 bg-[#18211d] border border-[#17FFBF] rounded-xl shadow-lg shadow-[#17FFBF]/10">
                         <button
                           onClick={() => setP1Index((prev) => (prev - 1 + P1_OPTIONS.length) % P1_OPTIONS.length)}
-                          className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
+                          className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
+                          title="Peranti Sebelumnya"
                         >
-                          <ChevronLeft className="w-5 h-5" />
+                          <ChevronLeft className="w-4 h-4" />
                         </button>
-                        <div className="p-1 text-[#17FFBF]">
-                          {p1Dev.type === 'keyboard' && <Keyboard className="w-9 h-9" />}
-                          {p1Dev.type === 'gamepad' && <Gamepad className="w-9 h-9" />}
-                          {p1Dev.type === 'smartphone' && <Smartphone className="w-9 h-9" />}
+
+                        <div className="px-2 text-[#17FFBF]">
+                          {p1Dev.type === 'keyboard' && <Keyboard className="w-8 h-8" />}
+                          {p1Dev.type === 'gamepad' && <Gamepad className="w-8 h-8" />}
+                          {p1Dev.type === 'smartphone' && <Smartphone className="w-8 h-8" />}
                         </div>
+
                         <button
                           onClick={() => setP1Index((prev) => (prev + 1) % P1_OPTIONS.length)}
-                          className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
+                          className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
+                          title="Peranti Selanjutnya"
                         >
-                          <ChevronRight className="w-5 h-5" />
+                          <ChevronRight className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -152,7 +162,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                     return (
                       <div key={slotIndex} className="flex flex-col items-start relative group my-1">
                         <div className="flex justify-between items-center w-full mb-1">
-                          <span className="text-xs font-mono text-slate-400 tracking-wider">User 3</span>
+                          <span className="text-[11px] font-medium text-slate-400 tracking-wide">User 3</span>
                           <button
                             onClick={() => setHasHomeExtra(false)}
                             className="text-[10px] text-red-400 hover:text-red-300 underline"
@@ -160,87 +170,88 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                             Hapus
                           </button>
                         </div>
-                        <div className="flex items-center gap-2 p-2 bg-[#1b2420] border-2 border-[#17FFBF] rounded-2xl shadow-lg shadow-[#17FFBF]/20">
+                        <div className="flex items-center gap-1.5 p-1.5 bg-[#18211d] border border-[#17FFBF] rounded-xl shadow-lg shadow-[#17FFBF]/10">
                           <button
                             onClick={() => setP3Index((prev) => (prev - 1 + P3_OPTIONS.length) % P3_OPTIONS.length)}
-                            className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
+                            className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
                           >
-                            <ChevronLeft className="w-5 h-5" />
+                            <ChevronLeft className="w-4 h-4" />
                           </button>
-                          <div className="p-1 text-[#17FFBF]">
-                            {p3Dev.type === 'keyboard' && <Keyboard className="w-9 h-9" />}
-                            {p3Dev.type === 'gamepad' && <Gamepad className="w-9 h-9" />}
-                            {p3Dev.type === 'smartphone' && <Smartphone className="w-9 h-9" />}
+                          <div className="px-2 text-[#17FFBF]">
+                            {p3Dev.type === 'keyboard' && <Keyboard className="w-8 h-8" />}
+                            {p3Dev.type === 'gamepad' && <Gamepad className="w-8 h-8" />}
+                            {p3Dev.type === 'smartphone' && <Smartphone className="w-8 h-8" />}
                           </div>
                           <button
                             onClick={() => setP3Index((prev) => (prev + 1) % P3_OPTIONS.length)}
-                            className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
+                            className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
                           >
-                            <ChevronRight className="w-5 h-5" />
+                            <ChevronRight className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
                     );
                   }
 
-                  // + Add Player Icon Button
+                  // Low-key AAA + Add Player Pill
                   return (
-                    <div key={slotIndex} className="py-2.5 pl-2">
+                    <div key={slotIndex} className="py-1">
                       <button
                         onClick={() => setHasHomeExtra(true)}
-                        className="flex items-center gap-2 p-2 bg-[#1b2420]/60 border border-dashed border-[#17FFBF]/60 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer rounded-xl group"
-                        title="Tambah Player Baru (User 3)"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#18211d]/50 border border-dashed border-[#17FFBF]/40 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer rounded-lg text-xs font-medium"
                       >
-                        <Plus className="w-7 h-7 group-hover:scale-110 transition-transform" />
-                        <span className="text-xs font-mono font-bold pr-2">Tambah Player</span>
+                        <Plus className="w-4 h-4" />
+                        <span>Tambah Player</span>
                       </button>
                     </div>
                   );
                 }
 
-                // Inactive Silhouettes
+                // Dark Controller Silhouette Rows
                 return (
-                  <div key={slotIndex} className="py-2.5 pl-2">
-                    <Gamepad className="w-10 h-10 text-white/10" />
+                  <div key={slotIndex} className="py-2 pl-2">
+                    <Gamepad className="w-9 h-9 text-white/10" />
                   </div>
                 );
               })}
             </div>
 
-            {/* RIGHT SIDE: AWAY */}
-            <div className="flex flex-col gap-4 items-end pr-6">
+            {/* RIGHT COLUMN: AWAY */}
+            <div className="flex flex-col gap-5 items-end pr-4 sm:pr-8">
               {SILHOUETTE_SLOTS.map((slotIndex) => {
                 if (slotIndex === 0) {
-                  // User 2 Slot / AI Bot
+                  // User 2 / AI Bot Active Slot
                   return (
                     <div key={slotIndex} className="flex flex-col items-end relative group my-1">
-                      <span className="text-xs font-mono text-slate-400 mb-1.5 tracking-wider">
+                      <span className="text-[11px] font-medium text-slate-400 mb-1 tracking-wide">
                         {selectedMode === '2vBot' ? 'AI Bot' : 'User 2'}
                       </span>
 
                       {selectedMode === '2vBot' ? (
-                        <div className="flex items-center gap-2 p-2.5 bg-[#1b2420] border-2 border-[#17FFBF] rounded-2xl shadow-lg shadow-[#17FFBF]/20">
-                          <Bot className="w-9 h-9 text-[#17FFBF] p-1" />
+                        <div className="flex items-center p-2 bg-[#18211d] border border-[#17FFBF] rounded-xl shadow-lg shadow-[#17FFBF]/10">
+                          <Bot className="w-8 h-8 text-[#17FFBF] px-1" />
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 p-2 bg-[#1b2420] border-2 border-[#17FFBF] rounded-2xl shadow-lg shadow-[#17FFBF]/20">
+                        <div className="flex items-center gap-1.5 p-1.5 bg-[#18211d] border border-[#17FFBF] rounded-xl shadow-lg shadow-[#17FFBF]/10">
                           <button
                             onClick={() => setP2Index((prev) => (prev - 1 + P2_OPTIONS.length) % P2_OPTIONS.length)}
-                            className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
+                            className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
                           >
-                            <ChevronLeft className="w-5 h-5" />
+                            <ChevronLeft className="w-4 h-4" />
                           </button>
-                          <div className="p-1 text-[#17FFBF]">
-                            {p2Dev.type === 'keyboard' && <Keyboard className="w-9 h-9" />}
-                            {p2Dev.type === 'gamepad' && <Gamepad className="w-9 h-9" />}
-                            {p2Dev.type === 'smartphone' && <Smartphone className="w-9 h-9" />}
-                            {p2Dev.type === 'bot' && <Bot className="w-9 h-9" />}
+
+                          <div className="px-2 text-[#17FFBF]">
+                            {p2Dev.type === 'keyboard' && <Keyboard className="w-8 h-8" />}
+                            {p2Dev.type === 'gamepad' && <Gamepad className="w-8 h-8" />}
+                            {p2Dev.type === 'smartphone' && <Smartphone className="w-8 h-8" />}
+                            {p2Dev.type === 'bot' && <Bot className="w-8 h-8" />}
                           </div>
+
                           <button
                             onClick={() => setP2Index((prev) => (prev + 1) % P2_OPTIONS.length)}
-                            className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
+                            className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
                           >
-                            <ChevronRight className="w-5 h-5" />
+                            <ChevronRight className="w-4 h-4" />
                           </button>
                         </div>
                       )}
@@ -260,50 +271,49 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                           >
                             Hapus
                           </button>
-                          <span className="text-xs font-mono text-slate-400 tracking-wider">User 4</span>
+                          <span className="text-[11px] font-medium text-slate-400 tracking-wide">User 4</span>
                         </div>
-                        <div className="flex items-center gap-2 p-2 bg-[#1b2420] border-2 border-[#17FFBF] rounded-2xl shadow-lg shadow-[#17FFBF]/20">
+                        <div className="flex items-center gap-1.5 p-1.5 bg-[#18211d] border border-[#17FFBF] rounded-xl shadow-lg shadow-[#17FFBF]/10">
                           <button
                             onClick={() => setP4Index((prev) => (prev - 1 + P4_OPTIONS.length) % P4_OPTIONS.length)}
-                            className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
+                            className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
                           >
-                            <ChevronLeft className="w-5 h-5" />
+                            <ChevronLeft className="w-4 h-4" />
                           </button>
-                          <div className="p-1 text-[#17FFBF]">
-                            {p4Dev.type === 'keyboard' && <Keyboard className="w-9 h-9" />}
-                            {p4Dev.type === 'gamepad' && <Gamepad className="w-9 h-9" />}
-                            {p4Dev.type === 'smartphone' && <Smartphone className="w-9 h-9" />}
+                          <div className="px-2 text-[#17FFBF]">
+                            {p4Dev.type === 'keyboard' && <Keyboard className="w-8 h-8" />}
+                            {p4Dev.type === 'gamepad' && <Gamepad className="w-8 h-8" />}
+                            {p4Dev.type === 'smartphone' && <Smartphone className="w-8 h-8" />}
                           </div>
                           <button
                             onClick={() => setP4Index((prev) => (prev + 1) % P4_OPTIONS.length)}
-                            className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
+                            className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
                           >
-                            <ChevronRight className="w-5 h-5" />
+                            <ChevronRight className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
                     );
                   }
 
-                  // + Add Player Icon Button
+                  // Low-key AAA + Add Player Pill
                   return (
-                    <div key={slotIndex} className="py-2.5 pr-2">
+                    <div key={slotIndex} className="py-1">
                       <button
                         onClick={() => setHasAwayExtra(true)}
-                        className="flex items-center gap-2 p-2 bg-[#1b2420]/60 border border-dashed border-[#17FFBF]/60 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer rounded-xl group"
-                        title="Tambah Player Baru (User 4)"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#18211d]/50 border border-dashed border-[#17FFBF]/40 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer rounded-lg text-xs font-medium"
                       >
-                        <Plus className="w-7 h-7 group-hover:scale-110 transition-transform" />
-                        <span className="text-xs font-mono font-bold pr-2">Tambah Player</span>
+                        <Plus className="w-4 h-4" />
+                        <span>Tambah Player</span>
                       </button>
                     </div>
                   );
                 }
 
-                // Inactive Silhouettes
+                // Dark Controller Silhouette Rows
                 return (
-                  <div key={slotIndex} className="py-2.5 pr-2">
-                    <Gamepad className="w-10 h-10 text-white/10" />
+                  <div key={slotIndex} className="py-2 pr-2">
+                    <Gamepad className="w-9 h-9 text-white/10" />
                   </div>
                 );
               })}
@@ -311,9 +321,9 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
           </div>
         </div>
 
-        {/* HP REMOTE QR CODE INTEGRATION */}
+        {/* HP REMOTE WIRELESS INTEGRATION WIDGET */}
         {isHpSelected && (
-          <div className="bg-[#131916] border border-[#17FFBF]/40 p-4 rounded-xl flex flex-col sm:flex-row items-center gap-4 text-xs font-mono">
+          <div className="bg-[#111614] border border-[#17FFBF]/30 p-4 rounded-none flex flex-col sm:flex-row items-center gap-4 text-xs font-mono">
             <div className="bg-white p-2 rounded shrink-0">
               <QRCodeSVG value={controllerUrl} size={85} />
             </div>
@@ -347,7 +357,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
           </button>
 
           <div className="text-xs text-slate-400 hidden sm:block">
-            KLIK <span className="text-[#17FFBF] font-bold">+ TAMBAH PLAYER</span> UNTUK MEMBUAT SLOT INPUT BARU
+            NAVIGASI: <span className="text-[#17FFBF] font-bold">A/D (P1)</span> | <span className="text-[#17FFBF] font-bold">◄/► PANAH (P2)</span>
           </div>
 
           <button
