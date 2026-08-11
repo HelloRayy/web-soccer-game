@@ -107,19 +107,28 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                         User 1
                       </span>
 
-                      {/* Active Controller Icon Box with Arrow Button (Matching reference crop image) */}
-                      <div className="flex items-center gap-2 p-2.5 bg-[#1b2420] border-2 border-[#17FFBF] rounded-2xl shadow-lg shadow-[#17FFBF]/20">
+                      {/* Active Controller Icon Box with Both Left & Right Arrow Buttons */}
+                      <div className="flex items-center gap-2 p-2 bg-[#1b2420] border-2 border-[#17FFBF] rounded-2xl shadow-lg shadow-[#17FFBF]/20">
+                        {/* Arrow Left Button */}
+                        <button
+                          onClick={() => setP1Index((prev) => (prev - 1 + P1_OPTIONS.length) % P1_OPTIONS.length)}
+                          className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
+                          title="Peranti Sebelumnya"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+
                         <div className="p-1 text-[#17FFBF]">
                           {p1Dev.type === 'keyboard' && <Keyboard className="w-9 h-9" />}
                           {p1Dev.type === 'gamepad' && <Gamepad className="w-9 h-9" />}
                           {p1Dev.type === 'smartphone' && <Smartphone className="w-9 h-9" />}
                         </div>
 
-                        {/* Arrow Right Cycle Button */}
+                        {/* Arrow Right Button */}
                         <button
                           onClick={() => setP1Index((prev) => (prev + 1) % P1_OPTIONS.length)}
-                          className="p-2 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
-                          title="Ganti Peranti Controller (Klik)"
+                          className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
+                          title="Peranti Selanjutnya"
                         >
                           <ChevronRight className="w-5 h-5" />
                         </button>
@@ -153,7 +162,16 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                           <Bot className="w-9 h-9 text-[#17FFBF] p-1" />
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 p-2.5 bg-[#1b2420] border-2 border-[#17FFBF] rounded-2xl shadow-lg shadow-[#17FFBF]/20">
+                        <div className="flex items-center gap-2 p-2 bg-[#1b2420] border-2 border-[#17FFBF] rounded-2xl shadow-lg shadow-[#17FFBF]/20">
+                          {/* Arrow Left Button */}
+                          <button
+                            onClick={() => setP2Index((prev) => (prev - 1 + P2_OPTIONS.length) % P2_OPTIONS.length)}
+                            className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
+                            title="Peranti Sebelumnya"
+                          >
+                            <ChevronLeft className="w-5 h-5" />
+                          </button>
+
                           <div className="p-1 text-[#17FFBF]">
                             {p2Dev.type === 'keyboard' && <Keyboard className="w-9 h-9" />}
                             {p2Dev.type === 'gamepad' && <Gamepad className="w-9 h-9" />}
@@ -161,10 +179,11 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                             {p2Dev.type === 'bot' && <Bot className="w-9 h-9" />}
                           </div>
 
+                          {/* Arrow Right Button */}
                           <button
                             onClick={() => setP2Index((prev) => (prev + 1) % P2_OPTIONS.length)}
-                            className="p-2 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
-                            title="Ganti Peranti Controller (Klik)"
+                            className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
+                            title="Peranti Selanjutnya"
                           >
                             <ChevronRight className="w-5 h-5" />
                           </button>
