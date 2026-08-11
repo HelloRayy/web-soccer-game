@@ -10,29 +10,13 @@ interface ControllerOption {
   type: 'keyboard' | 'gamepad' | 'smartphone' | 'bot';
 }
 
-const P1_OPTIONS: ControllerOption[] = [
+const DEVICE_OPTIONS: ControllerOption[] = [
   { id: 'keyboard1', name: 'KEYBOARD WASD', type: 'keyboard' },
-  { id: 'gamepad0', name: 'GAMEPAD USB 1', type: 'gamepad' },
-  { id: 'hp_remote', name: 'HP REMOTE WIRELESS', type: 'smartphone' },
-];
-
-const P2_OPTIONS: ControllerOption[] = [
   { id: 'keyboard2', name: 'KEYBOARD PANAH', type: 'keyboard' },
+  { id: 'gamepad0', name: 'GAMEPAD USB 1', type: 'gamepad' },
   { id: 'gamepad1', name: 'GAMEPAD USB 2', type: 'gamepad' },
   { id: 'hp_remote', name: 'HP REMOTE WIRELESS', type: 'smartphone' },
   { id: 'ai_bot', name: 'AI ENEMY BOT', type: 'bot' },
-];
-
-const P3_OPTIONS: ControllerOption[] = [
-  { id: 'hp_remote', name: 'HP REMOTE WIRELESS', type: 'smartphone' },
-  { id: 'gamepad0', name: 'GAMEPAD USB 1', type: 'gamepad' },
-  { id: 'keyboard1', name: 'KEYBOARD WASD', type: 'keyboard' },
-];
-
-const P4_OPTIONS: ControllerOption[] = [
-  { id: 'hp_remote', name: 'HP REMOTE WIRELESS', type: 'smartphone' },
-  { id: 'gamepad1', name: 'GAMEPAD USB 2', type: 'gamepad' },
-  { id: 'keyboard2', name: 'KEYBOARD PANAH', type: 'keyboard' },
 ];
 
 interface ControllerSelectModalProps {
@@ -52,34 +36,25 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
   isPeerConnected,
   selectedMode,
 }) => {
-  const [p1Index, setP1Index] = useState(0);
-  const [p2Index, setP2Index] = useState(0);
-  const [p3Index, setP3Index] = useState(0);
-  const [p4Index, setP4Index] = useState(0);
-
-  const [hasHomeExtra, setHasHomeExtra] = useState(false);
-  const [hasAwayExtra, setHasAwayExtra] = useState(false);
+  // Up to 5 Seats for Home & Away
+  const [homeSeats, setHomeSeats] = useState<number[]>([0]); // Device indices for Home players
+  const [awaySeats, setAwaySeats] = useState<number[]>([1]); // Device indices for Away players
 
   const [ipAddress, setIpAddress] = useState<string>(() => window.location.hostname || '192.168.1.100');
 
-  const p1Dev = P1_OPTIONS[p1Index];
-  const p2Dev = selectedMode === '2vBot' ? { id: 'ai_bot' as DeviceType, name: 'AI ENEMY BOT', type: 'bot' as const } : P2_OPTIONS[p2Index];
-  const p3Dev = P3_OPTIONS[p3Index];
-  const p4Dev = P4_OPTIONS[p4Index];
-
-  // Keyboard D-Pad Navigation for Select Sides
+  // Keyboard navigation for Primary Players (Home P1 & Away P2)
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'a' || e.key === 'A') {
-        setP1Index((prev) => (prev - 1 + P1_OPTIONS.length) % P1_OPTIONS.length);
+        cycleHomeDevice(0, -1);
       } else if (e.key === 'd' || e.key === 'D') {
-        setP1Index((prev) => (prev + 1) % P1_OPTIONS.length);
+        cycleHomeDevice(0, 1);
       } else if (e.key === 'ArrowLeft' && selectedMode === '1v1') {
-        setP2Index((prev) => (prev - 1 + P2_OPTIONS.length) % P2_OPTIONS.length);
+        cycleAwayDevice(0, -1);
       } else if (e.key === 'ArrowRight' && selectedMode === '1v1') {
-        setP2Index((prev) => (prev + 1) % P2_OPTIONS.length);
+        cycleAwayDevice(0, 1);
       }
     };
 
@@ -89,11 +64,56 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
   if (!isOpen) return null;
 
-  const controllerUrl = `http://${ipAddress}:5173/controller`;
-  const isHpSelected = p1Dev.id === 'hp_remote' || p2Dev.id === 'hp_remote' || (hasHomeExtra && p3Dev.id === 'hp_remote') || (hasAwayExtra && p4Dev.id === 'hp_remote');
+  const cycleHomeDevice = (seatIdx: number, delta: number) => {
+    setHomeSeats((prev) => {
+      const next = [...prev];
+      const currentDevIdx = next[seatIdx] || 0;
+      next[seatIdx] = (currentDevIdx + delta + DEVICE_OPTIONS.length) % DEVICE_OPTIONS.length;
+      return next;
+    });
+  };
 
-  // Authentic 6 Rows of Controller Silhouettes
-  const SILHOUETTE_SLOTS = [0, 1, 2, 3, 4, 5];
+  const cycleAwayDevice = (seatIdx: number, delta: number) => {
+    setAwaySeats((prev) => {
+      const next = [...prev];
+      const currentDevIdx = next[seatIdx] || 0;
+      next[seatIdx] = (currentDevIdx + delta + DEVICE_OPTIONS.length) % DEVICE_OPTIONS.length;
+      return next;
+    });
+  };
+
+  const addHomeSeat = () => {
+    if (homeSeats.length < 5) {
+      setHomeSeats((prev) => [...prev, 4]); // Default new seat to HP Remote (index 4)
+    }
+  };
+
+  const addAwaySeat = () => {
+    if (awaySeats.length < 5) {
+      setAwaySeats((prev) => [...prev, 4]); // Default new seat to HP Remote (index 4)
+    }
+  };
+
+  const removeHomeSeat = (index: number) => {
+    if (homeSeats.length > 1) {
+      setHomeSeats((prev) => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const removeAwaySeat = (index: number) => {
+    if (awaySeats.length > 1) {
+      setAwaySeats((prev) => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const controllerUrl = `http://${ipAddress}:5173/controller`;
+  const isHpSelected = homeSeats.some((idx) => DEVICE_OPTIONS[idx]?.id === 'hp_remote') || awaySeats.some((idx) => DEVICE_OPTIONS[idx]?.id === 'hp_remote');
+
+  // Exactly 5 Rows of Controller Slots per side
+  const ALL_5_SLOTS = [0, 1, 2, 3, 4];
+
+  const p1Device = DEVICE_OPTIONS[homeSeats[0]]?.id || 'keyboard1';
+  const p2Device = selectedMode === '2vBot' ? 'ai_bot' : (DEVICE_OPTIONS[awaySeats[0]]?.id || 'keyboard2');
 
   return (
     <div className="fixed inset-0 z-50 bg-[#05090C]/96 backdrop-blur-lg flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-150 select-none font-['Poppins',sans-serif]">
@@ -115,23 +135,39 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
             <div className="text-right font-['Outfit',sans-serif] tracking-tight">Away</div>
           </div>
 
-          {/* 2-COLUMN BOARD BODY */}
-          <div className="relative w-full p-6 grid grid-cols-2 divide-x divide-white/10 min-h-[360px]">
-            {/* LEFT COLUMN: HOME */}
-            <div className="flex flex-col gap-5 items-start pl-4 sm:pl-8">
-              {SILHOUETTE_SLOTS.map((slotIndex) => {
-                if (slotIndex === 0) {
-                  // User 1 Active Slot
-                  return (
-                    <div key={slotIndex} className="flex flex-col items-start relative group my-1">
-                      <span className="text-[11px] font-medium text-slate-400 mb-1 tracking-wide">
-                        User 1
-                      </span>
+          {/* 2-COLUMN BOARD BODY (UP TO 5 FULL SEATS EACH SIDE) */}
+          <div className="relative w-full p-6 grid grid-cols-2 divide-x divide-white/10 min-h-[380px]">
+            {/* LEFT COLUMN: HOME SEATS (1 TO 5) */}
+            <div className="flex flex-col gap-4 items-start pl-4 sm:pl-8">
+              {ALL_5_SLOTS.map((slotIndex) => {
+                const isActiveSeat = slotIndex < homeSeats.length;
+                const isAddButtonSlot = slotIndex === homeSeats.length;
 
-                      {/* EA FC 25 Style Active Controller Capsule */}
+                if (isActiveSeat) {
+                  const devIdx = homeSeats[slotIndex];
+                  const dev = DEVICE_OPTIONS[devIdx] || DEVICE_OPTIONS[0];
+                  const userNum = slotIndex * 2 + 1; // User 1, User 3, User 5, User 7, User 9
+
+                  return (
+                    <div key={slotIndex} className="flex flex-col items-start relative group my-0.5">
+                      <div className="flex items-center justify-between w-full mb-1 gap-2">
+                        <span className="text-[11px] font-medium text-slate-400 tracking-wide">
+                          User {userNum}
+                        </span>
+                        {slotIndex > 0 && (
+                          <button
+                            onClick={() => removeHomeSeat(slotIndex)}
+                            className="text-[10px] text-red-400 hover:text-red-300 underline"
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
+
+                      {/* EA FC 25 Active Controller Capsule */}
                       <div className="flex items-center gap-1.5 p-1.5 bg-[#18211d] border border-[#17FFBF] rounded-xl shadow-lg shadow-[#17FFBF]/10">
                         <button
-                          onClick={() => setP1Index((prev) => (prev - 1 + P1_OPTIONS.length) % P1_OPTIONS.length)}
+                          onClick={() => cycleHomeDevice(slotIndex, -1)}
                           className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
                           title="Peranti Sebelumnya"
                         >
@@ -139,13 +175,14 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                         </button>
 
                         <div className="px-2 text-[#17FFBF]">
-                          {p1Dev.type === 'keyboard' && <Keyboard className="w-8 h-8" />}
-                          {p1Dev.type === 'gamepad' && <Gamepad className="w-8 h-8" />}
-                          {p1Dev.type === 'smartphone' && <Smartphone className="w-8 h-8" />}
+                          {dev.type === 'keyboard' && <Keyboard className="w-8 h-8" />}
+                          {dev.type === 'gamepad' && <Gamepad className="w-8 h-8" />}
+                          {dev.type === 'smartphone' && <Smartphone className="w-8 h-8" />}
+                          {dev.type === 'bot' && <Bot className="w-8 h-8" />}
                         </div>
 
                         <button
-                          onClick={() => setP1Index((prev) => (prev + 1) % P1_OPTIONS.length)}
+                          onClick={() => cycleHomeDevice(slotIndex, 1)}
                           className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
                           title="Peranti Selanjutnya"
                         >
@@ -156,48 +193,11 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                   );
                 }
 
-                if (slotIndex === 1) {
-                  if (hasHomeExtra) {
-                    // User 3 Active Slot
-                    return (
-                      <div key={slotIndex} className="flex flex-col items-start relative group my-1">
-                        <div className="flex justify-between items-center w-full mb-1">
-                          <span className="text-[11px] font-medium text-slate-400 tracking-wide">User 3</span>
-                          <button
-                            onClick={() => setHasHomeExtra(false)}
-                            className="text-[10px] text-red-400 hover:text-red-300 underline"
-                          >
-                            Hapus
-                          </button>
-                        </div>
-                        <div className="flex items-center gap-1.5 p-1.5 bg-[#18211d] border border-[#17FFBF] rounded-xl shadow-lg shadow-[#17FFBF]/10">
-                          <button
-                            onClick={() => setP3Index((prev) => (prev - 1 + P3_OPTIONS.length) % P3_OPTIONS.length)}
-                            className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
-                          >
-                            <ChevronLeft className="w-4 h-4" />
-                          </button>
-                          <div className="px-2 text-[#17FFBF]">
-                            {p3Dev.type === 'keyboard' && <Keyboard className="w-8 h-8" />}
-                            {p3Dev.type === 'gamepad' && <Gamepad className="w-8 h-8" />}
-                            {p3Dev.type === 'smartphone' && <Smartphone className="w-8 h-8" />}
-                          </div>
-                          <button
-                            onClick={() => setP3Index((prev) => (prev + 1) % P3_OPTIONS.length)}
-                            className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
-                          >
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // Low-key AAA + Add Player Pill
+                if (isAddButtonSlot && homeSeats.length < 5) {
                   return (
-                    <div key={slotIndex} className="py-1">
+                    <div key={slotIndex} className="py-1.5">
                       <button
-                        onClick={() => setHasHomeExtra(true)}
+                        onClick={addHomeSeat}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-[#18211d]/50 border border-dashed border-[#17FFBF]/40 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer rounded-lg text-xs font-medium"
                       >
                         <Plus className="w-4 h-4" />
@@ -209,98 +209,83 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
                 // Dark Controller Silhouette Rows
                 return (
-                  <div key={slotIndex} className="py-2 pl-2">
+                  <div key={slotIndex} className="py-2.5 pl-2">
                     <Gamepad className="w-9 h-9 text-white/10" />
                   </div>
                 );
               })}
             </div>
 
-            {/* RIGHT COLUMN: AWAY */}
-            <div className="flex flex-col gap-5 items-end pr-4 sm:pr-8">
-              {SILHOUETTE_SLOTS.map((slotIndex) => {
-                if (slotIndex === 0) {
-                  // User 2 / AI Bot Active Slot
+            {/* RIGHT COLUMN: AWAY SEATS (1 TO 5) */}
+            <div className="flex flex-col gap-4 items-end pr-4 sm:pr-8">
+              {ALL_5_SLOTS.map((slotIndex) => {
+                const isActiveSeat = slotIndex < awaySeats.length;
+                const isAddButtonSlot = slotIndex === awaySeats.length;
+
+                if (isActiveSeat) {
+                  const devIdx = awaySeats[slotIndex];
+                  const dev = selectedMode === '2vBot' && slotIndex === 0
+                    ? { id: 'ai_bot' as DeviceType, name: 'AI ENEMY BOT', type: 'bot' as const }
+                    : (DEVICE_OPTIONS[devIdx] || DEVICE_OPTIONS[1]);
+                  const userNum = slotIndex === 0 && selectedMode === '2vBot' ? 'AI Bot' : `User ${slotIndex * 2 + 2}`;
+
                   return (
-                    <div key={slotIndex} className="flex flex-col items-end relative group my-1">
-                      <span className="text-[11px] font-medium text-slate-400 mb-1 tracking-wide">
-                        {selectedMode === '2vBot' ? 'AI Bot' : 'User 2'}
-                      </span>
-
-                      {selectedMode === '2vBot' ? (
-                        <div className="flex items-center p-2 bg-[#18211d] border border-[#17FFBF] rounded-xl shadow-lg shadow-[#17FFBF]/10">
-                          <Bot className="w-8 h-8 text-[#17FFBF] px-1" />
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 p-1.5 bg-[#18211d] border border-[#17FFBF] rounded-xl shadow-lg shadow-[#17FFBF]/10">
+                    <div key={slotIndex} className="flex flex-col items-end relative group my-0.5">
+                      <div className="flex items-center justify-between w-full mb-1 gap-2">
+                        {slotIndex > 0 && (
                           <button
-                            onClick={() => setP2Index((prev) => (prev - 1 + P2_OPTIONS.length) % P2_OPTIONS.length)}
-                            className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
-                          >
-                            <ChevronLeft className="w-4 h-4" />
-                          </button>
-
-                          <div className="px-2 text-[#17FFBF]">
-                            {p2Dev.type === 'keyboard' && <Keyboard className="w-8 h-8" />}
-                            {p2Dev.type === 'gamepad' && <Gamepad className="w-8 h-8" />}
-                            {p2Dev.type === 'smartphone' && <Smartphone className="w-8 h-8" />}
-                            {p2Dev.type === 'bot' && <Bot className="w-8 h-8" />}
-                          </div>
-
-                          <button
-                            onClick={() => setP2Index((prev) => (prev + 1) % P2_OPTIONS.length)}
-                            className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
-                          >
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-
-                if (slotIndex === 1) {
-                  if (hasAwayExtra) {
-                    // User 4 Active Slot
-                    return (
-                      <div key={slotIndex} className="flex flex-col items-end relative group my-1">
-                        <div className="flex justify-between items-center w-full mb-1">
-                          <button
-                            onClick={() => setHasAwayExtra(false)}
+                            onClick={() => removeAwaySeat(slotIndex)}
                             className="text-[10px] text-red-400 hover:text-red-300 underline"
                           >
                             Hapus
                           </button>
-                          <span className="text-[11px] font-medium text-slate-400 tracking-wide">User 4</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 p-1.5 bg-[#18211d] border border-[#17FFBF] rounded-xl shadow-lg shadow-[#17FFBF]/10">
-                          <button
-                            onClick={() => setP4Index((prev) => (prev - 1 + P4_OPTIONS.length) % P4_OPTIONS.length)}
-                            className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
-                          >
-                            <ChevronLeft className="w-4 h-4" />
-                          </button>
-                          <div className="px-2 text-[#17FFBF]">
-                            {p4Dev.type === 'keyboard' && <Keyboard className="w-8 h-8" />}
-                            {p4Dev.type === 'gamepad' && <Gamepad className="w-8 h-8" />}
-                            {p4Dev.type === 'smartphone' && <Smartphone className="w-8 h-8" />}
-                          </div>
-                          <button
-                            onClick={() => setP4Index((prev) => (prev + 1) % P4_OPTIONS.length)}
-                            className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
-                          >
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
-                        </div>
+                        )}
+                        <span className="text-[11px] font-medium text-slate-400 tracking-wide">
+                          {userNum}
+                        </span>
                       </div>
-                    );
-                  }
 
-                  // Low-key AAA + Add Player Pill
+                      <div className="flex items-center gap-1.5 p-1.5 bg-[#18211d] border border-[#17FFBF] rounded-xl shadow-lg shadow-[#17FFBF]/10">
+                        {selectedMode === '2vBot' && slotIndex === 0 ? (
+                          <div className="px-2 text-[#17FFBF]">
+                            <Bot className="w-8 h-8" />
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => cycleAwayDevice(slotIndex, -1)}
+                              className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
+                              title="Peranti Sebelumnya"
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                            </button>
+
+                            <div className="px-2 text-[#17FFBF]">
+                              {dev.type === 'keyboard' && <Keyboard className="w-8 h-8" />}
+                              {dev.type === 'gamepad' && <Gamepad className="w-8 h-8" />}
+                              {dev.type === 'smartphone' && <Smartphone className="w-8 h-8" />}
+                              {dev.type === 'bot' && <Bot className="w-8 h-8" />}
+                            </div>
+
+                            <button
+                              onClick={() => cycleAwayDevice(slotIndex, 1)}
+                              className="p-1 text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer rounded"
+                              title="Peranti Selanjutnya"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (isAddButtonSlot && awaySeats.length < 5) {
                   return (
-                    <div key={slotIndex} className="py-1">
+                    <div key={slotIndex} className="py-1.5">
                       <button
-                        onClick={() => setHasAwayExtra(true)}
+                        onClick={addAwaySeat}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-[#18211d]/50 border border-dashed border-[#17FFBF]/40 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer rounded-lg text-xs font-medium"
                       >
                         <Plus className="w-4 h-4" />
@@ -312,7 +297,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
                 // Dark Controller Silhouette Rows
                 return (
-                  <div key={slotIndex} className="py-2 pr-2">
+                  <div key={slotIndex} className="py-2.5 pr-2">
                     <Gamepad className="w-9 h-9 text-white/10" />
                   </div>
                 );
@@ -357,11 +342,11 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
           </button>
 
           <div className="text-xs text-slate-400 hidden sm:block">
-            NAVIGASI: <span className="text-[#17FFBF] font-bold">A/D (P1)</span> | <span className="text-[#17FFBF] font-bold">◄/► PANAH (P2)</span>
+            SLOT MAKSIMAL: <span className="text-[#17FFBF] font-bold">5 SEATS FULL PER SIDE</span>
           </div>
 
           <button
-            onClick={() => onConfirmStart(p1Dev.id, p2Dev.id)}
+            onClick={() => onConfirmStart(p1Device, p2Device)}
             className="py-3.5 px-8 clip-parallelogram bg-[#17FFBF] hover:bg-[#4BFFCE] text-[#05090C] font-mono font-black text-sm tracking-wider shadow-lg shadow-[#17FFBF]/30 transition cursor-pointer flex items-center gap-2"
           >
             <Play className="w-4 h-4 fill-current" />
