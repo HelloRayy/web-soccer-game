@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Gamepad, Keyboard, Smartphone, Bot, ChevronRight, ChevronLeft, Play, X } from 'lucide-react';
+import { Gamepad, Keyboard, Smartphone, Bot, ChevronRight, ChevronLeft, Play, X, Plus, UserPlus } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 export type DeviceType = 'keyboard1' | 'keyboard2' | 'gamepad0' | 'gamepad1' | 'hp_remote' | 'ai_bot';
@@ -23,6 +23,18 @@ const P2_OPTIONS: ControllerOption[] = [
   { id: 'ai_bot', name: 'AI ENEMY BOT', type: 'bot' },
 ];
 
+const P3_OPTIONS: ControllerOption[] = [
+  { id: 'hp_remote', name: 'HP REMOTE WIRELESS', type: 'smartphone' },
+  { id: 'gamepad0', name: 'GAMEPAD USB 1', type: 'gamepad' },
+  { id: 'keyboard1', name: 'KEYBOARD WASD', type: 'keyboard' },
+];
+
+const P4_OPTIONS: ControllerOption[] = [
+  { id: 'hp_remote', name: 'HP REMOTE WIRELESS', type: 'smartphone' },
+  { id: 'gamepad1', name: 'GAMEPAD USB 2', type: 'gamepad' },
+  { id: 'keyboard2', name: 'KEYBOARD PANAH', type: 'keyboard' },
+];
+
 interface ControllerSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -42,12 +54,20 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 }) => {
   const [p1Index, setP1Index] = useState(0);
   const [p2Index, setP2Index] = useState(0);
+  const [p3Index, setP3Index] = useState(0);
+  const [p4Index, setP4Index] = useState(0);
+
+  const [hasHomeExtra, setHasHomeExtra] = useState(false);
+  const [hasAwayExtra, setHasAwayExtra] = useState(false);
+
   const [ipAddress, setIpAddress] = useState<string>(() => window.location.hostname || '192.168.1.100');
 
   const p1Dev = P1_OPTIONS[p1Index];
   const p2Dev = selectedMode === '2vBot' ? { id: 'ai_bot' as DeviceType, name: 'AI ENEMY BOT', type: 'bot' as const } : P2_OPTIONS[p2Index];
+  const p3Dev = P3_OPTIONS[p3Index];
+  const p4Dev = P4_OPTIONS[p4Index];
 
-  // Keyboard navigation to cycle devices (A/D for P1, Left/Right Arrows for P2)
+  // Keyboard navigation
   useEffect(() => {
     if (!isOpen) return;
 
@@ -70,9 +90,8 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
   if (!isOpen) return null;
 
   const controllerUrl = `http://${ipAddress}:5173/controller`;
-  const isHpSelected = p1Dev.id === 'hp_remote' || p2Dev.id === 'hp_remote';
+  const isHpSelected = p1Dev.id === 'hp_remote' || p2Dev.id === 'hp_remote' || (hasHomeExtra && p3Dev.id === 'hp_remote') || (hasAwayExtra && p4Dev.id === 'hp_remote');
 
-  // 6 Silhouette rows per side to match EA FC 25 board
   const SILHOUETTE_SLOTS = [0, 1, 2, 3, 4, 5];
 
   return (
@@ -86,7 +105,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
           <X className="w-5 h-5" />
         </button>
 
-        {/* AUTHENTIC 2-COLUMN EA FC 25 SELECT SIDES BOARD (NO CENTER COLUMN) */}
+        {/* 2-COLUMN EA FC 25 SELECT SIDES BOARD */}
         <div className="w-full bg-[#131916] border border-white/10 shadow-2xl overflow-hidden relative min-h-[380px]">
           {/* HEADER BAR: Home (Left) | Away (Right) */}
           <div className="grid grid-cols-2 text-white font-bold text-2xl px-12 py-4 border-b border-white/10">
@@ -94,41 +113,31 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
             <div className="text-right pr-6 font-['Poppins',sans-serif]">Away</div>
           </div>
 
-          {/* 2-COLUMN GRID BODY (HOME LEFT | AWAY RIGHT) */}
+          {/* 2-COLUMN GRID BODY */}
           <div className="relative w-full p-4 sm:p-6 grid grid-cols-2 divide-x divide-white/10 min-h-[320px]">
-            {/* LEFT SIDE: HOME (P1 CONTROL SLOT) */}
+            {/* LEFT SIDE: HOME */}
             <div className="flex flex-col gap-4 items-start pl-6">
               {SILHOUETTE_SLOTS.map((slotIndex) => {
                 if (slotIndex === 0) {
-                  // Active P1 Controller Slot (In-place Arrow Cycling)
+                  // User 1 Slot
                   return (
                     <div key={slotIndex} className="flex flex-col items-start relative group my-1">
-                      <span className="text-xs font-mono text-slate-400 mb-1.5 tracking-wider">
-                        User 1
-                      </span>
-
-                      {/* Active Controller Icon Box with Both Left & Right Arrow Buttons */}
+                      <span className="text-xs font-mono text-slate-400 mb-1.5 tracking-wider">User 1</span>
                       <div className="flex items-center gap-2 p-2 bg-[#1b2420] border-2 border-[#17FFBF] rounded-2xl shadow-lg shadow-[#17FFBF]/20">
-                        {/* Arrow Left Button */}
                         <button
                           onClick={() => setP1Index((prev) => (prev - 1 + P1_OPTIONS.length) % P1_OPTIONS.length)}
                           className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
-                          title="Peranti Sebelumnya"
                         >
                           <ChevronLeft className="w-5 h-5" />
                         </button>
-
                         <div className="p-1 text-[#17FFBF]">
                           {p1Dev.type === 'keyboard' && <Keyboard className="w-9 h-9" />}
                           {p1Dev.type === 'gamepad' && <Gamepad className="w-9 h-9" />}
                           {p1Dev.type === 'smartphone' && <Smartphone className="w-9 h-9" />}
                         </div>
-
-                        {/* Arrow Right Button */}
                         <button
                           onClick={() => setP1Index((prev) => (prev + 1) % P1_OPTIONS.length)}
                           className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
-                          title="Peranti Selanjutnya"
                         >
                           <ChevronRight className="w-5 h-5" />
                         </button>
@@ -137,7 +146,59 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                   );
                 }
 
-                // Inactive Dark Controller Silhouette Icons
+                if (slotIndex === 1) {
+                  if (hasHomeExtra) {
+                    // User 3 Active Slot
+                    return (
+                      <div key={slotIndex} className="flex flex-col items-start relative group my-1">
+                        <div className="flex justify-between items-center w-full mb-1">
+                          <span className="text-xs font-mono text-slate-400 tracking-wider">User 3</span>
+                          <button
+                            onClick={() => setHasHomeExtra(false)}
+                            className="text-[10px] text-red-400 hover:text-red-300 underline"
+                          >
+                            Hapus
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 bg-[#1b2420] border-2 border-[#17FFBF] rounded-2xl shadow-lg shadow-[#17FFBF]/20">
+                          <button
+                            onClick={() => setP3Index((prev) => (prev - 1 + P3_OPTIONS.length) % P3_OPTIONS.length)}
+                            className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
+                          >
+                            <ChevronLeft className="w-5 h-5" />
+                          </button>
+                          <div className="p-1 text-[#17FFBF]">
+                            {p3Dev.type === 'keyboard' && <Keyboard className="w-9 h-9" />}
+                            {p3Dev.type === 'gamepad' && <Gamepad className="w-9 h-9" />}
+                            {p3Dev.type === 'smartphone' && <Smartphone className="w-9 h-9" />}
+                          </div>
+                          <button
+                            onClick={() => setP3Index((prev) => (prev + 1) % P3_OPTIONS.length)}
+                            className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
+                          >
+                            <ChevronRight className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // + Add Player Icon Button
+                  return (
+                    <div key={slotIndex} className="py-2.5 pl-2">
+                      <button
+                        onClick={() => setHasHomeExtra(true)}
+                        className="flex items-center gap-2 p-2 bg-[#1b2420]/60 border border-dashed border-[#17FFBF]/60 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer rounded-xl group"
+                        title="Tambah Player Baru (User 3)"
+                      >
+                        <Plus className="w-7 h-7 group-hover:scale-110 transition-transform" />
+                        <span className="text-xs font-mono font-bold pr-2">Tambah Player</span>
+                      </button>
+                    </div>
+                  );
+                }
+
+                // Inactive Silhouettes
                 return (
                   <div key={slotIndex} className="py-2.5 pl-2">
                     <Gamepad className="w-10 h-10 text-white/10" />
@@ -146,11 +207,11 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
               })}
             </div>
 
-            {/* RIGHT SIDE: AWAY (P2 CONTROL SLOT OR AI BOT) */}
+            {/* RIGHT SIDE: AWAY */}
             <div className="flex flex-col gap-4 items-end pr-6">
               {SILHOUETTE_SLOTS.map((slotIndex) => {
                 if (slotIndex === 0) {
-                  // Active P2 Controller Slot (or Fixed AI Bot in 2vBot mode)
+                  // User 2 Slot / AI Bot
                   return (
                     <div key={slotIndex} className="flex flex-col items-end relative group my-1">
                       <span className="text-xs font-mono text-slate-400 mb-1.5 tracking-wider">
@@ -163,27 +224,21 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 p-2 bg-[#1b2420] border-2 border-[#17FFBF] rounded-2xl shadow-lg shadow-[#17FFBF]/20">
-                          {/* Arrow Left Button */}
                           <button
                             onClick={() => setP2Index((prev) => (prev - 1 + P2_OPTIONS.length) % P2_OPTIONS.length)}
                             className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
-                            title="Peranti Sebelumnya"
                           >
                             <ChevronLeft className="w-5 h-5" />
                           </button>
-
                           <div className="p-1 text-[#17FFBF]">
                             {p2Dev.type === 'keyboard' && <Keyboard className="w-9 h-9" />}
                             {p2Dev.type === 'gamepad' && <Gamepad className="w-9 h-9" />}
                             {p2Dev.type === 'smartphone' && <Smartphone className="w-9 h-9" />}
                             {p2Dev.type === 'bot' && <Bot className="w-9 h-9" />}
                           </div>
-
-                          {/* Arrow Right Button */}
                           <button
                             onClick={() => setP2Index((prev) => (prev + 1) % P2_OPTIONS.length)}
                             className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
-                            title="Peranti Selanjutnya"
                           >
                             <ChevronRight className="w-5 h-5" />
                           </button>
@@ -193,7 +248,59 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                   );
                 }
 
-                // Inactive Dark Controller Silhouette Icons
+                if (slotIndex === 1) {
+                  if (hasAwayExtra) {
+                    // User 4 Active Slot
+                    return (
+                      <div key={slotIndex} className="flex flex-col items-end relative group my-1">
+                        <div className="flex justify-between items-center w-full mb-1">
+                          <button
+                            onClick={() => setHasAwayExtra(false)}
+                            className="text-[10px] text-red-400 hover:text-red-300 underline"
+                          >
+                            Hapus
+                          </button>
+                          <span className="text-xs font-mono text-slate-400 tracking-wider">User 4</span>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 bg-[#1b2420] border-2 border-[#17FFBF] rounded-2xl shadow-lg shadow-[#17FFBF]/20">
+                          <button
+                            onClick={() => setP4Index((prev) => (prev - 1 + P4_OPTIONS.length) % P4_OPTIONS.length)}
+                            className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
+                          >
+                            <ChevronLeft className="w-5 h-5" />
+                          </button>
+                          <div className="p-1 text-[#17FFBF]">
+                            {p4Dev.type === 'keyboard' && <Keyboard className="w-9 h-9" />}
+                            {p4Dev.type === 'gamepad' && <Gamepad className="w-9 h-9" />}
+                            {p4Dev.type === 'smartphone' && <Smartphone className="w-9 h-9" />}
+                          </div>
+                          <button
+                            onClick={() => setP4Index((prev) => (prev + 1) % P4_OPTIONS.length)}
+                            className="p-1.5 bg-[#05090C] hover:bg-[#17FFBF] text-white hover:text-[#05090C] transition cursor-pointer rounded-lg border border-white/10"
+                          >
+                            <ChevronRight className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // + Add Player Icon Button
+                  return (
+                    <div key={slotIndex} className="py-2.5 pr-2">
+                      <button
+                        onClick={() => setHasAwayExtra(true)}
+                        className="flex items-center gap-2 p-2 bg-[#1b2420]/60 border border-dashed border-[#17FFBF]/60 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer rounded-xl group"
+                        title="Tambah Player Baru (User 4)"
+                      >
+                        <Plus className="w-7 h-7 group-hover:scale-110 transition-transform" />
+                        <span className="text-xs font-mono font-bold pr-2">Tambah Player</span>
+                      </button>
+                    </div>
+                  );
+                }
+
+                // Inactive Silhouettes
                 return (
                   <div key={slotIndex} className="py-2.5 pr-2">
                     <Gamepad className="w-10 h-10 text-white/10" />
@@ -240,7 +347,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
           </button>
 
           <div className="text-xs text-slate-400 hidden sm:block">
-            KLIK PANAH <span className="text-[#17FFBF] font-bold">►</span> ATAL TEKAN <span className="text-[#17FFBF] font-bold">A/D (P1)</span> / <span className="text-[#17FFBF] font-bold">◄/► (P2)</span> UNTUK GANTI PERANTI
+            KLIK <span className="text-[#17FFBF] font-bold">+ TAMBAH PLAYER</span> UNTUK MEMBUAT SLOT INPUT BARU
           </div>
 
           <button
