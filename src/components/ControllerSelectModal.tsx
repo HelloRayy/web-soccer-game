@@ -140,16 +140,16 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
         {/* AUTHENTIC EA FC 25 / FL 25 SELECT SIDES BOARD */}
         <div className="w-full bg-[#111614] border border-white/10 shadow-2xl overflow-hidden relative">
-          {/* HEADER BAR: Home (Left) | Away (Right) */}
-          <div className="grid grid-cols-2 text-white font-bold text-2xl px-8 py-4 border-b border-white/10 bg-[#0c100e]">
-            <div className="text-left font-['Outfit',sans-serif] tracking-tight">Home</div>
-            <div className="text-right font-['Outfit',sans-serif] tracking-tight">Away</div>
+          {/* HEADER BAR: Home (Left) | Away (Right) - CENTERED */}
+          <div className="grid grid-cols-2 text-white font-bold text-2xl py-4 border-b border-white/10 bg-[#0c100e]">
+            <div className="text-center font-['Outfit',sans-serif] tracking-tight">Home</div>
+            <div className="text-center font-['Outfit',sans-serif] tracking-tight">Away</div>
           </div>
 
-          {/* 2-COLUMN BOARD BODY WITH SMOOTH VERTICAL SCROLLING */}
+          {/* 2-COLUMN BOARD BODY WITH SMOOTH VERTICAL SCROLLING (CENTERED) */}
           <div className="relative w-full p-6 grid grid-cols-2 divide-x divide-white/10 max-h-[320px] sm:max-h-[370px] overflow-y-auto custom-scrollbar">
-            {/* LEFT COLUMN: HOME SEATS (1 TO 5) */}
-            <div className="flex flex-col gap-4 items-start pl-4 sm:pl-8">
+            {/* LEFT COLUMN: HOME SEATS (CENTER ALIGNED) */}
+            <div className="flex flex-col gap-4 items-center px-2">
               {ALL_5_SLOTS.map((slotIndex) => {
                 const isActiveSeat = slotIndex < homeSeats.length;
                 const isAddButtonSlot = slotIndex === homeSeats.length;
@@ -160,15 +160,15 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                   const userNum = slotIndex * 2 + 1; // User 1, User 3, User 5, User 7, User 9
 
                   return (
-                    <div key={slotIndex} className="flex flex-col items-start relative group my-0.5">
+                    <div key={slotIndex} className="flex flex-col items-center relative group my-0.5">
                       <div className="flex items-center justify-between w-full mb-1 gap-2">
-                        <span className="text-[11px] font-medium text-slate-400 tracking-wide">
+                        <span className="text-[11px] font-medium text-slate-400 tracking-wide text-center w-full">
                           User {userNum}
                         </span>
                         {slotIndex > 0 && (
                           <button
                             onClick={() => removeHomeSeat(slotIndex)}
-                            className="text-[10px] text-red-400 hover:text-red-300 underline"
+                            className="text-[10px] text-red-400 hover:text-red-300 underline shrink-0"
                           >
                             Hapus
                           </button>
@@ -206,7 +206,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
                 if (isAddButtonSlot && homeSeats.length < 5) {
                   return (
-                    <div key={slotIndex} className="py-1.5">
+                    <div key={slotIndex} className="py-1.5 flex justify-center w-full">
                       <button
                         onClick={addHomeSeat}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-[#18211d]/50 border border-dashed border-[#17FFBF]/40 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer rounded-lg text-xs font-medium"
@@ -220,15 +220,15 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
                 // Dark Controller Silhouette Rows
                 return (
-                  <div key={slotIndex} className="py-2.5 pl-2">
+                  <div key={slotIndex} className="py-2.5 flex justify-center w-full">
                     <Gamepad className="w-9 h-9 text-white/10" />
                   </div>
                 );
               })}
             </div>
 
-            {/* RIGHT COLUMN: AWAY SEATS (1 TO 5) */}
-            <div className="flex flex-col gap-4 items-end pr-4 sm:pr-8">
+            {/* RIGHT COLUMN: AWAY SEATS (CENTER ALIGNED) */}
+            <div className="flex flex-col gap-4 items-center px-2">
               {ALL_5_SLOTS.map((slotIndex) => {
                 const isActiveSeat = slotIndex < awaySeats.length;
                 const isAddButtonSlot = slotIndex === awaySeats.length;
@@ -241,17 +241,17 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                   const userNum = slotIndex === 0 && selectedMode === '2vBot' ? 'AI Bot' : `User ${slotIndex * 2 + 2}`;
 
                   return (
-                    <div key={slotIndex} className="flex flex-col items-end relative group my-0.5">
+                    <div key={slotIndex} className="flex flex-col items-center relative group my-0.5">
                       <div className="flex items-center justify-between w-full mb-1 gap-2">
                         {slotIndex > 0 && (
                           <button
                             onClick={() => removeAwaySeat(slotIndex)}
-                            className="text-[10px] text-red-400 hover:text-red-300 underline"
+                            className="text-[10px] text-red-400 hover:text-red-300 underline shrink-0"
                           >
                             Hapus
                           </button>
                         )}
-                        <span className="text-[11px] font-medium text-slate-400 tracking-wide">
+                        <span className="text-[11px] font-medium text-slate-400 tracking-wide text-center w-full">
                           {userNum}
                         </span>
                       </div>
