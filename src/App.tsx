@@ -17,9 +17,9 @@ const MainGameContainer: React.FC = () => {
   const [p1Character, setP1Character] = useState<CharacterData | null>(null);
   const [p2Character, setP2Character] = useState<CharacterData | null>(null);
 
-  // Shared WebRTC PeerJS Host Service across Lobby & Game Views
   const [peerRoomId, setPeerRoomId] = useState('8492');
   const [isPeerConnected, setIsPeerConnected] = useState(false);
+  const [connectedPeerCount, setConnectedPeerCount] = useState(0);
   const peerServiceRef = useRef<HostPeerService | null>(null);
 
   useEffect(() => {
@@ -28,6 +28,10 @@ const MainGameContainer: React.FC = () => {
 
     hostService.onConnectionStateChange = (connected) => {
       setIsPeerConnected(connected);
+    };
+
+    hostService.onPeerCountChange = (count) => {
+      setConnectedPeerCount(count);
     };
 
     hostService.init().then((roomId) => {
@@ -64,6 +68,7 @@ const MainGameContainer: React.FC = () => {
         onStartMatch={handleConfirmControllers}
         peerRoomId={peerRoomId}
         isPeerConnected={isPeerConnected}
+        connectedPeerCount={connectedPeerCount}
       />
     );
   }

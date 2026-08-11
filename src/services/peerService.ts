@@ -20,16 +20,21 @@ const PEER_CONFIG = {
 
 export class HostPeerService {
   private peer: Peer | null = null;
-  private connection: DataConnection | null = null;
+  private connections: Map<string, DataConnection> = new Map();
   private bc: BroadcastChannel | null = null;
 
   public roomId: string;
   public onConnectionStateChange?: (connected: boolean) => void;
-  public onInputReceived?: (input: Partial<GamepadState>) => void;
-  public onGamepadStateUpdate?: (state: GamepadState) => void;
+  public onPeerCountChange?: (count: number) => void;
+  public onInputReceived?: (input: Partial<GamepadState>, peerId?: string) => void;
+  public onGamepadStateUpdate?: (state: GamepadState, peerId?: string) => void;
 
   constructor() {
     this.roomId = Math.floor(1000 + Math.random() * 9000).toString();
+  }
+
+  public getConnectedCount(): number {
+    return this.connections.size;
   }
 
   public init(customRoomId?: string): Promise<string> {
@@ -78,34 +83,40 @@ export class HostPeerService {
         });
 
         this.peer.on('connection', (conn: DataConnection) => {
-          console.log('[HostPeerService] Client connected:', conn.peer);
-          this.connection = conn;
+          console.log('[HostPeerService] Multi-HP Client connected:', conn.peer);
+          this.connections.set(conn.peer, conn);
 
+          const currentCount = this.connections.size;
           if (this.onConnectionStateChange) {
-            this.onConnectionStateChange(true);
+            this.onConnectionStateChange(currentCount > 0);
+          }
+          if (this.onPeerCountChange) {
+            this.onPeerCountChange(currentCount);
           }
 
           conn.on('data', (data: any) => {
             if (data && data.type === 'CONTROLLER_INPUT') {
-              if (this.onInputReceived) this.onInputReceived(data.input);
-              if (this.onGamepadStateUpdate) this.onGamepadStateUpdate(data.input);
+              if (this.onInputReceived) this.onInputReceived(data.input, conn.peer);
+              if (this.onGamepadStateUpdate) this.onGamepadStateUpdate(data.input, conn.peer);
             }
           });
 
-          conn.on('close', () => {
-            console.log('[HostPeerService] Client connection closed');
-            this.connection = null;
+          const handleClose = () => {
+            console.log('[HostPeerService] Client disconnected:', conn.peer);
+            this.connections.delete(conn.peer);
+            const count = this.connections.size;
             if (this.onConnectionStateChange) {
-              this.onConnectionStateChange(false);
+              this.onConnectionStateChange(count > 0);
             }
-          });
+            if (this.onPeerCountChange) {
+              this.onPeerCountChange(count);
+            }
+          };
 
+          conn.on('close', handleClose);
           conn.on('error', (err: any) => {
             console.error('[HostPeerService] Connection error:', err);
-            this.connection = null;
-            if (this.onConnectionStateChange) {
-              this.onConnectionStateChange(false);
-            }
+            handleClose();
           });
         });
 
@@ -121,10 +132,9 @@ export class HostPeerService {
   }
 
   public destroy() {
-    if (this.connection) {
-      this.connection.close();
-      this.connection = null;
-    }
+    this.connections.forEach((conn) => conn.close());
+    this.connections.clear();
+
     if (this.peer) {
       this.peer.destroy();
       this.peer = null;
@@ -197,7 +207,6 @@ export class ControllerPeerService {
                 this.connectToHost(roomId, retryCount + 1).then(resolve);
               }, 1200);
             } else {
-              // Fallback to local transport
               if (this.onConnectionStateChange) this.onConnectionStateChange(true);
               resolve(true);
             }
@@ -225,7 +234,6 @@ export class ControllerPeerService {
       });
     }
 
-    // Hybrid Local Channel Transport
     if (typeof window !== 'undefined') {
       try {
         if (this.bc) {

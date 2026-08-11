@@ -25,6 +25,7 @@ interface ControllerSelectModalProps {
   onConfirmStart: (p1Device: DeviceType, p2Device: DeviceType) => void;
   peerRoomId: string;
   isPeerConnected: boolean;
+  connectedPeerCount?: number;
   selectedMode: '1v1' | '2vBot';
 }
 
@@ -34,6 +35,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
   onConfirmStart,
   peerRoomId,
   isPeerConnected,
+  connectedPeerCount = 0,
   selectedMode,
 }) => {
   // Up to 5 Seats for Home & Away
@@ -315,27 +317,32 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
           </div>
         </div>
 
-        {/* HP REMOTE WIRELESS INTEGRATION WIDGET */}
+        {/* HP REMOTE WIRELESS MULTI-DEVICE INTEGRATION WIDGET */}
         {isHpSelected && (
           <div className="bg-[#111614] border border-[#17FFBF]/30 p-4 rounded-none flex flex-col sm:flex-row items-center gap-4 text-xs font-mono">
-            <div className="bg-white p-2 rounded shrink-0">
-              <QRCodeSVG value={controllerUrl} size={85} />
+            <div className="bg-white p-2 rounded shrink-0 flex flex-col items-center">
+              <QRCodeSVG value={controllerUrl} size={90} />
+              <span className="text-[9px] font-bold text-slate-800 mt-1 uppercase tracking-tighter">1 QR UNTUK SEMUA HP</span>
             </div>
             <div className="flex flex-col gap-1.5 w-full">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center flex-wrap gap-2">
                 <span className="font-bold text-[#17FFBF] flex items-center gap-1">
-                  <Smartphone className="w-4 h-4" /> KONEKSI HP REMOTE WIRELESS
+                  <Smartphone className="w-4 h-4" /> KONEKSI HP REMOTE WIRELESS (MULTI-DEVICE SUPPORT)
                 </span>
-                <span className={`px-2 py-0.5 text-[10px] font-bold ${
-                  isPeerConnected ? 'bg-[#17FFBF]/20 text-[#17FFBF]' : 'bg-amber-500/20 text-amber-300'
-                }`}>
-                  {isPeerConnected ? '🟢 CONNECTED' : '⏳ SCAN QR HP...'}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className={`px-2.5 py-0.5 text-[10px] font-bold ${
+                    isPeerConnected ? 'bg-[#17FFBF]/20 text-[#17FFBF] border border-[#17FFBF]/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                  }`}>
+                    {isPeerConnected ? `📱 ${connectedPeerCount || 1} HP TERHUBUNG` : '⏳ SCAN QR HP...'}
+                  </span>
+                </div>
               </div>
-              <p className="text-slate-400">Scan QR Code dengan kamera HP Anda untuk menghubungkan HP sebagai Joystick.</p>
-              <div className="bg-[#05090C] p-1.5 border border-white/10 font-mono text-[11px] text-cyan-300 flex justify-between">
+              <p className="text-slate-300 leading-relaxed">
+                <strong className="text-white">1 QR Code ini dapat di-scan oleh banyak HP sekaligus!</strong> Setiap HP yang terhubung otomatis menjadi Joystick independen untuk Player 1, Player 2, Player 3, dsb.
+              </p>
+              <div className="bg-[#05090C] p-2 border border-white/10 font-mono text-[11px] text-cyan-300 flex justify-between items-center">
                 <span>{controllerUrl}</span>
-                <span>ROOM: {peerRoomId}</span>
+                <span className="bg-[#17FFBF]/10 px-2 py-0.5 text-[#17FFBF] font-bold">ROOM: {peerRoomId}</span>
               </div>
             </div>
           </div>

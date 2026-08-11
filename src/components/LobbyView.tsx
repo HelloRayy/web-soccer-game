@@ -8,6 +8,7 @@ interface LobbyViewProps {
   onStartMatch: (mode: '1v1' | '2vBot', p1Device?: DeviceType, p2Device?: DeviceType) => void;
   peerRoomId: string;
   isPeerConnected: boolean;
+  connectedPeerCount?: number;
 }
 
 type MenuItemId = '1v1' | '2vBot' | 'extras' | 'settings';
@@ -68,7 +69,7 @@ const FIFA_SPRING_TRANSITION = {
   mass: 0.5
 };
 
-export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, isPeerConnected }) => {
+export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, isPeerConnected, connectedPeerCount = 0 }) => {
   const [selectedMode, setSelectedMode] = useState<'1v1' | '2vBot'>('1v1');
   const [activeItem, setActiveItem] = useState<MenuItemId>('1v1');
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
@@ -138,6 +139,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
         onConfirmStart={handleConfirmControllerStart}
         peerRoomId={peerRoomId}
         isPeerConnected={isPeerConnected}
+        connectedPeerCount={connectedPeerCount}
         selectedMode={selectedMode}
       />
 
