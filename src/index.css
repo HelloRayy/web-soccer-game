@@ -107,3 +107,18 @@
   font-weight: 900;
   font-size: 11px;
 }
+
+/* Sleek Dark Custom Scrollbar for Select Sides Board */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #0c100e;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(23, 255, 191, 0.4);
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #17FFBF;
+}

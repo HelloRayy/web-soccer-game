@@ -135,8 +135,8 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
             <div className="text-right font-['Outfit',sans-serif] tracking-tight">Away</div>
           </div>
 
-          {/* 2-COLUMN BOARD BODY (UP TO 5 FULL SEATS EACH SIDE) */}
-          <div className="relative w-full p-6 grid grid-cols-2 divide-x divide-white/10 min-h-[380px]">
+          {/* 2-COLUMN BOARD BODY WITH SMOOTH VERTICAL SCROLLING */}
+          <div className="relative w-full p-6 grid grid-cols-2 divide-x divide-white/10 max-h-[320px] sm:max-h-[370px] overflow-y-auto custom-scrollbar">
             {/* LEFT COLUMN: HOME SEATS (1 TO 5) */}
             <div className="flex flex-col gap-4 items-start pl-4 sm:pl-8">
               {ALL_5_SLOTS.map((slotIndex) => {
