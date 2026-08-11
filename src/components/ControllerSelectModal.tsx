@@ -1,8 +1,28 @@
-import React, { useState } from 'react';
-import { Gamepad, Keyboard, Smartphone, CheckCircle, Play, X, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Gamepad, Keyboard, Smartphone, Bot, ChevronLeft, ChevronRight, Play, X } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { detectLocalWifiIP } from '../services/networkService';
 
-export type DeviceType = 'keyboard1' | 'keyboard2' | 'gamepad0' | 'gamepad1' | 'hp_remote';
+export type DeviceType = 'keyboard1' | 'keyboard2' | 'gamepad0' | 'gamepad1' | 'hp_remote' | 'ai_bot';
+
+interface ControllerOption {
+  id: DeviceType;
+  name: string;
+  sub: string;
+  type: 'keyboard' | 'gamepad' | 'smartphone' | 'bot';
+}
+
+const P1_OPTIONS: ControllerOption[] = [
+  { id: 'keyboard1', name: 'KEYBOARD WASD', sub: 'WASD + J/K/L + Space', type: 'keyboard' },
+  { id: 'gamepad0', name: 'GAMEPAD USB 1', sub: 'Xbox / PS Controller 0', type: 'gamepad' },
+  { id: 'hp_remote', name: 'HP REMOTE WIRELESS', sub: 'Scan QR Code HP Controller', type: 'smartphone' },
+];
+
+const P2_OPTIONS: ControllerOption[] = [
+  { id: 'keyboard2', name: 'KEYBOARD PANAH', sub: 'Panah + Numpad / N,M', type: 'keyboard' },
+  { id: 'gamepad1', name: 'GAMEPAD USB 2', sub: 'Xbox / PS Controller 1', type: 'gamepad' },
+  { id: 'hp_remote', name: 'HP REMOTE WIRELESS', sub: 'Scan QR Code HP Controller', type: 'smartphone' },
+];
 
 interface ControllerSelectModalProps {
   isOpen: boolean;
@@ -10,6 +30,7 @@ interface ControllerSelectModalProps {
   onConfirmStart: (p1Device: DeviceType, p2Device: DeviceType) => void;
   peerRoomId: string;
   isPeerConnected: boolean;
+  selectedMode: '1v1' | '2vBot';
 }
 
 export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
@@ -18,249 +39,290 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
   onConfirmStart,
   peerRoomId,
   isPeerConnected,
+  selectedMode,
 }) => {
-  const [p1Device, setP1Device] = useState<DeviceType>('keyboard1');
-  const [p2Device, setP2Device] = useState<DeviceType>('keyboard2');
+  const [p1Index, setP1Index] = useState(0);
+  const [p2Index, setP2Index] = useState(0);
   const [ipAddress, setIpAddress] = useState<string>(() => window.location.hostname || '192.168.1.100');
+
+  // Auto-detect Wi-Fi LAN IP address when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      detectLocalWifiIP().then((ip) => setIpAddress(ip));
+    }
+  }, [isOpen]);
+
+  const p1Dev = P1_OPTIONS[p1Index];
+  const p2Dev = selectedMode === '2vBot' ? P2_OPTIONS[p2Index] : P2_OPTIONS[p2Index];
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'a' || e.key === 'A') {
+        setP1Index((prev) => (prev - 1 + P1_OPTIONS.length) % P1_OPTIONS.length);
+      } else if (e.key === 'd' || e.key === 'D') {
+        setP1Index((prev) => (prev + 1) % P1_OPTIONS.length);
+      } else if (e.key === 'ArrowLeft') {
+        setP2Index((prev) => (prev - 1 + P2_OPTIONS.length) % P2_OPTIONS.length);
+      } else if (e.key === 'ArrowRight') {
+        setP2Index((prev) => (prev + 1) % P2_OPTIONS.length);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const controllerUrl = `http://${ipAddress}:5173/controller`;
-  const isHpSelected = p1Device === 'hp_remote' || p2Device === 'hp_remote';
+  const isHpSelected = p1Dev.id === 'hp_remote' || (selectedMode === '1v1' && p2Dev.id === 'hp_remote') || (selectedMode === '2vBot' && p2Dev.id === 'hp_remote');
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 select-none font-sans">
-      <div className="bg-[#0b0f0c] border-2 border-emerald-500/50 rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl flex flex-col gap-6 text-slate-100 relative max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-[#060D17]/95 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150 select-none font-['Inter',sans-serif]">
+      <div className="bg-[#0A1526] border-2 border-[#17FFBF]/60 max-w-4xl w-full p-6 sm:p-8 shadow-2xl flex flex-col gap-5 text-[#E2F1F8] relative max-h-[95vh] overflow-y-auto font-mono">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
+          className="absolute top-4 right-4 p-2 bg-[#060D17] border border-[#142840] text-slate-400 hover:text-white transition cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Modal Header */}
+        {/* PES SELECT SIDES HEADER */}
         <div className="text-center flex flex-col items-center gap-1">
-          <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full">
-            <Gamepad className="w-4 h-4" /> Controller Assignment
+          <div className="flex items-center gap-2 text-[#17FFBF] text-xs font-bold uppercase tracking-widest bg-[#17FFBF]/10 border border-[#17FFBF]/30 px-3 py-1 rounded-full">
+            <Gamepad className="w-4 h-4" /> PES SELECT SIDES ({selectedMode.toUpperCase()})
           </div>
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
-            PILIH PERANTI KONTROLER (1v1)
+          <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight mt-1 font-['Plus_Jakarta_Sans',sans-serif] uppercase italic">
+            CONTROLLER ASSIGNMENT
           </h2>
           <p className="text-xs text-slate-400">
-            Tentukan peranti kontroler untuk Player 1 dan Player 2 sebelum memulai pertandingan.
+            Atur peranti kontroler Player 1 {selectedMode === '2vBot' ? '& Player 2 Co-Op' : ''} dengan panah <span className="text-[#17FFBF] font-bold">◄ KIRI / KANAN ►</span>.
           </p>
         </div>
 
-        {/* Dual Column Side Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mt-2">
-          {/* PLAYER 1 COLUMN (HOME) */}
-          <div className="bg-slate-900/90 border border-cyan-500/40 rounded-2xl p-5 flex flex-col gap-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-cyan-500/20 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-cyan-400 animate-pulse" />
-                <h3 className="font-black text-cyan-400 tracking-wide text-sm">PLAYER 1 (HOME)</h3>
-              </div>
-              <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
-                Red/Cyan Team
-              </span>
+        {/* AUTHENTIC PES SELECT SIDES BOARD */}
+        <div className="w-full bg-[#060D17] border-2 border-[#142840] overflow-hidden relative shadow-2xl">
+          {/* BOARD TOP BAR: HOME (LEFT) | AWAY (RIGHT) */}
+          <div className="grid grid-cols-2 bg-black text-white font-black text-xl sm:text-2xl font-['Plus_Jakarta_Sans',sans-serif] uppercase tracking-wider text-center py-2 border-b-2 border-[#142840]">
+            <div className="bg-[#FF4655]/20 text-[#FF4655] py-1 border-r border-[#142840] flex items-center justify-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-[#FF4655] animate-pulse" /> HOME {selectedMode === '2vBot' ? '(P1 & P2 CO-OP)' : '(PLAYER 1)'}
             </div>
-
-            <div className="flex flex-col gap-2.5">
-              {/* Option 1: Keyboard WASD */}
-              <button
-                onClick={() => setP1Device('keyboard1')}
-                className={`p-3.5 rounded-xl border text-xs font-bold transition flex items-center justify-between cursor-pointer ${
-                  p1Device === 'keyboard1'
-                    ? 'bg-cyan-950/80 border-cyan-400 text-cyan-300 shadow-lg shadow-cyan-500/20'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Keyboard className="w-4 h-4 text-cyan-400" />
-                  <div className="text-left">
-                    <div>Keyboard WASD</div>
-                    <div className="text-[10px] text-slate-500 font-mono">WASD + J/K/L + Space</div>
-                  </div>
-                </div>
-                {p1Device === 'keyboard1' && <CheckCircle className="w-4 h-4 text-cyan-400" />}
-              </button>
-
-              {/* Option 2: Gamepad 0 */}
-              <button
-                onClick={() => setP1Device('gamepad0')}
-                className={`p-3.5 rounded-xl border text-xs font-bold transition flex items-center justify-between cursor-pointer ${
-                  p1Device === 'gamepad0'
-                    ? 'bg-cyan-950/80 border-cyan-400 text-cyan-300 shadow-lg shadow-cyan-500/20'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Gamepad className="w-4 h-4 text-cyan-400" />
-                  <div className="text-left">
-                    <div>Gamepad / Joystick 1</div>
-                    <div className="text-[10px] text-slate-500 font-mono">Xbox / PS Controller 0</div>
-                  </div>
-                </div>
-                {p1Device === 'gamepad0' && <CheckCircle className="w-4 h-4 text-cyan-400" />}
-              </button>
-
-              {/* Option 3: HP Remote */}
-              <button
-                onClick={() => setP1Device('hp_remote')}
-                className={`p-3.5 rounded-xl border text-xs font-bold transition flex items-center justify-between cursor-pointer ${
-                  p1Device === 'hp_remote'
-                    ? 'bg-cyan-950/80 border-cyan-400 text-cyan-300 shadow-lg shadow-cyan-500/20'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Smartphone className="w-4 h-4 text-cyan-400" />
-                  <div className="text-left">
-                    <div>HP Remote Wireless</div>
-                    <div className="text-[10px] text-slate-500 font-mono">Scan QR HP Controller</div>
-                  </div>
-                </div>
-                {p1Device === 'hp_remote' && <CheckCircle className="w-4 h-4 text-cyan-400" />}
-              </button>
+            <div className="bg-[#17FFBF]/20 text-[#17FFBF] py-1 flex items-center justify-center gap-2">
+              {selectedMode === '2vBot' ? 'AWAY (AI BOTS)' : 'AWAY (PLAYER 2)'} <span className="w-3 h-3 rounded-full bg-[#17FFBF] animate-pulse" />
             </div>
           </div>
 
-          {/* PLAYER 2 COLUMN (AWAY) */}
-          <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-5 flex flex-col gap-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-amber-500/20 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-amber-400 animate-pulse" />
-                <h3 className="font-black text-amber-400 tracking-wide text-sm">PLAYER 2 (AWAY)</h3>
+          {/* BOARD CANVAS (RED LEFT | GREEN RIGHT SPLIT TINT) */}
+          <div className="relative w-full min-h-[280px] flex flex-col divide-y divide-[#142840]">
+            {/* Background Gradient Overlay */}
+            <div className="absolute inset-0 grid grid-cols-2 pointer-events-none z-0">
+              <div className="bg-gradient-to-r from-[#FF4655]/15 to-transparent" />
+              <div className="bg-gradient-to-l from-[#17FFBF]/15 to-transparent" />
+            </div>
+
+            {/* MODE 1V1: P1 ON HOME (LEFT) vs P2 ON AWAY (RIGHT) */}
+            {selectedMode === '1v1' ? (
+              <div className="relative z-10 grid grid-cols-2 divide-x divide-[#142840] items-center p-6 min-h-[240px]">
+                {/* HOME (P1) CONTROLLER ROW */}
+                <div className="flex flex-col items-center justify-center p-4 gap-3">
+                  <span className="text-xs font-mono font-bold text-[#FF4655] uppercase tracking-widest">
+                    PLAYER 1 CONTROLLER
+                  </span>
+
+                  <div className="flex items-center gap-4 bg-[#FF4655] text-[#060D17] px-6 py-3 font-black border-2 border-white shadow-xl">
+                    <button
+                      onClick={() => setP1Index((prev) => (prev - 1 + P1_OPTIONS.length) % P1_OPTIONS.length)}
+                      className="p-1.5 bg-[#060D17] text-[#FF4655] hover:bg-white transition cursor-pointer"
+                      title="Ganti Peranti P1 (Kiri)"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+
+                    <div className="flex items-center gap-3">
+                      {p1Dev.type === 'keyboard' && <Keyboard className="w-7 h-7" />}
+                      {p1Dev.type === 'gamepad' && <Gamepad className="w-7 h-7" />}
+                      {p1Dev.type === 'smartphone' && <Smartphone className="w-7 h-7" />}
+                      <div className="text-left">
+                        <div className="text-base font-black tracking-wider uppercase">{p1Dev.name}</div>
+                        <div className="text-[10px] font-mono opacity-80">{p1Dev.sub}</div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setP1Index((prev) => (prev + 1) % P1_OPTIONS.length)}
+                      className="p-1.5 bg-[#060D17] text-[#FF4655] hover:bg-white transition cursor-pointer"
+                      title="Ganti Peranti P1 (Kanan)"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* AWAY (P2) CONTROLLER ROW */}
+                <div className="flex flex-col items-center justify-center p-4 gap-3">
+                  <span className="text-xs font-mono font-bold text-[#17FFBF] uppercase tracking-widest">
+                    PLAYER 2 CONTROLLER
+                  </span>
+
+                  <div className="flex items-center gap-4 bg-[#17FFBF] text-[#060D17] px-6 py-3 font-black border-2 border-white shadow-xl">
+                    <button
+                      onClick={() => setP2Index((prev) => (prev - 1 + P2_OPTIONS.length) % P2_OPTIONS.length)}
+                      className="p-1.5 bg-[#060D17] text-[#17FFBF] hover:bg-white transition cursor-pointer"
+                      title="Ganti Peranti P2 (Kiri)"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+
+                    <div className="flex items-center gap-3">
+                      {p2Dev.type === 'keyboard' && <Keyboard className="w-7 h-7" />}
+                      {p2Dev.type === 'gamepad' && <Gamepad className="w-7 h-7" />}
+                      {p2Dev.type === 'smartphone' && <Smartphone className="w-7 h-7" />}
+                      <div className="text-left">
+                        <div className="text-base font-black tracking-wider uppercase">{p2Dev.name}</div>
+                        <div className="text-[10px] font-mono opacity-80">{p2Dev.sub}</div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setP2Index((prev) => (prev + 1) % P2_OPTIONS.length)}
+                      className="p-1.5 bg-[#060D17] text-[#17FFBF] hover:bg-white transition cursor-pointer"
+                      title="Ganti Peranti P2 (Kanan)"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
               </div>
-              <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
-                Blue/Amber Team
-              </span>
-            </div>
+            ) : (
+              /* MODE 2VBOT: P1 & P2 ON HOME (LEFT) vs AI BOT ON AWAY (RIGHT) */
+              <div className="relative z-10 grid grid-cols-2 divide-x divide-[#142840] items-center p-6 min-h-[260px]">
+                {/* HOME (P1 & P2 CO-OP INPUTS STACKED ON LEFT) */}
+                <div className="flex flex-col items-center justify-center p-4 gap-4">
+                  <span className="text-xs font-mono font-bold text-[#FF4655] uppercase tracking-widest">
+                    CO-OP TEAM INPUTS (HOME)
+                  </span>
 
-            <div className="flex flex-col gap-2.5">
-              {/* Option 1: Keyboard Arrows + Numpad */}
-              <button
-                onClick={() => setP2Device('keyboard2')}
-                className={`p-3.5 rounded-xl border text-xs font-bold transition flex items-center justify-between cursor-pointer ${
-                  p2Device === 'keyboard2'
-                    ? 'bg-amber-950/80 border-amber-400 text-amber-300 shadow-lg shadow-amber-500/20'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Keyboard className="w-4 h-4 text-amber-400" />
-                  <div className="text-left">
-                    <div>Keyboard 2 (Panah)</div>
-                    <div className="text-[10px] text-slate-500 font-mono">Arrows + Numpad / N,M</div>
+                  {/* P1 CONTROLLER */}
+                  <div className="flex items-center gap-4 bg-[#FF4655] text-[#060D17] px-5 py-2.5 font-black border-2 border-white shadow-xl w-full justify-between">
+                    <button
+                      onClick={() => setP1Index((prev) => (prev - 1 + P1_OPTIONS.length) % P1_OPTIONS.length)}
+                      className="p-1 bg-[#060D17] text-[#FF4655] hover:bg-white transition cursor-pointer"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+
+                    <div className="flex items-center gap-2.5">
+                      {p1Dev.type === 'keyboard' && <Keyboard className="w-5 h-5" />}
+                      {p1Dev.type === 'gamepad' && <Gamepad className="w-5 h-5" />}
+                      {p1Dev.type === 'smartphone' && <Smartphone className="w-5 h-5" />}
+                      <div className="text-left">
+                        <div className="text-sm font-black tracking-wider uppercase">P1: {p1Dev.name}</div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setP1Index((prev) => (prev + 1) % P1_OPTIONS.length)}
+                      className="p-1 bg-[#060D17] text-[#FF4655] hover:bg-white transition cursor-pointer"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* P2 CO-OP CONTROLLER */}
+                  <div className="flex items-center gap-4 bg-amber-400 text-[#060D17] px-5 py-2.5 font-black border-2 border-white shadow-xl w-full justify-between">
+                    <button
+                      onClick={() => setP2Index((prev) => (prev - 1 + P2_OPTIONS.length) % P2_OPTIONS.length)}
+                      className="p-1 bg-[#060D17] text-amber-400 hover:bg-white transition cursor-pointer"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+
+                    <div className="flex items-center gap-2.5">
+                      {p2Dev.type === 'keyboard' && <Keyboard className="w-5 h-5" />}
+                      {p2Dev.type === 'gamepad' && <Gamepad className="w-5 h-5" />}
+                      {p2Dev.type === 'smartphone' && <Smartphone className="w-5 h-5" />}
+                      <div className="text-left">
+                        <div className="text-sm font-black tracking-wider uppercase">P2: {p2Dev.name}</div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setP2Index((prev) => (prev + 1) % P2_OPTIONS.length)}
+                      className="p-1 bg-[#060D17] text-amber-400 hover:bg-white transition cursor-pointer"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                {p2Device === 'keyboard2' && <CheckCircle className="w-4 h-4 text-amber-400" />}
-              </button>
 
-              {/* Option 2: Gamepad 1 */}
-              <button
-                onClick={() => setP2Device('gamepad1')}
-                className={`p-3.5 rounded-xl border text-xs font-bold transition flex items-center justify-between cursor-pointer ${
-                  p2Device === 'gamepad1'
-                    ? 'bg-amber-950/80 border-amber-400 text-amber-300 shadow-lg shadow-amber-500/20'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Gamepad className="w-4 h-4 text-amber-400" />
-                  <div className="text-left">
-                    <div>Gamepad / Joystick 2</div>
-                    <div className="text-[10px] text-slate-500 font-mono">Xbox / PS Controller 1</div>
+                {/* AWAY (AI BOT ON RIGHT) */}
+                <div className="flex flex-col items-center justify-center p-4 gap-3">
+                  <span className="text-xs font-mono font-bold text-[#17FFBF] uppercase tracking-widest">
+                    ENEMY OPPONENT (AWAY)
+                  </span>
+
+                  <div className="flex items-center gap-3 bg-[#17FFBF] text-[#060D17] px-6 py-4 font-black border-2 border-white shadow-xl">
+                    <Bot className="w-8 h-8" />
+                    <div className="text-left">
+                      <div className="text-lg font-black tracking-wider uppercase">AI ENEMY BOTS</div>
+                      <div className="text-[10px] font-mono opacity-80">Autonomous Computer Team</div>
+                    </div>
                   </div>
                 </div>
-                {p2Device === 'gamepad1' && <CheckCircle className="w-4 h-4 text-amber-400" />}
-              </button>
-
-              {/* Option 3: HP Remote */}
-              <button
-                onClick={() => setP2Device('hp_remote')}
-                className={`p-3.5 rounded-xl border text-xs font-bold transition flex items-center justify-between cursor-pointer ${
-                  p2Device === 'hp_remote'
-                    ? 'bg-amber-950/80 border-amber-400 text-amber-300 shadow-lg shadow-amber-500/20'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Smartphone className="w-4 h-4 text-amber-400" />
-                  <div className="text-left">
-                    <div>HP Remote Wireless</div>
-                    <div className="text-[10px] text-slate-500 font-mono">Scan QR HP Controller</div>
-                  </div>
-                </div>
-                {p2Device === 'hp_remote' && <CheckCircle className="w-4 h-4 text-amber-400" />}
-              </button>
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Integrated HP QR Code Section if HP Remote is selected */}
+        {/* HP REMOTE QR CODE INTEGRATION */}
         {isHpSelected && (
-          <div className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-4 flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row items-center gap-5">
-              <div className="bg-white p-3 rounded-xl shadow-lg flex-shrink-0">
-                <QRCodeSVG value={controllerUrl} size={110} />
-              </div>
-
-              <div className="flex flex-col gap-2 w-full text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-black text-emerald-400 flex items-center gap-1.5">
-                    <Smartphone className="w-4 h-4" /> SCAN DENGAN HP ANDA
-                  </span>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    isPeerConnected ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                  }`}>
-                    {isPeerConnected ? '🟢 HP CONNECTED' : '⏳ MENUNGGU SCAN...'}
-                  </span>
-                </div>
-
-                <p className="text-slate-300">
-                  Scan QR Code di atas dengan kamera HP Anda, atau ketik URL berikut di browser HP:
-                </p>
-
-                <div className="bg-slate-950 p-2 rounded border border-slate-800 font-mono text-[11px] text-cyan-300 flex justify-between items-center">
-                  <span className="truncate">{controllerUrl}</span>
-                  <span className="text-slate-400 font-bold ml-2 shrink-0">ROOM: {peerRoomId}</span>
-                </div>
-              </div>
+          <div className="bg-[#060D17] border border-[#17FFBF]/40 p-4 rounded-2xl flex flex-col sm:flex-row items-center gap-4 text-xs">
+            <div className="bg-white p-2 rounded shrink-0">
+              <QRCodeSVG value={controllerUrl} size={90} />
             </div>
-
-            {/* Local Network IP Helper Input */}
-            <div className="bg-slate-950/80 border border-cyan-500/30 rounded-xl p-3 flex flex-col gap-1.5 text-xs">
-              <div className="flex items-center justify-between text-cyan-400 font-bold">
-                <span>💡 Masukkan IP Wi-Fi Laptop Anda (jika QR gagal di-scan):</span>
+            <div className="flex flex-col gap-1.5 w-full">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-[#17FFBF] flex items-center gap-1">
+                  <Smartphone className="w-4 h-4" /> KONEKSI HP REMOTE WIRELESS
+                </span>
+                <span className={`px-2 py-0.5 text-[10px] font-bold ${
+                  isPeerConnected ? 'bg-[#17FFBF]/20 text-[#17FFBF]' : 'bg-amber-500/20 text-amber-300'
+                }`}>
+                  {isPeerConnected ? '🟢 CONNECTED' : '⏳ SCAN QR HP...'}
+                </span>
               </div>
-              <input
-                type="text"
-                value={ipAddress}
-                onChange={(e) => setIpAddress(e.target.value)}
-                placeholder="Contoh IP Wi-Fi Laptop: 192.168.1.15"
-                className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-emerald-300 font-mono text-xs focus:outline-none focus:border-cyan-400"
-              />
+              <p className="text-slate-400">Scan QR Code dengan kamera HP Anda untuk menghubungkan HP sebagai Joystick.</p>
+              <div className="bg-[#0A1526] p-1.5 border border-[#142840] font-mono text-[11px] text-[#00D8F6] flex justify-between">
+                <span>{controllerUrl}</span>
+                <span>ROOM: {peerRoomId}</span>
+              </div>
             </div>
           </div>
         )}
 
-        {/* CTA Ready & Start Match */}
-        <div className="flex items-center justify-between gap-4 border-t border-white/10 pt-4">
+        {/* BOTTOM ACTION BAR */}
+        <div className="flex items-center justify-between gap-4 pt-2 border-t border-[#142840]">
           <button
             onClick={onClose}
-            className="px-5 py-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white font-bold text-xs cursor-pointer transition"
+            className="px-5 py-3 bg-[#060D17] border border-[#142840] text-slate-400 hover:text-white font-bold text-xs cursor-pointer transition"
           >
-            Batal
+            BATAL
           </button>
 
+          <div className="text-xs text-slate-400 hidden sm:block font-mono">
+            GANTI: <span className="text-[#FF4655] font-bold">A/D (P1)</span> | <span className="text-[#17FFBF] font-bold">◄/► PANAH (P2)</span>
+          </div>
+
           <button
-            onClick={() => onConfirmStart(p1Device, p2Device)}
-            className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-sm tracking-wide shadow-xl shadow-emerald-500/30 hover:brightness-110 active:scale-95 transition cursor-pointer flex items-center justify-center gap-2"
+            onClick={() => onConfirmStart(p1Dev.id, p2Dev.id)}
+            className="py-3.5 px-8 clip-parallelogram bg-[#17FFBF] hover:bg-[#4BFFCE] text-[#060D17] font-mono font-black text-sm tracking-wider shadow-lg shadow-[#17FFBF]/30 transition cursor-pointer flex items-center gap-2"
           >
-            <Play className="w-4 h-4 fill-slate-950" />
-            <span>READY & START MATCH</span>
+            <Play className="w-4 h-4 fill-current" />
+            <span>LANJUT KE PILIH TIM (A) ➔</span>
           </button>
         </div>
       </div>

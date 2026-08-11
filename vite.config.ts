@@ -6,7 +6,8 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    port: 8080,
-    host: true
+    host: '0.0.0.0', // Expose to all IPv4 local Wi-Fi interfaces so HP can connect
+    port: 5173,
+    strictPort: false,
   }
 });

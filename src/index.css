@@ -2,36 +2,108 @@
 
 @layer base {
   :root {
-    --font-main: 'Outfit', sans-serif;
+    --font-main: 'Inter', sans-serif;
+    --font-display: 'Plus Jakarta Sans', 'Outfit', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
 
   body {
-    background-color: #0a0e17;
-    color: #f1f5f9;
+    background-color: #060D17;
+    color: #E2F1F8;
     font-family: var(--font-main);
     overflow-x: hidden;
   }
 }
 
-/* Custom Glassmorphism Utility */
-.glass-card {
-  background: rgba(22, 30, 46, 0.7);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+/* Stadium Pitch Background Grid Pattern */
+.bg-stadium-pattern {
+  background-color: #060D17;
+  background-image: radial-gradient(#142840 1px, transparent 1px);
+  background-size: 32px 32px;
 }
 
-.glass-card-hover:hover {
-  background: rgba(28, 40, 62, 0.85);
-  border-color: rgba(16, 185, 129, 0.3);
+/* Perfect Parallelogram (Jajar Genjang) via Clip-Path */
+.clip-parallelogram {
+  clip-path: polygon(16px 0, 100% 0, calc(100% - 16px) 100%, 0 100%);
 }
 
-/* Pulse animation for connection badge */
-@keyframes pulse-slow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+/* Primary Electric Mint Teal Button (.val-btn-emerald) */
+.val-btn-emerald {
+  background-color: #17FFBF;
+  color: #060D17;
+  position: relative;
+  transition: background-color 0.12s ease-out;
+  border: 1.5px solid #17FFBF;
 }
 
-.animate-pulse-slow {
-  animation: pulse-slow 2s infinite;
+.val-btn-emerald:hover {
+  background-color: #4BFFCE;
+  color: #060D17 !important;
+}
+
+.val-btn-emerald:hover span, .val-btn-emerald:hover svg {
+  color: #060D17 !important;
+}
+
+/* Secondary Champions Gold Button (.val-btn-gold) */
+.val-btn-gold {
+  background-color: #FFD13B;
+  color: #060D17;
+  position: relative;
+  transition: background-color 0.12s ease-out;
+  border: 1.5px solid #FFE37B;
+}
+
+.val-btn-gold:hover {
+  background-color: #FFE37B;
+  color: #060D17 !important;
+}
+
+.val-btn-gold:hover span, .val-btn-gold:hover svg {
+  color: #060D17 !important;
+}
+
+/* Tactical Dark Pitch Button (.val-btn-dark-pitch) */
+.val-btn-dark-pitch {
+  background-color: #0A1526;
+  color: #E2F1F8;
+  position: relative;
+  transition: background-color 0.12s ease-out;
+  border: 1.5px solid #142840;
+}
+
+.val-btn-dark-pitch:hover {
+  background-color: #0F1E36;
+  color: #17FFBF !important;
+}
+
+.val-btn-dark-pitch:hover span, .val-btn-dark-pitch:hover svg {
+  color: #17FFBF !important;
+}
+
+/* Controller Helper Badges */
+.controller-btn-a {
+  background: #17FFBF;
+  color: #060D17;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 11px;
+}
+
+.controller-btn-b {
+  background: #FF4655;
+  color: #FFFFFF;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 11px;
 }

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { X, Smartphone, CheckCircle, Copy, Wifi, Info } from 'lucide-react';
+import { detectLocalWifiIP } from '../services/networkService';
 
 interface QRCodeModalProps {
   isOpen: boolean;
@@ -15,11 +16,21 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, roomI
   const [customHostIp, setCustomHostIp] = useState('');
 
   useEffect(() => {
+    if (isOpen) {
+      detectLocalWifiIP().then((autoIp) => {
+        if (!customHostIp) {
+          setCustomHostIp(autoIp);
+        }
+      });
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const port = window.location.port ? `:${window.location.port}` : '';
       let host = window.location.hostname;
 
-      // If user typed a custom local IP, use that instead of localhost
+      // If user typed or auto-detected a custom local IP, use that instead of localhost
       if (customHostIp.trim()) {
         host = customHostIp.trim();
       }

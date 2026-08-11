@@ -9,14 +9,11 @@ import { MatchRules } from '../game/MatchRules';
 import { HUDOverlay } from './HUDOverlay';
 import { MatchMode, MatchRulesState, GamepadState } from '../types/game';
 import { HostPeerService } from '../services/peerService';
+import { DeviceType } from './ControllerSelectModal';
 
 // Large Virtual Stadium World Dimensions
 const WORLD_WIDTH = 2200;
 const WORLD_HEIGHT = 1350;
-// Wide Broadcast Tactical Viewport Zoom
-const CAMERA_ZOOM = 0.92;
-
-import { DeviceType } from './ControllerSelectModal';
 
 interface GameViewProps {
   selectedMode?: '1v1' | '2vBot';
@@ -25,6 +22,7 @@ interface GameViewProps {
   onReturnToLobby?: () => void;
   peerRoomId?: string;
   isPeerConnected?: boolean;
+  hostPeerService?: HostPeerService | null;
 }
 
 export const GameView: React.FC<GameViewProps> = ({
@@ -34,6 +32,7 @@ export const GameView: React.FC<GameViewProps> = ({
   onReturnToLobby,
   peerRoomId = '8492',
   isPeerConnected = false,
+  hostPeerService = null,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const { gamepads } = useGamepad();
@@ -47,15 +46,40 @@ export const GameView: React.FC<GameViewProps> = ({
 
   // Toggle HUD Overlay & Debugger State
   const [showHUD, setShowHUD] = useState(true);
-
-  // Mouse Cursor Visibility State
   const [showCursor, setShowCursor] = useState(false);
   const prevBackBtnRef = useRef(false);
 
   const [goalBannerText, setGoalBannerText] = useState<string | null>(null);
   const remoteGamepadStateRef = useRef<GamepadState | null>(null);
 
-  // Smooth Camera Position & Dynamic Zoom Tracking State
+  // Register WebRTC HP Remote Connection Callbacks
+  useEffect(() => {
+    if (!hostPeerService) return;
+
+    hostPeerService.onGamepadStateUpdate = (inputState: GamepadState) => {
+      remoteGamepadStateRef.current = inputState;
+    };
+
+    hostPeerService.onInputReceived = (partialInput: any) => {
+      if (!remoteGamepadStateRef.current) {
+        remoteGamepadStateRef.current = {
+          index: 99,
+          id: 'HP Remote Wireless',
+          connected: true,
+          axes: { leftStickX: 0, leftStickY: 0, rightStickX: 0, rightStickY: 0 },
+          buttons: { a: false, b: false, x: false, y: false, lb: false, rb: false, lt: 0, rt: 0, back: false, start: false, lsClick: false, rsClick: false },
+          ...(partialInput || {})
+        };
+      } else {
+        remoteGamepadStateRef.current = {
+          ...remoteGamepadStateRef.current,
+          ...(partialInput || {})
+        };
+      }
+    };
+  }, [hostPeerService]);
+
+  // Camera Position & Dynamic Zoom Tracking State
   const cameraRef = useRef({
     x: WORLD_WIDTH * 0.5,
     y: WORLD_HEIGHT * 0.5
@@ -66,8 +90,6 @@ export const GameView: React.FC<GameViewProps> = ({
   const fieldRef = useRef(new Field(WORLD_WIDTH, WORLD_HEIGHT));
   const ballRef = useRef(new Ball(WORLD_WIDTH * 0.5, WORLD_HEIGHT * 0.5));
   const matchRulesRef = useRef(new MatchRules('1v1_local'));
-
-  // Players Array dynamically initialized based on mode
   const playersRef = useRef<Player[]>([]);
 
   const [matchState, setMatchState] = useState<MatchRulesState>(matchRulesRef.current.state);
@@ -192,29 +214,30 @@ export const GameView: React.FC<GameViewProps> = ({
     }
 
     if (rules.state.state !== 'GAME_OVER') {
-      // 2. Update Players (P1, P2, AI Bots)
+      // 2. Update Players (P1, P2, AI Bots) with HP Remote & Controller Assignments
       players.forEach((player) => {
         const teammates = players.filter((p) => p.team === player.team && p.id !== player.id);
         const opponents = players.filter((p) => p.team !== player.team);
 
         let activeGp: GamepadState | null = null;
         if (player.id === 'p1') {
-          if (p1Device === 'keyboard1') {
+          if (p1Device === 'hp_remote') {
+            activeGp = remoteGamepadStateRef.current || p1Input;
+          } else if (p1Device === 'keyboard1') {
             activeGp = p1Input;
           } else if (p1Device === 'gamepad0') {
             activeGp = gamepads[0] || p1Input;
-          } else if (p1Device === 'hp_remote') {
-            activeGp = (remoteGamepadStateRef.current && isPeerConnected) ? remoteGamepadStateRef.current : p1Input;
           } else {
             activeGp = p1Input;
           }
         } else if (player.id === 'p2') {
-          if (p2Device === 'keyboard2') {
+          if (p2Device === 'hp_remote') {
+            // Priority for Player 2 HP Remote Wireless Controller!
+            activeGp = remoteGamepadStateRef.current || p2Input;
+          } else if (p2Device === 'keyboard2') {
             activeGp = p2Input;
           } else if (p2Device === 'gamepad1') {
             activeGp = gamepads[1] || gamepads[0] || p2Input;
-          } else if (p2Device === 'hp_remote') {
-            activeGp = (remoteGamepadStateRef.current && isPeerConnected) ? remoteGamepadStateRef.current : p2Input;
           } else {
             activeGp = p2Input;
           }
@@ -226,14 +249,14 @@ export const GameView: React.FC<GameViewProps> = ({
             setShowHUD((prev) => !prev);
           }
         } else if (player.id === 'p3' || player.id === 'p4') {
-          // AI Enemy Bot Intelligence Loop (Cooperative Team AI)
+          // AI Enemy Bot Intelligence Loop
           player.updateEnemyBotAI(ball, field, opponents, teammates);
         } else {
           player.updatePassiveReception(ball, field);
         }
       });
 
-      // 3. SOLID PLAYER-TO-PLAYER BODY COLLISION PHYSICS SOLVER (Runs FIRST before ball attachment!)
+      // 3. SOLID PLAYER-TO-PLAYER BODY COLLISION PHYSICS SOLVER
       for (let i = 0; i < players.length; i++) {
         for (let j = i + 1; j < players.length; j++) {
           const pA = players[i];
@@ -275,7 +298,6 @@ export const GameView: React.FC<GameViewProps> = ({
           const distToCarrier = Math.hypot(tackler.pos.x - ballCarrier.pos.x, tackler.pos.y - ballCarrier.pos.y);
           const distToBall = Math.hypot(tackler.pos.x - ball.pos.x, tackler.pos.y - ball.pos.y);
 
-          // Directional Body Shielding Check: Is tackler standing behind carrier's back?
           const dxToTackler = tackler.pos.x - ballCarrier.pos.x;
           const dyToTackler = tackler.pos.y - ballCarrier.pos.y;
           const angleToTackler = Math.atan2(dyToTackler, dxToTackler);
@@ -283,45 +305,33 @@ export const GameView: React.FC<GameViewProps> = ({
           let angleDiff = Math.abs(angleToTackler - ballCarrier.facingAngle);
           while (angleDiff > Math.PI) angleDiff = Math.abs(angleDiff - Math.PI * 2);
 
-          // Tackler is behind carrier's back if angle difference is > 105 degrees (~1.83 radians)
           const isTacklerBehindCarrier = angleDiff > 1.83;
 
-          // 100% Precise Hitbox Radii
-          const ballHitboxRadius = tackler.radius + ball.radius + 14; // Direct ball contact
-          const bodyHitboxRadius = tackler.radius + ballCarrier.radius + 12; // Body-to-body contact
-          const slideHitboxRadius = tackler.radius + ballCarrier.radius + 75; // Extended slide tackle reach
+          const ballHitboxRadius = tackler.radius + ball.radius + 14;
+          const bodyHitboxRadius = tackler.radius + ballCarrier.radius + 12;
+          const slideHitboxRadius = tackler.radius + ballCarrier.radius + 75;
 
           const isDirectBallHit = distToBall < ballHitboxRadius;
-          // Standing body contact steal ALLOWED ONLY if tackler is NOT behind carrier's back!
           const isBodyContactHit = distToCarrier < bodyHitboxRadius && !isTacklerBehindCarrier;
           const isSlideHit = tackler.isTackling && (distToCarrier < slideHitboxRadius || distToBall < slideHitboxRadius);
 
-          // Dispossess condition: Can steal if direct ball contact, front/side body contact, or slide tackle!
           const canDispossess = (isDirectBallHit || isBodyContactHit || isSlideHit) && ballCarrier.dispossessProtectionTimer <= 0;
 
           if (canDispossess) {
-            if (ballCarrier.skillDodgeInvincibleTimer > 0) {
-              ballCarrier.triggerFeedback('🔥 GOCEK SUCCESS!');
-              tackler.stumbleTimer = 0.55;
-              tackler.isTackling = false;
-              tackler.triggerFeedback('❌ TACKLE MISSED!');
-            } else {
+            let stealChance = 0.85;
+            if (isSlideHit) stealChance = 0.95;
+
+            if (Math.random() < stealChance) {
               ballCarrier.hasPossession = false;
+              ball.attachedPlayerId = null;
+              ballCarrier.dispossessProtectionTimer = 0.40;
+              tackler.dispossessProtectionTimer = 0;
               tackler.hasPossession = true;
-              ballCarrier.dispossessProtectionTimer = 0.25; // Clean 250ms anti-flicker protection lock
-              tackler.dispossessProtectionTimer = 0.0;
-
-              ball.releaseTimer = 0;
-              ball.homingTargetPlayer = null;
-              ball.throughPassTargetPos = null;
-              ball.attachToPlayer(tackler.pos, tackler.facingAngle, tackler.radius, tackler.vel, tackler.id);
-
-              tackler.triggerFeedback('⚡ BOLA DIREBUT!');
+              ball.attachedPlayerId = tackler.id;
               ballCarrier.triggerFeedback('💥 REBUT!');
               tackler.isTackling = false;
             }
           } else if (distToCarrier < bodyHitboxRadius && isTacklerBehindCarrier && !tackler.isTackling) {
-            // Trigger Visual Body Shield Feedback when opponent bumps into carrier's back!
             if (Math.random() < 0.08) {
               ballCarrier.triggerFeedback('🛡️ BODY SHIELD!');
             }
@@ -329,37 +339,7 @@ export const GameView: React.FC<GameViewProps> = ({
         }
       });
 
-      // 4b. Sandwiched Loose Ball Squeeze Pop-Out Solver (ONLY for unpossessed loose ball)
-      for (let i = 0; i < players.length; i++) {
-        for (let j = i + 1; j < players.length; j++) {
-          const pA = players[i];
-          const pB = players[j];
-          const distBetween = Math.hypot(pB.pos.x - pA.pos.x, pB.pos.y - pA.pos.y) || 1;
-
-          if (distBetween < pA.radius + pB.radius + 12) {
-            const midX = (pA.pos.x + pB.pos.x) * 0.5;
-            const midY = (pA.pos.y + pB.pos.y) * 0.5;
-            const distBallToMid = Math.hypot(ball.pos.x - midX, ball.pos.y - midY);
-
-            // Pop out ONLY if NO ONE currently holds the ball
-            if (distBallToMid < 32 && !ball.attachedPlayerId) {
-              const lineDx = (pB.pos.x - pA.pos.x) / distBetween;
-              const lineDy = (pB.pos.y - pA.pos.y) / distBetween;
-              const popDirX = -lineDy;
-              const popDirY = lineDx;
-
-              pA.hasPossession = false;
-              pB.hasPossession = false;
-              pA.dispossessProtectionTimer = 0.50;
-              pB.dispossessProtectionTimer = 0.50;
-              ball.kick({ x: popDirX, y: popDirY }, 5.5, 'none');
-              ball.releaseTimer = 0.50;
-            }
-          }
-        }
-      }
-
-      // 5. FRAME-PERFECT RECEPTION POSSESSION ATTACHMENT SOLVER (Runs LAST at final post-collision position!)
+      // 5. FRAME-PERFECT RECEPTION POSSESSION ATTACHMENT SOLVER
       players.forEach((p) => {
         if (ball.attachedPlayerId === p.id) {
           p.hasPossession = true;
@@ -381,25 +361,18 @@ export const GameView: React.FC<GameViewProps> = ({
           }
         }
 
-        // Single Source of Truth Enforcer
         p.hasPossession = (ball.attachedPlayerId === p.id);
       });
 
-      // 6. Check Loose Ball Collision Bounce (ONLY during active releaseTimer flight!)
-      players.forEach((p) => {
-        if (!p.hasPossession && ball.releaseTimer > 0) {
-          ball.checkPlayerCollision(p);
-        }
-      });
+      // Debug telemetry info
+      const p1Source = p1Device === 'hp_remote' ? '📱 HP Remote' : p1Device.toUpperCase();
+      const p2Source = p2Device === 'hp_remote' ? '📱 HP Remote' : p2Device.toUpperCase();
+      rules.state.debugInputText = `P1: [${p1Source}] | P2: [${p2Source}] | MODE: ${selectedMode}`;
 
-      const controllerSource = isPeerConnected ? '📱 HP Remote' : 'P1 Controller 0';
-      const player1 = players[0];
-      rules.state.debugInputText = player1 ? `${player1.debugInputString} | MODE: ${selectedMode} | SRC: ${controllerSource}` : `MODE: ${selectedMode}`;
-
-      // 7. Update Ball Physics
+      // 6. Update Ball Physics
       ball.update(dt, field);
 
-      // 8. DYNAMIC AUTO-FIT BROADCAST CAMERA & DYNAMIC ZOOM SYSTEM
+      // 7. DYNAMIC AUTO-FIT BROADCAST CAMERA & DYNAMIC ZOOM SYSTEM
       const allX = [...players.map((p) => p.pos.x), ball.pos.x];
       const allY = [...players.map((p) => p.pos.y), ball.pos.y];
 
@@ -408,11 +381,9 @@ export const GameView: React.FC<GameViewProps> = ({
       const minY = Math.min(...allY);
       const maxY = Math.max(...allY);
 
-      // Midpoint Target (Center between P1, P2, and Ball)
       const targetCamX = (minX + maxX) * 0.5;
       const targetCamY = (minY + maxY) * 0.5;
 
-      // Calculate required viewport span + safety padding buffer
       const padding = 280;
       const spanX = Math.max(500, (maxX - minX) + padding);
       const spanY = Math.max(350, (maxY - minY) + padding);
@@ -423,12 +394,9 @@ export const GameView: React.FC<GameViewProps> = ({
       const reqZoomX = viewW / spanX;
       const reqZoomY = viewH / spanY;
 
-      // Pick tighter zoom constraint to fit both width & height comfortably
       const targetZoomRaw = Math.min(reqZoomX, reqZoomY);
-      // Clamp Zoom between 0.52 (super wide dynamic zoom-out) and 0.92 (close-up action zoom-in)
       const targetZoom = Math.max(0.52, Math.min(0.92, targetZoomRaw));
 
-      // Exponential Smooth Lerp for Camera Position and Zoom
       cameraRef.current.x = cameraRef.current.x * 0.90 + targetCamX * 0.10;
       cameraRef.current.y = cameraRef.current.y * 0.90 + targetCamY * 0.10;
       zoomRef.current = zoomRef.current * 0.92 + targetZoom * 0.08;
