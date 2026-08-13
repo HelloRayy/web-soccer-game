@@ -69,19 +69,19 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
             {/* CENTER CARDS BODY: 2 HORIZONTAL SELECTOR CARDS */}
             <div className="p-6 sm:p-10 grid grid-cols-1 sm:grid-cols-2 gap-6 bg-[#111513]">
               
-              {/* CARD 1: PLAYER VS PLAYER */}
+              {/* CARD 1: PLAYER VS PLAYER (NO MOTION ZOOM / NO ANIMATION DELAY) */}
               <div
                 onMouseEnter={() => setSelectedCard('1v1')}
                 onClick={() => onSelectMode('1v1')}
-                className={`cursor-pointer transition-all duration-150 p-6 flex flex-col items-center text-center gap-4 relative group rounded-none border ${
+                className={`cursor-pointer p-6 flex flex-col items-center text-center gap-4 relative rounded-none border ${
                   selectedCard === '1v1'
-                    ? 'bg-[#141e2e] text-white border-2 border-[#3B82F6] shadow-lg shadow-blue-500/10'
-                    : 'bg-[#171d1a] text-white border-white/10 hover:border-white/30 opacity-75 hover:opacity-100'
+                    ? 'bg-[#141e2e] text-white border-2 border-[#3B82F6]'
+                    : 'bg-[#171d1a] text-white border-white/10'
                 }`}
               >
                 {/* INNER LOGO CARD GRAPHIC */}
                 <div
-                  className={`w-full h-44 rounded-2xl flex flex-col items-center justify-center p-4 border transition-colors ${
+                  className={`w-full h-44 rounded-2xl flex flex-col items-center justify-center p-4 border ${
                     selectedCard === '1v1'
                       ? 'bg-gradient-to-br from-[#0c1426] via-[#121c33] to-[#0a1020] border-[#3B82F6]/80 text-white'
                       : 'bg-[#0e1311] border-white/10 text-slate-300'
@@ -109,19 +109,19 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
                 </div>
               </div>
 
-              {/* CARD 2: PLAYER VS BOT */}
+              {/* CARD 2: PLAYER VS BOT (NO MOTION ZOOM / NO ANIMATION DELAY) */}
               <div
                 onMouseEnter={() => setSelectedCard('2vBot')}
                 onClick={() => onSelectMode('2vBot')}
-                className={`cursor-pointer transition-all duration-150 p-6 flex flex-col items-center text-center gap-4 relative group rounded-none border ${
+                className={`cursor-pointer p-6 flex flex-col items-center text-center gap-4 relative rounded-none border ${
                   selectedCard === '2vBot'
-                    ? 'bg-[#141e2e] text-white border-2 border-[#3B82F6] shadow-lg shadow-blue-500/10'
-                    : 'bg-[#171d1a] text-white border-white/10 hover:border-white/30 opacity-75 hover:opacity-100'
+                    ? 'bg-[#141e2e] text-white border-2 border-[#3B82F6]'
+                    : 'bg-[#171d1a] text-white border-white/10'
                 }`}
               >
                 {/* INNER LOGO CARD GRAPHIC */}
                 <div
-                  className={`w-full h-44 rounded-2xl flex flex-col items-center justify-center p-4 border transition-colors ${
+                  className={`w-full h-44 rounded-2xl flex flex-col items-center justify-center p-4 border ${
                     selectedCard === '2vBot'
                       ? 'bg-gradient-to-br from-[#0c1426] via-[#121c33] to-[#0a1020] border-[#3B82F6]/80 text-white'
                       : 'bg-[#0e1311] border-white/10 text-slate-300'
