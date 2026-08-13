@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Keyboard, Gamepad, Smartphone, Bot, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Keyboard, Gamepad, Smartphone, Bot, RotateCcw, Lock, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { DeviceType } from './ControllerSelectModal';
 
 export interface SquadPlayer {
@@ -75,11 +75,11 @@ interface TeamSelectViewProps {
 }
 
 // Auto role detection based on Y-coordinate percentage (Own Half: 42% - 92%)
-const getAutoRole = (yPercent: number): { code: 'FWD' | 'MID' | 'DEF' | 'GK'; bg: string } => {
-  if (yPercent < 55) return { code: 'FWD', bg: 'bg-[#ef4444] text-white' };
-  if (yPercent < 72) return { code: 'MID', bg: 'bg-[#10b981] text-white' };
-  if (yPercent < 86) return { code: 'DEF', bg: 'bg-[#2563EB] text-white' };
-  return { code: 'GK', bg: 'bg-[#FFD13B] text-[#05090C] font-bold' };
+const getAutoRole = (yPercent: number): { code: 'FWD' | 'MID' | 'DEF' | 'GK'; label: string; bg: string } => {
+  if (yPercent < 55) return { code: 'FWD', label: 'Penyerang', bg: 'bg-rose-500 text-white shadow-rose-500/30' };
+  if (yPercent < 72) return { code: 'MID', label: 'Gelandang', bg: 'bg-emerald-500 text-white shadow-emerald-500/30' };
+  if (yPercent < 86) return { code: 'DEF', label: 'Bek Bertahan', bg: 'bg-blue-600 text-white shadow-blue-600/30' };
+  return { code: 'GK', label: 'Penjaga Gawang', bg: 'bg-amber-400 text-slate-950 shadow-amber-400/30 font-black' };
 };
 
 export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
@@ -91,13 +91,14 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
 }) => {
   const homePitchRef = useRef<HTMLDivElement>(null);
   const awayPitchRef = useRef<HTMLDivElement>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   // Initial Player Spawn Position Nodes (Placed inside Own Half: Y >= 45%)
   const [nodes, setNodes] = useState<PlayerNode[]>([
-    { id: 'p1', name: 'User 1 (HOME)', devType: p1Device, team: 'home', x: 50, y: 48 },
-    { id: 'p1_sub', name: 'User 3 (HOME)', devType: 'keyboard2', team: 'home', x: 30, y: 68 },
-    { id: 'p2', name: mode === '2vBot' ? 'AI BOT 1' : 'User 2 (AWAY)', devType: mode === '2vBot' ? 'ai_bot' : p2Device, team: 'away', x: 50, y: 48 },
-    { id: 'p2_sub', name: mode === '2vBot' ? 'AI BOT 2' : 'User 4 (AWAY)', devType: mode === '2vBot' ? 'ai_bot' : 'gamepad1', team: 'away', x: 70, y: 68 }
+    { id: 'p1', name: 'Player 1', devType: p1Device, team: 'home', x: 50, y: 48 },
+    { id: 'p1_sub', name: 'Player 2', devType: 'keyboard2', team: 'home', x: 30, y: 68 },
+    { id: 'p2', name: mode === '2vBot' ? 'AI Bot 1' : 'Player 1', devType: mode === '2vBot' ? 'ai_bot' : p2Device, team: 'away', x: 50, y: 48 },
+    { id: 'p2_sub', name: mode === '2vBot' ? 'AI Bot 2' : 'Player 2', devType: mode === '2vBot' ? 'ai_bot' : 'gamepad1', team: 'away', x: 70, y: 68 }
   ]);
 
   const p1Char = CHARACTERS[0];
@@ -106,17 +107,17 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
   // Reset positions to default
   const handleResetPositions = () => {
     setNodes([
-      { id: 'p1', name: 'User 1 (HOME)', devType: p1Device, team: 'home', x: 50, y: 48 },
-      { id: 'p1_sub', name: 'User 3 (HOME)', devType: 'keyboard2', team: 'home', x: 30, y: 68 },
-      { id: 'p2', name: mode === '2vBot' ? 'AI BOT 1' : 'User 2 (AWAY)', devType: mode === '2vBot' ? 'ai_bot' : p2Device, team: 'away', x: 50, y: 48 },
-      { id: 'p2_sub', name: mode === '2vBot' ? 'AI BOT 2' : 'User 4 (AWAY)', devType: mode === '2vBot' ? 'ai_bot' : 'gamepad1', team: 'away', x: 70, y: 68 }
+      { id: 'p1', name: 'Player 1', devType: p1Device, team: 'home', x: 50, y: 48 },
+      { id: 'p1_sub', name: 'Player 2', devType: 'keyboard2', team: 'home', x: 30, y: 68 },
+      { id: 'p2', name: mode === '2vBot' ? 'AI Bot 1' : 'Player 1', devType: mode === '2vBot' ? 'ai_bot' : p2Device, team: 'away', x: 50, y: 48 },
+      { id: 'p2_sub', name: mode === '2vBot' ? 'AI Bot 2' : 'Player 2', devType: mode === '2vBot' ? 'ai_bot' : 'gamepad1', team: 'away', x: 70, y: 68 }
     ]);
   };
 
   // Keyboard navigation support for P1 (WASD) and P2 (Arrows) node movement (Own Half constrained)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const step = 5; // move step percentage
+      const step = 4; // move step percentage
 
       setNodes((prevNodes) =>
         prevNodes.map((node) => {
@@ -158,11 +159,30 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
       case 'gamepad1':
         return <Gamepad className="w-5 h-5 text-white" />;
       case 'hp_remote':
-        return <Smartphone className="w-5 h-5 text-[#3B82F6]" />;
+        return <Smartphone className="w-5 h-5 text-sky-400" />;
       case 'ai_bot':
         return <Bot className="w-5 h-5 text-amber-400" />;
       default:
         return <Gamepad className="w-5 h-5 text-white" />;
+    }
+  };
+
+  const getDevLabel = (devType: DeviceType) => {
+    switch (devType) {
+      case 'keyboard1':
+        return 'Keyboard WASD';
+      case 'keyboard2':
+        return 'Keyboard Arrow';
+      case 'gamepad0':
+        return 'Gamepad Stik 1';
+      case 'gamepad1':
+        return 'Gamepad Stik 2';
+      case 'hp_remote':
+        return 'HP Wireless Controller';
+      case 'ai_bot':
+        return 'Auto Bot AI';
+      default:
+        return 'Gamepad';
     }
   };
 
@@ -182,77 +202,105 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
       {/* FLOATING TOP-LEFT BACK BUTTON */}
       <button
         onClick={onBackToControllers}
-        className="fixed top-3 left-5 z-30 bg-[#151917]/90 backdrop-blur border border-white/10 hover:border-white/30 text-slate-300 hover:text-white px-4 py-2 font-mono text-xs font-bold cursor-pointer transition flex items-center gap-2 shadow-2xl"
+        className="fixed top-4 left-6 z-30 bg-[#111513]/90 backdrop-blur border border-white/10 hover:border-white/30 text-slate-300 hover:text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer transition flex items-center gap-2 shadow-2xl"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span>BACK TO CONTROLLERS</span>
+        <span>Ganti Controller</span>
       </button>
 
       {/* FULLSCREEN eFOOTBALL / PES TEAM SHEET CARDS (HOME LEFT vs AWAY RIGHT) */}
-      <div className="relative z-10 w-full h-[calc(100vh-85px)] my-auto mt-8 mb-12 px-2 sm:px-4 grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
-        {/* HOME TEAM CARD (FRANCE) */}
+      <div className="relative z-10 w-full h-[calc(100vh-80px)] my-auto mt-6 mb-12 px-2 sm:px-4 grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+        
+        {/* ==================== HOME TEAM CARD ==================== */}
         <div className="bg-[#111513] border border-white/10 p-5 rounded-2xl shadow-2xl flex flex-col justify-between h-full">
           {/* HEADER: FLAG + TEAM NAME + SUBHEADER */}
           <div className="border-b border-white/10 pb-3 mb-3 flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <span className="text-3xl sm:text-4xl shadow">{p1Char.flag}</span>
+              <span className="text-3xl sm:text-4xl filter drop-shadow">{p1Char.flag}</span>
               <div>
-                <h3 className="text-xl sm:text-2xl font-black uppercase text-white font-['Outfit',sans-serif] tracking-tight">
-                  {p1Char.name}
-                </h3>
-                <span className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider">
-                  Spawn Setup • HOME TEAM
-                </span>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl sm:text-2xl font-black uppercase text-white font-['Plus_Jakarta_Sans',sans-serif] tracking-tight">
+                    {p1Char.name}
+                  </h3>
+                  <span className="text-[11px] font-bold text-sky-400 bg-sky-950/80 border border-sky-500/30 px-2 py-0.5 rounded-full">
+                    HOME
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-slate-400 mt-0.5">
+                  Atur Titik Spawn Tim Tuan Rumah
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 font-mono">
-              <span className="text-xs font-bold text-[#3B82F6] bg-blue-950/80 px-2.5 py-1 rounded border border-blue-500/30">
-                DEV: {p1Device.toUpperCase()}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-sky-300 bg-[#162133] px-3 py-1.5 rounded-lg border border-sky-500/20">
+                {getDevLabel(p1Device)}
               </span>
               <button
                 onClick={handleResetPositions}
-                className="p-1.5 bg-[#171d1a] border border-white/10 hover:border-white/30 text-slate-400 hover:text-white rounded cursor-pointer transition"
+                className="p-2 bg-[#171d1a] border border-white/10 hover:border-white/30 text-slate-400 hover:text-white rounded-lg cursor-pointer transition flex items-center gap-1 text-xs font-medium"
                 title="Reset Posisi Default"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Reset</span>
               </button>
             </div>
           </div>
 
           {/* MAIN CARD BODY: PITCH (LEFT 7 COLS) + CONNECTED PLAYERS ROSTER (RIGHT 5 COLS) */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch my-1 flex-1">
+            
             {/* LEFT 7 COLS: FIELD PITCH WITH DRAGGABLE NODES */}
             <div className="sm:col-span-7 flex flex-col h-full">
               <div
                 ref={homePitchRef}
-                className="relative w-full h-[450px] sm:h-[490px] lg:h-[calc(100vh-230px)] bg-gradient-to-b from-[#15803d] via-[#16a34a] to-[#15803d] p-3 flex flex-col justify-between overflow-hidden shadow-xl rounded-2xl border-2 border-emerald-400/40"
+                className="relative w-full h-[450px] sm:h-[490px] lg:h-[calc(100vh-220px)] bg-[#15803d] p-3 flex flex-col justify-between overflow-hidden shadow-xl rounded-2xl border-2 border-emerald-500/30 select-none"
+                style={{
+                  backgroundImage: `repeating-linear-gradient(to bottom, #16a34a 0px, #16a34a 45px, #15803d 45px, #15803d 90px)`
+                }}
               >
                 {/* PITCH FIELD LINES SVG OVERLAY */}
-                <svg className="absolute inset-0 w-full h-full stroke-white/30 stroke-[2] fill-none pointer-events-none">
+                <svg className="absolute inset-0 w-full h-full stroke-white/40 stroke-[2] fill-none pointer-events-none">
                   <rect x="6" y="6" width="calc(100% - 12px)" height="calc(100% - 12px)" rx="10" />
                   <line x1="6" y1="50%" x2="calc(100% - 6px)" y2="50%" />
                   <circle cx="50%" cy="50%" r="42" />
                   {/* Top Penalty Box */}
-                  <rect x="22%" y="6" width="56%" height="25%" />
+                  <rect x="20%" y="6" width="60%" height="25%" />
+                  <rect x="33%" y="6" width="34%" height="10%" />
                   {/* Bottom Penalty Box */}
-                  <rect x="22%" y="75%" width="56%" height="25%" />
+                  <rect x="20%" y="75%" width="60%" height="25%" />
+                  <rect x="33%" y="90%" width="34%" height="10%" />
                 </svg>
 
                 {/* RESTRICTED OPPONENT HALF UI OVERLAY (Top 42%) */}
-                <div className="absolute top-0 left-0 right-0 h-[42%] bg-red-950/40 backdrop-blur-[1px] border-b-2 border-dashed border-red-500/60 pointer-events-none z-10 flex flex-col items-center justify-center p-2 text-center">
-                  <span className="text-[10px] sm:text-[11px] font-mono font-black tracking-widest text-red-400/90 bg-red-950/90 px-2.5 py-0.5 rounded border border-red-500/40 uppercase shadow">
-                    🚫 OPPONENT HALF (RESTRICTED)
-                  </span>
-                  <span className="text-[8px] sm:text-[9px] font-mono font-bold text-red-300/60 mt-0.5 uppercase tracking-wider">
-                    NO SPAWN ALLOWED HERE
+                <div className="absolute top-0 left-0 right-0 h-[42%] bg-gradient-to-b from-red-950/70 via-red-950/40 to-transparent backdrop-blur-[2px] border-b-2 border-dashed border-red-500/80 pointer-events-none z-10 flex flex-col items-center justify-center p-3 text-center">
+                  <div className="flex items-center gap-1.5 bg-red-950/90 border border-red-500/50 px-3.5 py-1.5 rounded-full text-red-300 shadow-xl">
+                    <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
+                    <span className="text-[11px] font-bold tracking-wide uppercase font-['Plus_Jakarta_Sans',sans-serif]">
+                      Daerah Lawan (Terkunci)
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-medium text-red-300/70 mt-1.5 tracking-normal">
+                    Pemain hanya dapat spawn di area tim sendiri
                   </span>
                 </div>
 
-                {/* VALID SPAWN ZONE LABEL AT BOTTOM */}
-                <div className="absolute bottom-2 left-0 right-0 text-center pointer-events-none z-10">
-                  <span className="text-[8px] sm:text-[9px] font-mono font-bold text-emerald-300/70 uppercase tracking-widest bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
-                    ✅ YOUR TEAM SPAWN ZONE
+                {/* TACTICAL GUIDE WATERMARKS (YOUR TEAM HALF) */}
+                <div className="absolute top-[45%] left-3 text-[10px] font-black uppercase text-emerald-100/30 tracking-widest pointer-events-none z-0">
+                  Zona Serang (FWD)
+                </div>
+                <div className="absolute top-[60%] left-3 text-[10px] font-black uppercase text-emerald-100/30 tracking-widest pointer-events-none z-0">
+                  Zona Tengah (MID)
+                </div>
+                <div className="absolute top-[76%] left-3 text-[10px] font-black uppercase text-emerald-100/30 tracking-widest pointer-events-none z-0">
+                  Zona Bertahan (DEF / GK)
+                </div>
+
+                {/* VALID SPAWN ZONE INDICATOR (BOTTOM) */}
+                <div className="absolute bottom-2.5 left-0 right-0 flex justify-center pointer-events-none z-10">
+                  <span className="text-[10px] font-bold text-emerald-200 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-500/40 shadow flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    Area Bebas Geser Posisi Pemain
                   </span>
                 </div>
 
@@ -261,27 +309,35 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
                   .filter((n) => n.team === 'home')
                   .map((node) => {
                     const role = getAutoRole(node.y);
+                    const isHovered = hoveredNodeId === node.id;
                     return (
                       <motion.div
                         key={node.id}
                         drag
                         dragSnapToOrigin={false}
                         onDragEnd={(_, info) => handleDragEndNode(node.id, homePitchRef, info)}
+                        onMouseEnter={() => setHoveredNodeId(node.id)}
+                        onMouseLeave={() => setHoveredNodeId(null)}
                         style={{ left: `${node.x}%`, top: `${node.y}%` }}
                         className="absolute z-20 -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing flex flex-col items-center group touch-none"
                       >
                         {/* USER LABEL BADGE */}
-                        <span className="text-[9px] font-mono font-bold text-white bg-[#0c100e]/90 border border-blue-500/50 px-1.5 py-0.5 rounded shadow uppercase mb-0.5 tracking-wider whitespace-nowrap">
-                          {node.name}
-                        </span>
+                        <div className="flex items-center gap-1 bg-[#0c100e]/95 border border-sky-500/60 px-2 py-0.5 rounded-full shadow-lg mb-1 whitespace-nowrap">
+                          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+                          <span className="text-[10px] font-bold text-white font-['Plus_Jakarta_Sans',sans-serif]">
+                            {node.name}
+                          </span>
+                        </div>
 
                         {/* MAIN AVATAR CIRCLE NODE */}
-                        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#111513] border-2 border-[#3B82F6] shadow-xl shadow-blue-500/30 flex items-center justify-center relative group-hover:scale-110 transition-transform">
+                        <div className={`w-12 h-12 rounded-full bg-[#0c100e] border-2 border-sky-400 shadow-xl flex items-center justify-center relative transition-all duration-150 ${
+                          isHovered ? 'scale-125 shadow-sky-500/60 ring-4 ring-sky-400/30' : 'group-hover:scale-110 shadow-sky-500/30'
+                        }`}>
                           {renderDevIcon(node.devType)}
                         </div>
 
                         {/* AUTO ROLE BADGE */}
-                        <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded shadow mt-0.5 uppercase ${role.bg}`}>
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-md shadow-md mt-1 uppercase font-['Plus_Jakarta_Sans',sans-serif] ${role.bg}`}>
                           {role.code}
                         </span>
                       </motion.div>
@@ -291,117 +347,169 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
             </div>
 
             {/* RIGHT 5 COLS: CONNECTED PLAYERS SQUAD ROSTER PANEL */}
-            <div className="sm:col-span-5 bg-[#0c100e] p-3.5 rounded-xl border border-white/10 flex flex-col justify-between font-mono h-full">
+            <div className="sm:col-span-5 bg-[#0c100e] p-4 rounded-xl border border-white/10 flex flex-col justify-between h-full">
               <div>
-                <div className="text-xs font-bold text-slate-200 border-b border-white/10 pb-2.5 mb-3 flex justify-between items-center">
-                  <span>CONNECTED PLAYERS</span>
-                  <span className="text-[#3B82F6] text-[10px] font-bold bg-blue-950/80 px-2 py-0.5 rounded border border-blue-500/30">
-                    {nodes.filter((n) => n.team === 'home').length} ACTIVE
+                <div className="border-b border-white/10 pb-3 mb-3 flex justify-between items-center">
+                  <div>
+                    <h4 className="text-sm font-bold text-white font-['Plus_Jakarta_Sans',sans-serif]">
+                      Pemain Terkoneksi
+                    </h4>
+                    <p className="text-[11px] text-slate-400">
+                      Geser ikon di lapangan untuk ubah posisi
+                    </p>
+                  </div>
+                  <span className="text-sky-400 text-xs font-bold bg-sky-950/80 px-2.5 py-0.5 rounded-full border border-sky-500/30">
+                    {nodes.filter((n) => n.team === 'home').length} Pemain
                   </span>
                 </div>
 
-                <div className="flex flex-col gap-2 overflow-y-auto max-h-[400px] lg:max-h-[calc(100vh-280px)] pr-1 custom-scrollbar">
+                <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[400px] lg:max-h-[calc(100vh-280px)] pr-1 custom-scrollbar">
                   {nodes
                     .filter((n) => n.team === 'home')
                     .map((node) => {
                       const role = getAutoRole(node.y);
+                      const isHovered = hoveredNodeId === node.id;
                       return (
                         <div
                           key={node.id}
-                          className="flex items-center justify-between p-2 bg-white/5 rounded-lg border border-white/10 hover:border-blue-500/40 transition"
+                          onMouseEnter={() => setHoveredNodeId(node.id)}
+                          onMouseLeave={() => setHoveredNodeId(null)}
+                          className={`flex items-center justify-between p-3 rounded-xl border transition-all duration-150 ${
+                            isHovered
+                              ? 'bg-sky-950/40 border-sky-500/80 shadow-lg shadow-sky-500/10'
+                              : 'bg-white/5 border-white/10 hover:border-sky-500/40'
+                          }`}
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-8 h-8 rounded-full bg-[#111513] border border-blue-500/60 flex items-center justify-center shrink-0">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-full bg-[#111513] border-2 border-sky-400 flex items-center justify-center shrink-0 shadow">
                               {renderDevIcon(node.devType)}
                             </div>
                             <div className="flex flex-col truncate">
-                              <span className="text-xs font-bold text-white truncate">{node.name}</span>
-                              <span className="text-[9px] text-slate-400 font-mono">
-                                POS: ({Math.round(node.x)}%, {Math.round(node.y)}%)
+                              <span className="text-xs font-bold text-white truncate font-['Plus_Jakarta_Sans',sans-serif]">
+                                {node.name}
+                              </span>
+                              <span className="text-[11px] text-slate-400">
+                                {getDevLabel(node.devType)}
                               </span>
                             </div>
                           </div>
 
-                          <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold shrink-0 ${role.bg}`}>
-                            {role.code}
-                          </span>
+                          <div className="flex flex-col items-end shrink-0 gap-1">
+                            <span className={`px-2.5 py-0.5 rounded-md text-[10px] uppercase font-black font-['Plus_Jakarta_Sans',sans-serif] ${role.bg}`}>
+                              {role.code}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              {role.label}
+                            </span>
+                          </div>
                         </div>
                       );
                     })}
                 </div>
               </div>
 
-              <div className="mt-3 pt-2.5 border-t border-white/10 text-[10px] text-slate-400 flex justify-between items-center">
-                <span>SPAWN MODE: REAL-TIME</span>
-                <span className="text-emerald-400 font-bold">READY TO SPAWN</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* AWAY TEAM CARD (INDONESIA) */}
-        <div className="bg-[#111513] border border-white/10 p-5 rounded-2xl shadow-2xl flex flex-col justify-between h-full">
-          {/* HEADER: FLAG + TEAM NAME + SUBHEADER */}
-          <div className="border-b border-white/10 pb-3 mb-3 flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl sm:text-4xl shadow">{p2Char.flag}</span>
-              <div>
-                <h3 className="text-xl sm:text-2xl font-black uppercase text-white font-['Outfit',sans-serif] tracking-tight">
-                  {p2Char.name}
-                </h3>
-                <span className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider">
-                  Spawn Setup • AWAY TEAM
+              <div className="mt-3 pt-3 border-t border-white/10 text-xs text-slate-400 flex justify-between items-center">
+                <span>Status Posisi:</span>
+                <span className="text-emerald-400 font-bold flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Siap Bertanding
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 font-mono">
-              <span className="text-xs font-bold text-amber-400 bg-amber-950/80 px-2.5 py-1 rounded border border-amber-500/30">
-                {mode === '2vBot' ? 'AUTO BOT 🤖' : `DEV: ${p2Device.toUpperCase()}`}
+          </div>
+        </div>
+
+        {/* ==================== AWAY TEAM CARD ==================== */}
+        <div className="bg-[#111513] border border-white/10 p-5 rounded-2xl shadow-2xl flex flex-col justify-between h-full">
+          {/* HEADER: FLAG + TEAM NAME + SUBHEADER */}
+          <div className="border-b border-white/10 pb-3 mb-3 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl sm:text-4xl filter drop-shadow">{p2Char.flag}</span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl sm:text-2xl font-black uppercase text-white font-['Plus_Jakarta_Sans',sans-serif] tracking-tight">
+                    {p2Char.name}
+                  </h3>
+                  <span className="text-[11px] font-bold text-amber-400 bg-amber-950/80 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                    AWAY
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-slate-400 mt-0.5">
+                  Atur Titik Spawn Tim Tamu
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-amber-300 bg-[#261f14] px-3 py-1.5 rounded-lg border border-amber-500/20">
+                {mode === '2vBot' ? 'Auto Bot AI' : getDevLabel(p2Device)}
               </span>
               <button
                 onClick={handleResetPositions}
-                className="p-1.5 bg-[#171d1a] border border-white/10 hover:border-white/30 text-slate-400 hover:text-white rounded cursor-pointer transition"
+                className="p-2 bg-[#171d1a] border border-white/10 hover:border-white/30 text-slate-400 hover:text-white rounded-lg cursor-pointer transition flex items-center gap-1 text-xs font-medium"
                 title="Reset Posisi Default"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Reset</span>
               </button>
             </div>
           </div>
 
           {/* MAIN CARD BODY: PITCH (LEFT 7 COLS) + CONNECTED PLAYERS ROSTER (RIGHT 5 COLS) */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch my-1 flex-1">
+            
             {/* LEFT 7 COLS: FIELD PITCH WITH DRAGGABLE NODES */}
             <div className="sm:col-span-7 flex flex-col h-full">
               <div
                 ref={awayPitchRef}
-                className="relative w-full h-[450px] sm:h-[490px] lg:h-[calc(100vh-230px)] bg-gradient-to-b from-[#15803d] via-[#16a34a] to-[#15803d] p-3 flex flex-col justify-between overflow-hidden shadow-xl rounded-2xl border-2 border-emerald-400/40"
+                className="relative w-full h-[450px] sm:h-[490px] lg:h-[calc(100vh-220px)] bg-[#15803d] p-3 flex flex-col justify-between overflow-hidden shadow-xl rounded-2xl border-2 border-emerald-500/30 select-none"
+                style={{
+                  backgroundImage: `repeating-linear-gradient(to bottom, #16a34a 0px, #16a34a 45px, #15803d 45px, #15803d 90px)`
+                }}
               >
                 {/* PITCH FIELD LINES SVG OVERLAY */}
-                <svg className="absolute inset-0 w-full h-full stroke-white/30 stroke-[2] fill-none pointer-events-none">
+                <svg className="absolute inset-0 w-full h-full stroke-white/40 stroke-[2] fill-none pointer-events-none">
                   <rect x="6" y="6" width="calc(100% - 12px)" height="calc(100% - 12px)" rx="10" />
                   <line x1="6" y1="50%" x2="calc(100% - 6px)" y2="50%" />
                   <circle cx="50%" cy="50%" r="42" />
                   {/* Top Penalty Box */}
-                  <rect x="22%" y="6" width="56%" height="25%" />
+                  <rect x="20%" y="6" width="60%" height="25%" />
+                  <rect x="33%" y="6" width="34%" height="10%" />
                   {/* Bottom Penalty Box */}
-                  <rect x="22%" y="75%" width="56%" height="25%" />
+                  <rect x="20%" y="75%" width="60%" height="25%" />
+                  <rect x="33%" y="90%" width="34%" height="10%" />
                 </svg>
 
                 {/* RESTRICTED OPPONENT HALF UI OVERLAY (Top 42%) */}
-                <div className="absolute top-0 left-0 right-0 h-[42%] bg-red-950/40 backdrop-blur-[1px] border-b-2 border-dashed border-red-500/60 pointer-events-none z-10 flex flex-col items-center justify-center p-2 text-center">
-                  <span className="text-[10px] sm:text-[11px] font-mono font-black tracking-widest text-red-400/90 bg-red-950/90 px-2.5 py-0.5 rounded border border-red-500/40 uppercase shadow">
-                    🚫 OPPONENT HALF (RESTRICTED)
-                  </span>
-                  <span className="text-[8px] sm:text-[9px] font-mono font-bold text-red-300/60 mt-0.5 uppercase tracking-wider">
-                    NO SPAWN ALLOWED HERE
+                <div className="absolute top-0 left-0 right-0 h-[42%] bg-gradient-to-b from-red-950/70 via-red-950/40 to-transparent backdrop-blur-[2px] border-b-2 border-dashed border-red-500/80 pointer-events-none z-10 flex flex-col items-center justify-center p-3 text-center">
+                  <div className="flex items-center gap-1.5 bg-red-950/90 border border-red-500/50 px-3.5 py-1.5 rounded-full text-red-300 shadow-xl">
+                    <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
+                    <span className="text-[11px] font-bold tracking-wide uppercase font-['Plus_Jakarta_Sans',sans-serif]">
+                      Daerah Lawan (Terkunci)
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-medium text-red-300/70 mt-1.5 tracking-normal">
+                    Pemain hanya dapat spawn di area tim sendiri
                   </span>
                 </div>
 
-                {/* VALID SPAWN ZONE LABEL AT BOTTOM */}
-                <div className="absolute bottom-2 left-0 right-0 text-center pointer-events-none z-10">
-                  <span className="text-[8px] sm:text-[9px] font-mono font-bold text-emerald-300/70 uppercase tracking-widest bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
-                    ✅ YOUR TEAM SPAWN ZONE
+                {/* TACTICAL GUIDE WATERMARKS (YOUR TEAM HALF) */}
+                <div className="absolute top-[45%] left-3 text-[10px] font-black uppercase text-emerald-100/30 tracking-widest pointer-events-none z-0">
+                  Zona Serang (FWD)
+                </div>
+                <div className="absolute top-[60%] left-3 text-[10px] font-black uppercase text-emerald-100/30 tracking-widest pointer-events-none z-0">
+                  Zona Tengah (MID)
+                </div>
+                <div className="absolute top-[76%] left-3 text-[10px] font-black uppercase text-emerald-100/30 tracking-widest pointer-events-none z-0">
+                  Zona Bertahan (DEF / GK)
+                </div>
+
+                {/* VALID SPAWN ZONE INDICATOR (BOTTOM) */}
+                <div className="absolute bottom-2.5 left-0 right-0 flex justify-center pointer-events-none z-10">
+                  <span className="text-[10px] font-bold text-emerald-200 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-500/40 shadow flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    Area Bebas Geser Posisi Pemain
                   </span>
                 </div>
 
@@ -410,29 +518,37 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
                   .filter((n) => n.team === 'away')
                   .map((node) => {
                     const role = getAutoRole(node.y);
+                    const isHovered = hoveredNodeId === node.id;
                     return (
                       <motion.div
                         key={node.id}
                         drag={mode !== '2vBot'}
                         dragSnapToOrigin={false}
                         onDragEnd={(_, info) => handleDragEndNode(node.id, awayPitchRef, info)}
+                        onMouseEnter={() => setHoveredNodeId(node.id)}
+                        onMouseLeave={() => setHoveredNodeId(null)}
                         style={{ left: `${node.x}%`, top: `${node.y}%` }}
                         className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group touch-none ${
                           mode === '2vBot' ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'
                         }`}
                       >
                         {/* USER LABEL BADGE */}
-                        <span className="text-[9px] font-mono font-bold text-white bg-[#0c100e]/90 border border-amber-500/50 px-1.5 py-0.5 rounded shadow uppercase mb-0.5 tracking-wider whitespace-nowrap">
-                          {node.name}
-                        </span>
+                        <div className="flex items-center gap-1 bg-[#0c100e]/95 border border-amber-500/60 px-2 py-0.5 rounded-full shadow-lg mb-1 whitespace-nowrap">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                          <span className="text-[10px] font-bold text-white font-['Plus_Jakarta_Sans',sans-serif]">
+                            {node.name}
+                          </span>
+                        </div>
 
                         {/* MAIN AVATAR CIRCLE NODE */}
-                        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#111513] border-2 border-amber-400 shadow-xl shadow-amber-500/30 flex items-center justify-center relative group-hover:scale-110 transition-transform">
+                        <div className={`w-12 h-12 rounded-full bg-[#0c100e] border-2 border-amber-400 shadow-xl flex items-center justify-center relative transition-all duration-150 ${
+                          isHovered ? 'scale-125 shadow-amber-500/60 ring-4 ring-amber-400/30' : 'group-hover:scale-110 shadow-amber-500/30'
+                        }`}>
                           {renderDevIcon(node.devType)}
                         </div>
 
                         {/* AUTO ROLE BADGE */}
-                        <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded shadow mt-0.5 uppercase ${role.bg}`}>
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-md shadow-md mt-1 uppercase font-['Plus_Jakarta_Sans',sans-serif] ${role.bg}`}>
                           {role.code}
                         </span>
                       </motion.div>
@@ -442,70 +558,104 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
             </div>
 
             {/* RIGHT 5 COLS: CONNECTED PLAYERS SQUAD ROSTER PANEL */}
-            <div className="sm:col-span-5 bg-[#0c100e] p-3.5 rounded-xl border border-white/10 flex flex-col justify-between font-mono h-full">
+            <div className="sm:col-span-5 bg-[#0c100e] p-4 rounded-xl border border-white/10 flex flex-col justify-between h-full">
               <div>
-                <div className="text-xs font-bold text-slate-200 border-b border-white/10 pb-2.5 mb-3 flex justify-between items-center">
-                  <span>CONNECTED PLAYERS</span>
-                  <span className="text-amber-400 text-[10px] font-bold bg-amber-950/80 px-2 py-0.5 rounded border border-amber-500/30">
-                    {nodes.filter((n) => n.team === 'away').length} ACTIVE
+                <div className="border-b border-white/10 pb-3 mb-3 flex justify-between items-center">
+                  <div>
+                    <h4 className="text-sm font-bold text-white font-['Plus_Jakarta_Sans',sans-serif]">
+                      Pemain Terkoneksi
+                    </h4>
+                    <p className="text-[11px] text-slate-400">
+                      {mode === '2vBot' ? 'Posisi spawn otomatis diatur' : 'Geser ikon di lapangan untuk ubah posisi'}
+                    </p>
+                  </div>
+                  <span className="text-amber-400 text-xs font-bold bg-amber-950/80 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                    {nodes.filter((n) => n.team === 'away').length} Pemain
                   </span>
                 </div>
 
-                <div className="flex flex-col gap-2 overflow-y-auto max-h-[400px] lg:max-h-[calc(100vh-280px)] pr-1 custom-scrollbar">
+                <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[400px] lg:max-h-[calc(100vh-280px)] pr-1 custom-scrollbar">
                   {nodes
                     .filter((n) => n.team === 'away')
                     .map((node) => {
                       const role = getAutoRole(node.y);
+                      const isHovered = hoveredNodeId === node.id;
                       return (
                         <div
                           key={node.id}
-                          className="flex items-center justify-between p-2 bg-white/5 rounded-lg border border-white/10 hover:border-amber-500/40 transition"
+                          onMouseEnter={() => setHoveredNodeId(node.id)}
+                          onMouseLeave={() => setHoveredNodeId(null)}
+                          className={`flex items-center justify-between p-3 rounded-xl border transition-all duration-150 ${
+                            isHovered
+                              ? 'bg-amber-950/40 border-amber-500/80 shadow-lg shadow-amber-500/10'
+                              : 'bg-white/5 border-white/10 hover:border-amber-500/40'
+                          }`}
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-8 h-8 rounded-full bg-[#111513] border border-amber-400/60 flex items-center justify-center shrink-0">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-full bg-[#111513] border-2 border-amber-400 flex items-center justify-center shrink-0 shadow">
                               {renderDevIcon(node.devType)}
                             </div>
                             <div className="flex flex-col truncate">
-                              <span className="text-xs font-bold text-white truncate">{node.name}</span>
-                              <span className="text-[9px] text-slate-400 font-mono">
-                                POS: ({Math.round(node.x)}%, {Math.round(node.y)}%)
+                              <span className="text-xs font-bold text-white truncate font-['Plus_Jakarta_Sans',sans-serif]">
+                                {node.name}
+                              </span>
+                              <span className="text-[11px] text-slate-400">
+                                {mode === '2vBot' ? 'Auto AI Player' : getDevLabel(node.devType)}
                               </span>
                             </div>
                           </div>
 
-                          <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold shrink-0 ${role.bg}`}>
-                            {role.code}
-                          </span>
+                          <div className="flex flex-col items-end shrink-0 gap-1">
+                            <span className={`px-2.5 py-0.5 rounded-md text-[10px] uppercase font-black font-['Plus_Jakarta_Sans',sans-serif] ${role.bg}`}>
+                              {role.code}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              {role.label}
+                            </span>
+                          </div>
                         </div>
                       );
                     })}
                 </div>
               </div>
 
-              <div className="mt-3 pt-2.5 border-t border-white/10 text-[10px] text-slate-400 flex justify-between items-center">
-                <span>SPAWN MODE: REAL-TIME</span>
-                <span className="text-emerald-400 font-bold">READY TO SPAWN</span>
+              <div className="mt-3 pt-3 border-t border-white/10 text-xs text-slate-400 flex justify-between items-center">
+                <span>Status Posisi:</span>
+                <span className="text-emerald-400 font-bold flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Siap Bertanding
+                </span>
               </div>
             </div>
+
           </div>
         </div>
+
       </div>
 
       {/* FLOATING CORNER MOVEMENT HINTS (BOTTOM-LEFT) */}
-      <div className="fixed bottom-4 left-6 z-30 bg-[#111513]/90 backdrop-blur border border-white/10 px-4 py-2 rounded-xl text-xs font-mono font-bold text-slate-300 shadow-2xl flex items-center gap-4">
-        <span>P1 MOVE: W / A / S / D</span>
-        {mode === '1v1' && <span className="border-l border-white/10 pl-4">P2 MOVE: ◄ / ▲ / ▼ / ►</span>}
+      <div className="fixed bottom-4 left-6 z-30 bg-[#111513]/90 backdrop-blur border border-white/10 px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-300 shadow-2xl flex items-center gap-4">
+        <span className="flex items-center gap-1.5">
+          <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px] font-bold">W A S D</kbd>
+          <span>P1 Geser</span>
+        </span>
+        {mode === '1v1' && (
+          <span className="border-l border-white/10 pl-4 flex items-center gap-1.5">
+            <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px] font-bold">▲ ◄ ▼ ►</kbd>
+            <span>P2 Geser</span>
+          </span>
+        )}
       </div>
 
       {/* FLOATING CORNER KICK-OFF BUTTON (BOTTOM-RIGHT) */}
       <button
         onClick={() => onConfirmStartGame(p1Char, p2Char)}
-        className="fixed bottom-4 right-6 z-30 py-3 px-8 clip-parallelogram bg-[#2563EB] hover:bg-[#3B82F6] text-white font-mono font-black text-xs tracking-wider transition cursor-pointer flex items-center gap-2.5 shadow-2xl shadow-blue-500/30 border border-blue-400/40"
+        className="fixed bottom-4 right-6 z-30 py-3.5 px-8 clip-parallelogram bg-[#2563EB] hover:bg-[#3B82F6] text-white font-['Plus_Jakarta_Sans',sans-serif] font-black text-xs tracking-wider transition cursor-pointer flex items-center gap-2.5 shadow-2xl shadow-blue-500/30 border border-blue-400/40 hover:scale-105 active:scale-95"
       >
-        <span className="w-4.5 h-4.5 rounded-full bg-[#10b981] text-white font-black flex items-center justify-center text-[10px] shadow leading-none border border-emerald-400/50">
+        <span className="w-5 h-5 rounded-full bg-[#10b981] text-white font-black flex items-center justify-center text-[10px] shadow leading-none border border-emerald-400/50">
           A
         </span>
-        <span>KICK OFF MATCH ➔</span>
+        <span>MULAI PERTANDINGAN ➔</span>
       </button>
     </div>
   );
