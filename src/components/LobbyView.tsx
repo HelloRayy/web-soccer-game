@@ -2,11 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Smartphone, Swords, Bot, Info, Settings, User, Gem, Shield, Music } from 'lucide-react';
 import { QRCodeModal } from './QRCodeModal';
-import { ControllerSelectModal, DeviceType } from './ControllerSelectModal';
+import { ControllerSelectModal, DeviceType, PlayerDeviceConfig } from './ControllerSelectModal';
 import { MatchModeModal } from './MatchModeModal';
 
 interface LobbyViewProps {
-  onStartMatch: (mode: '1v1' | '2vBot', p1Device?: DeviceType, p2Device?: DeviceType) => void;
+  onStartMatch: (
+    mode: '1v1' | '2vBot',
+    p1Device?: DeviceType,
+    p2Device?: DeviceType,
+    homeControllers?: PlayerDeviceConfig[],
+    awayControllers?: PlayerDeviceConfig[]
+  ) => void;
   peerRoomId: string;
   isPeerConnected: boolean;
   connectedPeerCount?: number;
@@ -115,9 +121,14 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
     setShowControllerSelectModal(true);
   };
 
-  const handleConfirmControllerStart = (p1Device: DeviceType, p2Device: DeviceType) => {
+  const handleConfirmControllerStart = (
+    p1Device: DeviceType,
+    p2Device: DeviceType,
+    homeControllers?: PlayerDeviceConfig[],
+    awayControllers?: PlayerDeviceConfig[]
+  ) => {
     setShowControllerSelectModal(false);
-    onStartMatch(selectedMode, p1Device, p2Device);
+    onStartMatch(selectedMode, p1Device, p2Device, homeControllers, awayControllers);
   };
 
   return (

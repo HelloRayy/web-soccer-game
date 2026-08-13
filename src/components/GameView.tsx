@@ -175,7 +175,26 @@ export const GameView: React.FC<GameViewProps> = ({
 
   // Re-instantiate players whenever selectedMode or customSpawns changes
   useEffect(() => {
-    if (selectedMode === '1v1') {
+    if (customSpawns && customSpawns.length > 0) {
+      playersRef.current = customSpawns.map((node, i) => {
+        const coords = mapSpawnCoords(node, WORLD_WIDTH, WORLD_HEIGHT);
+        let controllerIdx: number | null = null;
+        if (node.devType === 'gamepad0') controllerIdx = 0;
+        else if (node.devType === 'gamepad1') controllerIdx = 1;
+        else if (node.devType === 'keyboard1') controllerIdx = 0;
+        else if (node.devType === 'keyboard2') controllerIdx = 1;
+        else if (node.devType === 'hp_remote') controllerIdx = 99;
+
+        const isBot = node.devType === 'ai_bot';
+        const color = node.team === 'home'
+          ? (i === 0 ? '#06b6d4' : '#34d399')
+          : (i === 0 ? '#f59e0b' : '#ef4444');
+
+        const p = new Player(node.id, `${node.name} (${node.team === 'home' ? 'Home' : 'Away'})`, node.team, isBot ? null : controllerIdx, color, coords.x, coords.y);
+        if (isBot) p.isAI = true;
+        return p;
+      });
+    } else if (selectedMode === '1v1') {
       playersRef.current = [
         new Player('p1', 'Player 1 (Home)', 'home', 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5),
         new Player('p2', 'Player 2 (Away)', 'away', 1, '#f59e0b', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.5)
@@ -191,7 +210,7 @@ export const GameView: React.FC<GameViewProps> = ({
     }
     matchRulesRef.current.resetMatch();
     resetMatchPositions();
-  }, [selectedMode, resetMatchPositions]);
+  }, [selectedMode, customSpawns, resetMatchPositions]);
 
   // Window Resize & Keyboard Ctrl Listener
   useEffect(() => {

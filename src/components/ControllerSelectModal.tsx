@@ -6,6 +6,15 @@ import { useGamepad } from '../hooks/useGamepad';
 
 export type DeviceType = 'keyboard1' | 'keyboard2' | 'gamepad0' | 'gamepad1' | 'hp_remote' | 'ai_bot';
 
+export interface PlayerDeviceConfig {
+  id: string;
+  name: string;
+  devType: DeviceType;
+  label: string;
+  team: 'home' | 'away';
+  slotIndex: number;
+}
+
 interface ControllerOption {
   id: DeviceType;
   name: string;
@@ -25,7 +34,12 @@ const DEVICE_OPTIONS: ControllerOption[] = [
 interface ControllerSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirmStart: (p1Device: DeviceType, p2Device: DeviceType) => void;
+  onConfirmStart: (
+    p1Device: DeviceType,
+    p2Device: DeviceType,
+    homeControllers?: PlayerDeviceConfig[],
+    awayControllers?: PlayerDeviceConfig[]
+  ) => void;
   peerRoomId: string;
   isPeerConnected: boolean;
   connectedPeerCount?: number;
@@ -417,7 +431,35 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
               </div>
 
               <button
-                onClick={() => onConfirmStart(p1Device, p2Device)}
+                onClick={() => {
+                  const homeConfig: PlayerDeviceConfig[] = homeSeats.map((seatDevIdx, i) => {
+                    const opt = DEVICE_OPTIONS[seatDevIdx] || DEVICE_OPTIONS[0];
+                    return {
+                      id: `home_${i + 1}`,
+                      name: `Player ${i + 1}`,
+                      devType: opt.id,
+                      label: opt.name,
+                      team: 'home',
+                      slotIndex: i,
+                    };
+                  });
+
+                  const awayConfig: PlayerDeviceConfig[] = awaySeats.map((seatDevIdx, i) => {
+                    const opt = selectedMode === '2vBot' && i === 0
+                      ? { id: 'ai_bot' as DeviceType, name: 'AI Enemy Bot', badge: 'BOT', type: 'bot' as const }
+                      : (DEVICE_OPTIONS[seatDevIdx] || DEVICE_OPTIONS[1]);
+                    return {
+                      id: `away_${i + 1}`,
+                      name: selectedMode === '2vBot' && i === 0 ? 'AI Bot' : `Player ${i + 1}`,
+                      devType: opt.id,
+                      label: opt.name,
+                      team: 'away',
+                      slotIndex: i,
+                    };
+                  });
+
+                  onConfirmStart(p1Device, p2Device, homeConfig, awayConfig);
+                }}
                 className="py-2.5 px-6 clip-parallelogram bg-[#2563EB] hover:bg-[#3B82F6] text-white font-mono font-black text-xs tracking-wider transition cursor-pointer flex items-center gap-2"
               >
                 <span className="w-4.5 h-4.5 rounded-full bg-[#10b981] text-white font-black flex items-center justify-center text-[10px] shadow leading-none border border-emerald-400/50">

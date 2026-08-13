@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Keyboard, Gamepad, Smartphone, Bot, RotateCcw, Lock, CheckCircle2 } from 'lucide-react';
-import { DeviceType } from './ControllerSelectModal';
+import { DeviceType, PlayerDeviceConfig } from './ControllerSelectModal';
 
 export interface SquadPlayer {
   pos: 'GK' | 'CB' | 'LB' | 'RB' | 'DMF' | 'CMF' | 'LWF' | 'RWF' | 'CF' | 'SS' | 'RMF';
@@ -69,6 +69,8 @@ interface TeamSelectViewProps {
   mode: '1v1' | '2vBot';
   p1Device: DeviceType;
   p2Device: DeviceType;
+  homeControllers?: PlayerDeviceConfig[];
+  awayControllers?: PlayerDeviceConfig[];
   onBackToControllers: () => void;
   onConfirmStartGame: (p1Char: CharacterData, p2Char: CharacterData, customSpawns: PlayerNode[]) => void;
 }
@@ -81,10 +83,72 @@ const getAutoRole = (yPercent: number): { code: 'FWD' | 'MID' | 'DEF' | 'GK'; la
   return { code: 'GK', label: 'Penjaga Gawang', bg: 'bg-amber-400 text-slate-950 shadow-amber-400/30 font-black' };
 };
 
+const DEFAULT_COORDS = [
+  { x: 50, y: 55 },
+  { x: 30, y: 72 },
+  { x: 70, y: 72 },
+  { x: 40, y: 85 },
+  { x: 60, y: 85 }
+];
+
+const buildInitialNodes = (
+  mode: '1v1' | '2vBot',
+  p1Device: DeviceType,
+  p2Device: DeviceType,
+  homeControllers?: PlayerDeviceConfig[],
+  awayControllers?: PlayerDeviceConfig[]
+): PlayerNode[] => {
+  const result: PlayerNode[] = [];
+
+  // 1. Build Home Nodes from exact controllers selected in Modal
+  if (homeControllers && homeControllers.length > 0) {
+    homeControllers.forEach((ctrl, idx) => {
+      const coord = DEFAULT_COORDS[idx % DEFAULT_COORDS.length];
+      result.push({
+        id: `home_${idx + 1}`,
+        name: `Player ${idx + 1}`,
+        devType: ctrl.devType,
+        team: 'home',
+        x: coord.x,
+        y: coord.y,
+      });
+    });
+  } else {
+    result.push({ id: 'home_1', name: 'Player 1', devType: p1Device, team: 'home', x: 50, y: 55 });
+    if (mode === '2vBot') {
+      result.push({ id: 'home_2', name: 'Player 2', devType: 'keyboard2', team: 'home', x: 30, y: 72 });
+    }
+  }
+
+  // 2. Build Away Nodes from exact controllers selected in Modal
+  if (mode === '2vBot') {
+    result.push({ id: 'away_1', name: 'AI Bot 1', devType: 'ai_bot', team: 'away', x: 50, y: 55 });
+    result.push({ id: 'away_2', name: 'AI Bot 2', devType: 'ai_bot', team: 'away', x: 70, y: 72 });
+  } else if (awayControllers && awayControllers.length > 0) {
+    awayControllers.forEach((ctrl, idx) => {
+      const coord = DEFAULT_COORDS[idx % DEFAULT_COORDS.length];
+      result.push({
+        id: `away_${idx + 1}`,
+        name: `Player ${idx + 1}`,
+        devType: ctrl.devType,
+        team: 'away',
+        x: coord.x,
+        y: coord.y,
+      });
+    });
+  } else {
+    result.push({ id: 'away_1', name: 'Player 1', devType: p2Device, team: 'away', x: 50, y: 55 });
+  }
+
+  return result;
+};
+
 export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
   mode,
   p1Device,
   p2Device,
+  homeControllers,
+  awayControllers,
   onBackToControllers,
   onConfirmStartGame
 }) => {
@@ -92,25 +156,22 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
   const awayPitchRef = useRef<HTMLDivElement>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
-  // Initial Player Spawn Position Nodes (Placed strictly inside Own Half: Y >= 50%)
-  const [nodes, setNodes] = useState<PlayerNode[]>([
-    { id: 'p1', name: 'Player 1', devType: p1Device, team: 'home', x: 50, y: 55 },
-    { id: 'p1_sub', name: 'Player 2', devType: 'keyboard2', team: 'home', x: 30, y: 72 },
-    { id: 'p2', name: mode === '2vBot' ? 'AI Bot 1' : 'Player 1', devType: mode === '2vBot' ? 'ai_bot' : p2Device, team: 'away', x: 50, y: 55 },
-    { id: 'p2_sub', name: mode === '2vBot' ? 'AI Bot 2' : 'Player 2', devType: mode === '2vBot' ? 'ai_bot' : 'gamepad1', team: 'away', x: 70, y: 72 }
-  ]);
+  // Initial Player Spawn Position Nodes (Synchronized with configured controllers)
+  const [nodes, setNodes] = useState<PlayerNode[]>(() =>
+    buildInitialNodes(mode, p1Device, p2Device, homeControllers, awayControllers)
+  );
+
+  // Re-sync nodes if controllers or mode changes
+  useEffect(() => {
+    setNodes(buildInitialNodes(mode, p1Device, p2Device, homeControllers, awayControllers));
+  }, [mode, p1Device, p2Device, homeControllers, awayControllers]);
 
   const p1Char = CHARACTERS[0];
   const p2Char = CHARACTERS[1];
 
   // Reset positions to default
   const handleResetPositions = () => {
-    setNodes([
-      { id: 'p1', name: 'Player 1', devType: p1Device, team: 'home', x: 50, y: 55 },
-      { id: 'p1_sub', name: 'Player 2', devType: 'keyboard2', team: 'home', x: 30, y: 72 },
-      { id: 'p2', name: mode === '2vBot' ? 'AI Bot 1' : 'Player 1', devType: mode === '2vBot' ? 'ai_bot' : p2Device, team: 'away', x: 50, y: 55 },
-      { id: 'p2_sub', name: mode === '2vBot' ? 'AI Bot 2' : 'Player 2', devType: mode === '2vBot' ? 'ai_bot' : 'gamepad1', team: 'away', x: 70, y: 72 }
-    ]);
+    setNodes(buildInitialNodes(mode, p1Device, p2Device, homeControllers, awayControllers));
   };
 
   // Continuous Smooth Sliding Game Loop for Keyboard (WASD & Arrows) and Gamepads
@@ -134,6 +195,7 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
       const keys = pressedKeysRef.current;
       const speed = 0.6; // percentage per frame for fluid 60fps sliding
       const rawGamepads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
+      const connectedGps = Array.from(rawGamepads).filter((g): g is Gamepad => g !== null && g.connected);
 
       setNodes((prevNodes) => {
         let changed = false;
@@ -143,39 +205,51 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
           let dy = 0;
 
           // 1. Keyboard P1 Inputs (WASD)
-          if (node.id === 'p1') {
+          if (node.devType === 'keyboard1') {
             if (keys.has('a')) dx -= speed;
             if (keys.has('d')) dx += speed;
             if (keys.has('w')) dy -= speed;
             if (keys.has('s')) dy += speed;
           }
 
-          // 2. Keyboard P1 Sub & P2 Inputs (Arrow Keys)
-          if ((node.id === 'p2' && mode === '1v1') || node.id === 'p1_sub') {
+          // 2. Keyboard P2 Inputs (Arrow Keys)
+          if (node.devType === 'keyboard2') {
             if (keys.has('arrowleft')) dx -= speed;
             if (keys.has('arrowright')) dx += speed;
             if (keys.has('arrowup')) dy -= speed;
             if (keys.has('arrowdown')) dy += speed;
           }
 
-          // 3. Gamepad Analog Stick & D-Pad Inputs (With Fallback Auto-Detection)
-          let gp: Gamepad | null = null;
+          // 3. Gamepad 1 Inputs (Slot 0 or first connected gamepad)
           if (node.devType === 'gamepad0') {
-            gp = rawGamepads[0] || rawGamepads.find((g) => g && g.connected) || null;
-          } else if (node.devType === 'gamepad1') {
-            gp = rawGamepads[1] || (rawGamepads.filter((g) => g && g.connected).length > 1 ? rawGamepads.filter((g) => g && g.connected)[1] : null);
+            const gp = rawGamepads[0] || connectedGps[0] || null;
+            if (gp && gp.connected) {
+              const leftStickX = Math.abs(gp.axes[0] || 0) > 0.12 ? gp.axes[0] : 0;
+              const leftStickY = Math.abs(gp.axes[1] || 0) > 0.12 ? gp.axes[1] : 0;
+              const dpadLeft = gp.buttons[14]?.pressed ? -1 : 0;
+              const dpadRight = gp.buttons[15]?.pressed ? 1 : 0;
+              const dpadUp = gp.buttons[12]?.pressed ? -1 : 0;
+              const dpadDown = gp.buttons[13]?.pressed ? 1 : 0;
+
+              dx += (leftStickX + dpadLeft + dpadRight) * speed;
+              dy += (leftStickY + dpadUp + dpadDown) * speed;
+            }
           }
 
-          if (gp && gp.connected) {
-            const leftStickX = Math.abs(gp.axes[0] || 0) > 0.12 ? gp.axes[0] : 0;
-            const leftStickY = Math.abs(gp.axes[1] || 0) > 0.12 ? gp.axes[1] : 0;
-            const dpadLeft = gp.buttons[14]?.pressed ? -1 : 0;
-            const dpadRight = gp.buttons[15]?.pressed ? 1 : 0;
-            const dpadUp = gp.buttons[12]?.pressed ? -1 : 0;
-            const dpadDown = gp.buttons[13]?.pressed ? 1 : 0;
+          // 4. Gamepad 2 Inputs (Slot 1 or second connected gamepad, or fallback for away team)
+          if (node.devType === 'gamepad1') {
+            const gp = rawGamepads[1] || (connectedGps.length > 1 ? connectedGps[1] : (connectedGps.length === 1 && node.team === 'away' ? connectedGps[0] : null));
+            if (gp && gp.connected) {
+              const leftStickX = Math.abs(gp.axes[0] || 0) > 0.12 ? gp.axes[0] : 0;
+              const leftStickY = Math.abs(gp.axes[1] || 0) > 0.12 ? gp.axes[1] : 0;
+              const dpadLeft = gp.buttons[14]?.pressed ? -1 : 0;
+              const dpadRight = gp.buttons[15]?.pressed ? 1 : 0;
+              const dpadUp = gp.buttons[12]?.pressed ? -1 : 0;
+              const dpadDown = gp.buttons[13]?.pressed ? 1 : 0;
 
-            dx += (leftStickX + dpadLeft + dpadRight) * speed;
-            dy += (leftStickY + dpadUp + dpadDown) * speed;
+              dx += (leftStickX + dpadLeft + dpadRight) * speed;
+              dy += (leftStickY + dpadUp + dpadDown) * speed;
+            }
           }
 
           if (dx !== 0 || dy !== 0) {
@@ -686,14 +760,16 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
       <div className="fixed bottom-4 left-6 z-30 bg-[#111513]/90 backdrop-blur border border-white/10 px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-300 shadow-2xl flex items-center gap-4">
         <span className="flex items-center gap-1.5">
           <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px] font-bold">W A S D</kbd>
-          <span>P1 Geser</span>
+          <span>P1 Keyboard</span>
         </span>
-        {mode === '1v1' && (
-          <span className="border-l border-white/10 pl-4 flex items-center gap-1.5">
-            <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px] font-bold">▲ ◄ ▼ ►</kbd>
-            <span>P2 Geser</span>
-          </span>
-        )}
+        <span className="border-l border-white/10 pl-4 flex items-center gap-1.5">
+          <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px] font-bold">▲ ◄ ▼ ►</kbd>
+          <span>P2 Keyboard</span>
+        </span>
+        <span className="border-l border-white/10 pl-4 flex items-center gap-1.5 text-emerald-400">
+          <Gamepad className="w-3.5 h-3.5" />
+          <span>Analog Stick Gamepad</span>
+        </span>
       </div>
 
       {/* FLOATING CORNER KICK-OFF BUTTON (BOTTOM-RIGHT) */}

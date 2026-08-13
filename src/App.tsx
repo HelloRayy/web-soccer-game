@@ -6,7 +6,7 @@ import { TeamSelectView, CharacterData, PlayerNode } from './components/TeamSele
 import { GameView } from './components/GameView';
 import { MobileControllerView } from './components/MobileControllerView';
 import { DebugControllerView } from './components/DebugControllerView';
-import { DeviceType } from './components/ControllerSelectModal';
+import { DeviceType, PlayerDeviceConfig } from './components/ControllerSelectModal';
 import { HostPeerService } from './services/peerService';
 import { Agentation } from 'agentation';
 
@@ -15,6 +15,8 @@ const MainGameContainer: React.FC = () => {
   const [selectedMode, setSelectedMode] = useState<'1v1' | '2vBot'>('1v1');
   const [p1Device, setP1Device] = useState<DeviceType>('keyboard1');
   const [p2Device, setP2Device] = useState<DeviceType>('keyboard2');
+  const [homeControllers, setHomeControllers] = useState<PlayerDeviceConfig[]>([]);
+  const [awayControllers, setAwayControllers] = useState<PlayerDeviceConfig[]>([]);
   const [p1Character, setP1Character] = useState<CharacterData | null>(null);
   const [p2Character, setP2Character] = useState<CharacterData | null>(null);
   const [customSpawns, setCustomSpawns] = useState<PlayerNode[] | null>(null);
@@ -50,10 +52,18 @@ const MainGameContainer: React.FC = () => {
   };
 
   // Step 1: Confirm Controllers in Lobby ➔ Advance to Team Selection Screen (PES Flow)
-  const handleConfirmControllers = (mode: '1v1' | '2vBot', p1Dev?: DeviceType, p2Dev?: DeviceType) => {
+  const handleConfirmControllers = (
+    mode: '1v1' | '2vBot',
+    p1Dev?: DeviceType,
+    p2Dev?: DeviceType,
+    homeDevs?: PlayerDeviceConfig[],
+    awayDevs?: PlayerDeviceConfig[]
+  ) => {
     setSelectedMode(mode);
     if (p1Dev) setP1Device(p1Dev);
     if (p2Dev) setP2Device(p2Dev);
+    if (homeDevs) setHomeControllers(homeDevs);
+    if (awayDevs) setAwayControllers(awayDevs);
     setCurrentView('team-select');
   };
 
@@ -90,6 +100,8 @@ const MainGameContainer: React.FC = () => {
         mode={selectedMode}
         p1Device={p1Device}
         p2Device={p2Device}
+        homeControllers={homeControllers}
+        awayControllers={awayControllers}
         onBackToControllers={() => setCurrentView('lobby')}
         onConfirmStartGame={handleConfirmTeamsAndStart}
       />
