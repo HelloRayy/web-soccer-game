@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { SplashScreen } from './components/SplashScreen';
 import { LobbyView } from './components/LobbyView';
 import { TeamSelectView, CharacterData } from './components/TeamSelectView';
 import { GameView } from './components/GameView';
@@ -10,7 +11,7 @@ import { HostPeerService } from './services/peerService';
 import { Agentation } from 'agentation';
 
 const MainGameContainer: React.FC = () => {
-  const [currentView, setCurrentView] = useState<'lobby' | 'team-select' | 'game'>('lobby');
+  const [currentView, setCurrentView] = useState<'splash' | 'lobby' | 'team-select' | 'game'>('splash');
   const [selectedMode, setSelectedMode] = useState<'1v1' | '2vBot'>('1v1');
   const [p1Device, setP1Device] = useState<DeviceType>('keyboard1');
   const [p2Device, setP2Device] = useState<DeviceType>('keyboard2');
@@ -43,6 +44,10 @@ const MainGameContainer: React.FC = () => {
     };
   }, []);
 
+  const handleStartFromSplash = () => {
+    setCurrentView('lobby');
+  };
+
   // Step 1: Confirm Controllers in Lobby ➔ Advance to Team Selection Screen (PES Flow)
   const handleConfirmControllers = (mode: '1v1' | '2vBot', p1Dev?: DeviceType, p2Dev?: DeviceType) => {
     setSelectedMode(mode);
@@ -61,6 +66,10 @@ const MainGameContainer: React.FC = () => {
   const handleReturnToLobby = () => {
     setCurrentView('lobby');
   };
+
+  if (currentView === 'splash') {
+    return <SplashScreen onStartGame={handleStartFromSplash} />;
+  }
 
   if (currentView === 'lobby') {
     return (
