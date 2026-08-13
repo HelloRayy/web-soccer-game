@@ -226,14 +226,22 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
           </h1>
         </div>
 
-        {/* TOP-RIGHT USER PROFILE BADGE */}
-        <div className="flex items-center gap-4 font-mono text-xs text-slate-300">
-          <span className="font-bold text-white text-sm">EferQ</span>
-          <span className="bg-[#0A1526]/80 border border-white/10 px-3 py-1.5 rounded-xl text-slate-300 font-semibold backdrop-blur-md">
-            Level 0
-          </span>
-          <div className="flex items-center gap-1.5 text-purple-300 font-bold bg-[#0A1526]/80 border border-white/10 px-3 py-1.5 rounded-xl backdrop-blur-md">
-            <Gem className="w-4 h-4 fill-purple-400 text-purple-400" />
+        {/* TOP-RIGHT USER PROFILE BADGE (Presisi FL 25 Design System) */}
+        <div className="flex items-center gap-3 font-mono text-xs text-slate-300">
+          <div className="flex items-center gap-2 bg-[#0c1613] border border-[#17FFBF]/30 px-3 py-1.5 rounded-full backdrop-blur-md">
+            <div className="w-5 h-5 rounded-full bg-[#17FFBF] text-[#05090C] font-black text-[10px] flex items-center justify-center">
+              E
+            </div>
+            <span className="font-bold text-white text-xs tracking-wide">EferQ</span>
+          </div>
+
+          <div className="bg-[#0c1613] border border-[#17FFBF]/30 px-3 py-1.5 rounded-full text-[#17FFBF] font-bold text-xs backdrop-blur-md flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#17FFBF] animate-pulse" />
+            <span>Level 0</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-purple-300 font-bold bg-[#140b22] border border-purple-500/30 px-3.5 py-1.5 rounded-full backdrop-blur-md shadow-lg shadow-purple-900/20">
+            <Gem className="w-3.5 h-3.5 fill-purple-400 text-purple-400" />
             <span>0/1,000</span>
           </div>
         </div>
@@ -281,30 +289,44 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
       {/* 3. BOTTOM HUD BAR (FL 25 Soundtrack Widget & Helpers) */}
       <div className="relative z-10 w-full flex items-center justify-between pointer-events-auto pt-4 font-mono text-xs pl-2 sm:pl-6">
         {/* Bottom-Left Helper Badge */}
-        <div className="flex items-center gap-2 text-slate-400 font-semibold">
-          <span className="w-5 h-5 rounded-full bg-[#0A1526] border border-white/20 flex items-center justify-center text-[10px] font-bold text-white shadow">
+        <div
+          onClick={() => setIsQRModalOpen(true)}
+          className="flex items-center gap-2 text-[#17FFBF] font-mono text-xs font-semibold tracking-tight opacity-90 hover:opacity-100 transition cursor-pointer"
+        >
+          <span className="w-5 h-5 rounded-full bg-[#0c1613] border border-[#17FFBF]/50 flex items-center justify-center text-[10px] font-bold text-[#17FFBF] shadow">
             ◄ L
           </span>
           <span>Settings / Accessibility Settings</span>
         </div>
 
-        {/* Bottom-Right Soundtrack & Social HUD Widget */}
-        <div className="flex items-center gap-3">
+        {/* Bottom-Right Soundtrack & Trigger HUD Widget */}
+        <div className="flex items-center gap-2.5">
           {/* Track Banner Pill */}
-          <div className="bg-[#0A1526]/80 border border-white/10 px-4 py-2 rounded-xl flex items-center gap-5 text-xs text-white shadow-lg backdrop-blur-md">
+          <div className="bg-[#09120f]/90 border border-[#17FFBF]/30 px-4 py-2 rounded-xl flex items-center gap-4 text-xs text-white shadow-xl backdrop-blur-md">
             <div className="flex items-center gap-2">
               <Music className="w-4 h-4 text-[#17FFBF] animate-pulse" />
-              <span className="font-bold tracking-wide">Stick Around You</span>
+              <span className="font-bold tracking-wide font-sans">Stick Around You</span>
             </div>
-            <span className="font-black text-[#17FFBF] tracking-widest uppercase">JINXSPRO</span>
+            <span className="font-black text-[#17FFBF] tracking-widest uppercase text-[11px] bg-[#17FFBF]/10 px-2 py-0.5 rounded border border-[#17FFBF]/30">
+              JINXSPRO
+            </span>
           </div>
 
-          {/* Controller HUD Badges */}
-          <div className="flex items-center gap-2 text-slate-300 bg-[#0A1526]/80 border border-white/10 px-3.5 py-2 rounded-xl text-xs font-bold backdrop-blur-md">
+          {/* Controller Trigger HUD Badges */}
+          <div className="flex items-center gap-2 text-slate-300 bg-[#09120f]/90 border border-white/10 px-3.5 py-2 rounded-xl text-xs font-bold backdrop-blur-md">
             <span className="text-white font-extrabold">RT</span>
-            <span className="text-emerald-400">1</span>
-            <span>👥 {connectedPeerCount}</span>
+            <span className="text-[#17FFBF] font-black">1</span>
+            <span className="text-slate-400 border-l border-white/10 pl-2">👥 {connectedPeerCount}</span>
           </div>
+
+          {/* Soundtrack Equalizer Quick Button */}
+          <button
+            onClick={() => setShowControlsModal(true)}
+            className="w-9 h-9 rounded-xl bg-[#09120f]/90 border border-white/10 text-slate-300 hover:text-[#17FFBF] hover:border-[#17FFBF]/50 flex items-center justify-center transition cursor-pointer backdrop-blur-md shadow-lg"
+            title="Equalizer & Controls"
+          >
+            <span className="text-base font-bold">≡</span>
+          </button>
         </div>
       </div>
     </div>
