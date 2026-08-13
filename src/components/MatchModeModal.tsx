@@ -69,14 +69,14 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
             {/* CENTER CARDS BODY: 2 HORIZONTAL SELECTOR CARDS */}
             <div className="p-6 sm:p-10 grid grid-cols-1 sm:grid-cols-2 gap-6 bg-[#111513]">
               
-              {/* CARD 1: PLAYER VS PLAYER (NO MOTION ZOOM / NO ANIMATION DELAY) */}
+              {/* CARD 1: PLAYER VS PLAYER (NO LAYOUT SHIFT / NO BORDER THICKNESS JUMP) */}
               <div
                 onMouseEnter={() => setSelectedCard('1v1')}
                 onClick={() => onSelectMode('1v1')}
-                className={`cursor-pointer p-6 flex flex-col items-center text-center gap-4 relative rounded-none border ${
+                className={`cursor-pointer p-6 flex flex-col items-center text-center gap-4 relative rounded-none border-2 ${
                   selectedCard === '1v1'
-                    ? 'bg-[#141e2e] text-white border-2 border-[#3B82F6]'
-                    : 'bg-[#171d1a] text-white border-white/10'
+                    ? 'bg-[#141e2e] text-white border-[#3B82F6]'
+                    : 'bg-[#171d1a] text-white border-white/10 hover:border-white/30'
                 }`}
               >
                 {/* INNER LOGO CARD GRAPHIC */}
@@ -109,14 +109,14 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
                 </div>
               </div>
 
-              {/* CARD 2: PLAYER VS BOT (NO MOTION ZOOM / NO ANIMATION DELAY) */}
+              {/* CARD 2: PLAYER VS BOT (NO LAYOUT SHIFT / NO BORDER THICKNESS JUMP) */}
               <div
                 onMouseEnter={() => setSelectedCard('2vBot')}
                 onClick={() => onSelectMode('2vBot')}
-                className={`cursor-pointer p-6 flex flex-col items-center text-center gap-4 relative rounded-none border ${
+                className={`cursor-pointer p-6 flex flex-col items-center text-center gap-4 relative rounded-none border-2 ${
                   selectedCard === '2vBot'
-                    ? 'bg-[#141e2e] text-white border-2 border-[#3B82F6]'
-                    : 'bg-[#171d1a] text-white border-white/10'
+                    ? 'bg-[#141e2e] text-white border-[#3B82F6]'
+                    : 'bg-[#171d1a] text-white border-white/10 hover:border-white/30'
                 }`}
               >
                 {/* INNER LOGO CARD GRAPHIC */}
