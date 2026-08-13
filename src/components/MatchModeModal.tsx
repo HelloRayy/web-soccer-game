@@ -158,23 +158,8 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
 
             </div>
 
-            {/* BOTTOM HELPER BAR (Presisi Controller Hints: (A) Confirm (B) Return) */}
-            <div className="bg-[#1b201d] px-8 py-4 border-t border-white/10 flex justify-between items-center text-xs font-mono">
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-[#17FFBF] text-[#09100d] font-bold flex items-center justify-center text-[10px]">
-                    A
-                  </span>
-                  <span className="text-slate-200 font-semibold">Confirm</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-[#FF4655] text-white font-bold flex items-center justify-center text-[10px]">
-                    B
-                  </span>
-                  <span className="text-slate-400">Return</span>
-                </div>
-              </div>
-
+            {/* BOTTOM HELPER BAR */}
+            <div className="bg-[#1b201d] px-8 py-4 border-t border-white/10 flex justify-end items-center text-xs font-mono">
               <button
                 onClick={() => onSelectMode(selectedCard)}
                 className="py-2.5 px-6 clip-parallelogram bg-[#17FFBF] hover:bg-[#4BFFCE] text-[#05090C] font-mono font-black text-xs tracking-wider transition cursor-pointer"
@@ -183,6 +168,45 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
               </button>
             </div>
           </motion.div>
+
+          {/* AUTHENTIC PES CONSOLE INFO CONTROL BAR (OUTSIDE DIV CONTAINER - FIXED AT BOTTOM LEFT SCREEN) */}
+          <div className="fixed bottom-6 left-8 z-50 flex items-center gap-6 text-xs font-sans text-slate-200 select-none pointer-events-auto">
+            <div className="flex items-center gap-1.5">
+              <span className="w-5 h-5 rounded-full bg-[#17FFBF] text-[#05090C] font-black flex items-center justify-center text-[10px] shadow">
+                A
+              </span>
+              <span className="font-semibold text-white">Confirm</span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="w-5 h-5 rounded-full bg-[#FF4655] text-white font-black flex items-center justify-center text-[10px] shadow">
+                B
+              </span>
+              <span className="font-semibold text-slate-300">Return</span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="w-5 h-5 rounded-full bg-[#00D8F6] text-[#05090C] font-black flex items-center justify-center text-[10px] shadow">
+                X
+              </span>
+              <span className="font-semibold text-slate-300">Edit Personal Preset</span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="w-5 h-5 rounded-full bg-[#FFD13B] text-[#05090C] font-black flex items-center justify-center text-[10px] shadow">
+                Y
+              </span>
+              <span className="font-semibold text-slate-300">Coach Mode</span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 bg-[#1a232b] border border-white/20 px-2 py-0.5 rounded text-[10px] font-mono font-bold text-white">
+                <span>LT</span>
+                <span>RT</span>
+              </div>
+              <span className="font-semibold text-slate-300">Select Personal Preset</span>
+            </div>
+          </div>
         </div>
       )}
     </AnimatePresence>
