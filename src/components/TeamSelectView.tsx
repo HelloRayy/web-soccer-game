@@ -247,12 +247,29 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
               <rect x="22%" y="75%" width="56%" height="25%" />
             </svg>
 
+            {/* RESTRICTED OPPONENT HALF UI OVERLAY (Top 42%) */}
+            <div className="absolute top-0 left-0 right-0 h-[42%] bg-red-950/40 backdrop-blur-[1px] border-b-2 border-dashed border-red-500/60 pointer-events-none z-10 flex flex-col items-center justify-center p-2 text-center">
+              <span className="text-[11px] font-mono font-black tracking-widest text-red-400/90 bg-red-950/90 px-3 py-1 rounded border border-red-500/40 uppercase shadow-lg">
+                🚫 OPPONENT HALF (RESTRICTED)
+              </span>
+              <span className="text-[9px] font-mono font-bold text-red-300/60 mt-1 uppercase tracking-wider">
+                NO SPAWN ALLOWED HERE
+              </span>
+            </div>
+
+            {/* VALID SPAWN ZONE LABEL AT BOTTOM */}
+            <div className="absolute bottom-2 left-0 right-0 text-center pointer-events-none z-10">
+              <span className="text-[9px] font-mono font-bold text-emerald-300/70 uppercase tracking-widest bg-emerald-950/60 px-2.5 py-0.5 rounded border border-emerald-500/30">
+                ✅ YOUR TEAM SPAWN ZONE
+              </span>
+            </div>
+
             {/* HOME TEAM WATERMARK LABEL */}
-            <div className="absolute top-4 left-6 z-10 flex flex-col pointer-events-none">
-              <span className="text-2xl sm:text-3xl font-black italic uppercase text-white/40 font-['Outfit',sans-serif]">
+            <div className="absolute top-3 left-4 z-20 flex flex-col pointer-events-none">
+              <span className="text-xl sm:text-2xl font-black italic uppercase text-white/40 font-['Outfit',sans-serif]">
                 HOME TEAM
               </span>
-              <span className="text-xs font-mono font-bold text-[#3B82F6] tracking-widest uppercase">
+              <span className="text-[10px] font-mono font-bold text-[#3B82F6] tracking-widest uppercase">
                 RED CYBER FC 🇫🇷
               </span>
             </div>
@@ -308,12 +325,29 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
               <rect x="22%" y="75%" width="56%" height="25%" />
             </svg>
 
+            {/* RESTRICTED OPPONENT HALF UI OVERLAY (Top 42%) */}
+            <div className="absolute top-0 left-0 right-0 h-[42%] bg-red-950/40 backdrop-blur-[1px] border-b-2 border-dashed border-red-500/60 pointer-events-none z-10 flex flex-col items-center justify-center p-2 text-center">
+              <span className="text-[11px] font-mono font-black tracking-widest text-red-400/90 bg-red-950/90 px-3 py-1 rounded border border-red-500/40 uppercase shadow-lg">
+                🚫 OPPONENT HALF (RESTRICTED)
+              </span>
+              <span className="text-[9px] font-mono font-bold text-red-300/60 mt-1 uppercase tracking-wider">
+                NO SPAWN ALLOWED HERE
+              </span>
+            </div>
+
+            {/* VALID SPAWN ZONE LABEL AT BOTTOM */}
+            <div className="absolute bottom-2 left-0 right-0 text-center pointer-events-none z-10">
+              <span className="text-[9px] font-mono font-bold text-emerald-300/70 uppercase tracking-widest bg-emerald-950/60 px-2.5 py-0.5 rounded border border-emerald-500/30">
+                ✅ YOUR TEAM SPAWN ZONE
+              </span>
+            </div>
+
             {/* AWAY TEAM WATERMARK LABEL */}
-            <div className="absolute top-4 right-6 z-10 flex flex-col items-end pointer-events-none">
-              <span className="text-2xl sm:text-3xl font-black italic uppercase text-white/40 font-['Outfit',sans-serif]">
+            <div className="absolute top-3 right-4 z-20 flex flex-col items-end pointer-events-none">
+              <span className="text-xl sm:text-2xl font-black italic uppercase text-white/40 font-['Outfit',sans-serif]">
                 AWAY TEAM
               </span>
-              <span className="text-xs font-mono font-bold text-amber-400 tracking-widest uppercase">
+              <span className="text-[10px] font-mono font-bold text-amber-400 tracking-widest uppercase">
                 {mode === '2vBot' ? 'AI ENEMY BOTS 🤖' : 'ELECTRIC MINT FC 🇮🇩'}
               </span>
             </div>
