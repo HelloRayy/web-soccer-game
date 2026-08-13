@@ -166,62 +166,63 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                   return (
                     <div key={slotIndex} className="grid grid-cols-2 divide-x divide-white/10 min-h-[148px] items-center">
                       {/* HOME CELL */}
-                      <div className="flex flex-col items-center justify-center p-3 h-full">
+                      <div className="flex flex-col items-center justify-center p-3 h-full relative px-10">
                         {isHomeActive ? (
-                          <div className="flex flex-col items-center gap-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[11px] font-bold text-[#3B82F6] tracking-wide font-mono">
-                                User {homeUserNum}
+                          <>
+                            {/* LARGE EDGE ARROWS */}
+                            <button
+                              onClick={() => cycleHomeDevice(slotIndex, -1)}
+                              className="absolute left-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white transition cursor-pointer"
+                              title="Peranti Sebelumnya"
+                            >
+                              <ChevronLeft className="w-7 h-7 stroke-[2.5]" />
+                            </button>
+
+                            <div className="flex flex-col items-center gap-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-bold text-[#3B82F6] tracking-wide font-mono">
+                                  User {homeUserNum}
+                                </span>
+                                {slotIndex > 0 && (
+                                  <button
+                                    onClick={() => removeHomeSeat(slotIndex)}
+                                    className="text-[10px] text-red-400 hover:text-red-300 underline cursor-pointer"
+                                  >
+                                    Hapus
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="text-white p-1 flex flex-col items-center">
+                                {homeDev.type === 'keyboard' && <Keyboard className="w-14 h-14" />}
+                                {homeDev.type === 'gamepad' && <Gamepad className="w-14 h-14" />}
+                                {homeDev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-[#3B82F6]" />}
+                                {homeDev.type === 'bot' && <Bot className="w-14 h-14 text-amber-400" />}
+                              </div>
+
+                              <span className="text-[10px] font-mono font-semibold text-slate-300 uppercase tracking-widest">
+                                {homeDev.name}
                               </span>
-                              {slotIndex > 0 && (
+
+                              {homeDev.type === 'smartphone' && (
                                 <button
-                                  onClick={() => removeHomeSeat(slotIndex)}
-                                  className="text-[10px] text-red-400 hover:text-red-300 underline cursor-pointer"
+                                  onClick={() => setShowQRPopover(true)}
+                                  className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer text-[10px] font-semibold shadow rounded mt-0.5"
                                 >
-                                  Hapus
+                                  <Smartphone className="w-3 h-3" />
+                                  <span>Connect</span>
                                 </button>
                               )}
                             </div>
 
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => cycleHomeDevice(slotIndex, -1)}
-                                className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
-                                title="Peranti Sebelumnya"
-                              >
-                                <ChevronLeft className="w-5 h-5" />
-                              </button>
-
-                              <div className="text-white p-1 flex flex-col items-center">
-                                {homeDev.type === 'keyboard' && <Keyboard className="w-12 h-12" />}
-                                {homeDev.type === 'gamepad' && <Gamepad className="w-12 h-12" />}
-                                {homeDev.type === 'smartphone' && <Smartphone className="w-12 h-12 text-[#3B82F6]" />}
-                                {homeDev.type === 'bot' && <Bot className="w-12 h-12 text-amber-400" />}
-                              </div>
-
-                              <button
-                                onClick={() => cycleHomeDevice(slotIndex, 1)}
-                                className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
-                                title="Peranti Selanjutnya"
-                              >
-                                <ChevronRight className="w-5 h-5" />
-                              </button>
-                            </div>
-
-                            <span className="text-[10px] font-mono font-semibold text-slate-300 uppercase tracking-widest">
-                              {homeDev.name}
-                            </span>
-
-                            {homeDev.type === 'smartphone' && (
-                              <button
-                                onClick={() => setShowQRPopover(true)}
-                                className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer text-[10px] font-semibold shadow rounded mt-0.5"
-                              >
-                                <Smartphone className="w-3 h-3" />
-                                <span>Connect</span>
-                              </button>
-                            )}
-                          </div>
+                            <button
+                              onClick={() => cycleHomeDevice(slotIndex, 1)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white transition cursor-pointer"
+                              title="Peranti Selanjutnya"
+                            >
+                              <ChevronRight className="w-7 h-7 stroke-[2.5]" />
+                            </button>
+                          </>
                         ) : isHomeAdd && homeSeats.length < 5 ? (
                           <button
                             onClick={addHomeSeat}
@@ -231,75 +232,72 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                             <Plus className="w-10 h-10 stroke-[2.5]" />
                           </button>
                         ) : (
-                          <Gamepad className="w-12 h-12 text-white/10" />
+                          <Gamepad className="w-14 h-14 text-white/10" />
                         )}
                       </div>
 
                       {/* AWAY CELL */}
-                      <div className="flex flex-col items-center justify-center p-3 h-full">
+                      <div className="flex flex-col items-center justify-center p-3 h-full relative px-10">
                         {isAwayActive ? (
-                          <div className="flex flex-col items-center gap-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[11px] font-bold text-[#3B82F6] tracking-wide font-mono">
-                                {awayUserNum}
+                          <>
+                            {/* LARGE EDGE ARROWS */}
+                            {!(selectedMode === '2vBot' && slotIndex === 0) && (
+                              <button
+                                onClick={() => cycleAwayDevice(slotIndex, -1)}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white transition cursor-pointer"
+                                title="Peranti Sebelumnya"
+                              >
+                                <ChevronLeft className="w-7 h-7 stroke-[2.5]" />
+                              </button>
+                            )}
+
+                            <div className="flex flex-col items-center gap-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-bold text-[#3B82F6] tracking-wide font-mono">
+                                  {awayUserNum}
+                                </span>
+                                {slotIndex > 0 && (
+                                  <button
+                                    onClick={() => removeAwaySeat(slotIndex)}
+                                    className="text-[10px] text-red-400 hover:text-red-300 underline cursor-pointer"
+                                  >
+                                    Hapus
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="text-white p-1 flex flex-col items-center">
+                                {awayDev.type === 'keyboard' && <Keyboard className="w-14 h-14" />}
+                                {awayDev.type === 'gamepad' && <Gamepad className="w-14 h-14" />}
+                                {awayDev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-[#3B82F6]" />}
+                                {awayDev.type === 'bot' && <Bot className="w-14 h-14 text-amber-400" />}
+                              </div>
+
+                              <span className="text-[10px] font-mono font-semibold text-slate-300 uppercase tracking-widest">
+                                {awayDev.name}
                               </span>
-                              {slotIndex > 0 && (
+
+                              {awayDev.type === 'smartphone' && (
                                 <button
-                                  onClick={() => removeAwaySeat(slotIndex)}
-                                  className="text-[10px] text-red-400 hover:text-red-300 underline cursor-pointer"
+                                  onClick={() => setShowQRPopover(true)}
+                                  className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer text-[10px] font-semibold shadow rounded mt-0.5"
                                 >
-                                  Hapus
+                                  <Smartphone className="w-3 h-3" />
+                                  <span>Connect</span>
                                 </button>
                               )}
                             </div>
 
-                            <div className="flex items-center gap-3">
-                              {selectedMode === '2vBot' && slotIndex === 0 ? (
-                                <div className="text-amber-400 p-1 flex flex-col items-center">
-                                  <Bot className="w-12 h-12" />
-                                </div>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={() => cycleAwayDevice(slotIndex, -1)}
-                                    className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
-                                    title="Peranti Sebelumnya"
-                                  >
-                                    <ChevronLeft className="w-5 h-5" />
-                                  </button>
-
-                                  <div className="text-white p-1 flex flex-col items-center">
-                                    {awayDev.type === 'keyboard' && <Keyboard className="w-12 h-12" />}
-                                    {awayDev.type === 'gamepad' && <Gamepad className="w-12 h-12" />}
-                                    {awayDev.type === 'smartphone' && <Smartphone className="w-12 h-12 text-[#3B82F6]" />}
-                                    {awayDev.type === 'bot' && <Bot className="w-12 h-12 text-amber-400" />}
-                                  </div>
-
-                                  <button
-                                    onClick={() => cycleAwayDevice(slotIndex, 1)}
-                                    className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
-                                    title="Peranti Selanjutnya"
-                                  >
-                                    <ChevronRight className="w-5 h-5" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-
-                            <span className="text-[10px] font-mono font-semibold text-slate-300 uppercase tracking-widest">
-                              {awayDev.name}
-                            </span>
-
-                            {awayDev.type === 'smartphone' && (
+                            {!(selectedMode === '2vBot' && slotIndex === 0) && (
                               <button
-                                onClick={() => setShowQRPopover(true)}
-                                className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer text-[10px] font-semibold shadow rounded mt-0.5"
+                                onClick={() => cycleAwayDevice(slotIndex, 1)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white transition cursor-pointer"
+                                title="Peranti Selanjutnya"
                               >
-                                <Smartphone className="w-3 h-3" />
-                                <span>Connect</span>
+                                <ChevronRight className="w-7 h-7 stroke-[2.5]" />
                               </button>
                             )}
-                          </div>
+                          </>
                         ) : isAwayAdd && awaySeats.length < 5 ? (
                           <button
                             onClick={addAwaySeat}
@@ -309,7 +307,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                             <Plus className="w-10 h-10 stroke-[2.5]" />
                           </button>
                         ) : (
-                          <Gamepad className="w-12 h-12 text-white/10" />
+                          <Gamepad className="w-14 h-14 text-white/10" />
                         )}
                       </div>
                     </div>
