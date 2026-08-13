@@ -228,10 +228,10 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                         ) : isHomeAdd && homeSeats.length < 5 ? (
                           <button
                             onClick={addHomeSeat}
-                            className="p-2 text-white/30 hover:text-[#3B82F6] hover:scale-110 transition cursor-pointer flex items-center justify-center group"
+                            className="w-full h-full absolute inset-0 flex items-center justify-center text-white/30 hover:text-[#3B82F6] hover:bg-white/10 transition-colors cursor-pointer group"
                             title="Tambah Player"
                           >
-                            <Plus className="w-10 h-10 stroke-[2.5]" />
+                            <Plus className="w-10 h-10 stroke-[2.5] group-hover:scale-110 transition-transform" />
                           </button>
                         ) : (
                           <Gamepad className="w-14 h-14 text-white/10" />
@@ -305,10 +305,10 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                         ) : isAwayAdd && awaySeats.length < 5 ? (
                           <button
                             onClick={addAwaySeat}
-                            className="p-2 text-white/30 hover:text-[#3B82F6] hover:scale-110 transition cursor-pointer flex items-center justify-center group"
+                            className="w-full h-full absolute inset-0 flex items-center justify-center text-white/30 hover:text-[#3B82F6] hover:bg-white/10 transition-colors cursor-pointer group"
                             title="Tambah Player"
                           >
-                            <Plus className="w-10 h-10 stroke-[2.5]" />
+                            <Plus className="w-10 h-10 stroke-[2.5] group-hover:scale-110 transition-transform" />
                           </button>
                         ) : (
                           <Gamepad className="w-14 h-14 text-white/10" />
