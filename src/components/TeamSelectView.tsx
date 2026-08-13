@@ -230,124 +230,128 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
 
       {/* FULLSCREEN SPLIT PITCHES (LEFT = HOME PITCH, RIGHT = AWAY PITCH) */}
       <div className="relative z-10 w-full h-full grid grid-cols-2 divide-x divide-white/10 pt-16 pb-16">
-        {/* LEFT FULL HEIGHT HOME PITCH */}
-        <div
-          ref={homePitchRef}
-          className="relative w-full h-full bg-gradient-to-b from-[#15803d] via-[#16a34a] to-[#15803d] p-4 flex flex-col justify-between overflow-hidden shadow-inner"
-        >
-          {/* PITCH FIELD LINES SVG OVERLAY */}
-          <svg className="absolute inset-0 w-full h-full stroke-white/30 stroke-[2] fill-none pointer-events-none">
-            <rect x="6" y="6" width="calc(100% - 12px)" height="calc(100% - 12px)" rx="6" />
-            <line x1="6" y1="50%" x2="calc(100% - 6px)" y2="50%" />
-            <circle cx="50%" cy="50%" r="45" />
-            {/* Top Penalty Box */}
-            <rect x="22%" y="6" width="56%" height="25%" />
-            {/* Bottom Penalty Box */}
-            <rect x="22%" y="75%" width="56%" height="25%" />
-          </svg>
+        {/* LEFT HOME PITCH COLUMN */}
+        <div className="flex items-center justify-center p-4 sm:p-6 h-full w-full">
+          <div
+            ref={homePitchRef}
+            className="relative w-full max-w-[440px] h-full bg-gradient-to-b from-[#15803d] via-[#16a34a] to-[#15803d] p-4 flex flex-col justify-between overflow-hidden shadow-2xl rounded-xl border-2 border-emerald-400/40"
+          >
+            {/* PITCH FIELD LINES SVG OVERLAY */}
+            <svg className="absolute inset-0 w-full h-full stroke-white/30 stroke-[2] fill-none pointer-events-none">
+              <rect x="6" y="6" width="calc(100% - 12px)" height="calc(100% - 12px)" rx="6" />
+              <line x1="6" y1="50%" x2="calc(100% - 6px)" y2="50%" />
+              <circle cx="50%" cy="50%" r="45" />
+              {/* Top Penalty Box */}
+              <rect x="22%" y="6" width="56%" height="25%" />
+              {/* Bottom Penalty Box */}
+              <rect x="22%" y="75%" width="56%" height="25%" />
+            </svg>
 
-          {/* HOME TEAM WATERMARK LABEL */}
-          <div className="absolute top-4 left-6 z-10 flex flex-col pointer-events-none">
-            <span className="text-3xl font-black italic uppercase text-white/40 font-['Outfit',sans-serif]">
-              HOME TEAM
-            </span>
-            <span className="text-xs font-mono font-bold text-[#3B82F6] tracking-widest uppercase">
-              RED CYBER FC 🇫🇷
-            </span>
+            {/* HOME TEAM WATERMARK LABEL */}
+            <div className="absolute top-4 left-6 z-10 flex flex-col pointer-events-none">
+              <span className="text-2xl sm:text-3xl font-black italic uppercase text-white/40 font-['Outfit',sans-serif]">
+                HOME TEAM
+              </span>
+              <span className="text-xs font-mono font-bold text-[#3B82F6] tracking-widest uppercase">
+                RED CYBER FC 🇫🇷
+              </span>
+            </div>
+
+            {/* HOME PLAYER NODES */}
+            {nodes
+              .filter((n) => n.team === 'home')
+              .map((node) => {
+                const role = getAutoRole(node.y);
+                return (
+                  <motion.div
+                    key={node.id}
+                    drag
+                    dragSnapToOrigin={false}
+                    onDragEnd={(_, info) => handleDragEndNode(node.id, homePitchRef, info)}
+                    style={{ left: `${node.x}%`, top: `${node.y}%` }}
+                    className="absolute z-20 -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing flex flex-col items-center group touch-none"
+                  >
+                    {/* USER LABEL BADGE */}
+                    <span className="text-[10px] font-mono font-bold text-white bg-[#0c100e]/90 border border-blue-500/50 px-2 py-0.5 rounded shadow-lg uppercase mb-1 tracking-wider whitespace-nowrap">
+                      {node.name}
+                    </span>
+
+                    {/* MAIN AVATAR CIRCLE NODE */}
+                    <div className="w-14 h-14 rounded-full bg-[#111513] border-2 border-[#3B82F6] shadow-xl shadow-blue-500/30 flex items-center justify-center relative group-hover:scale-110 transition-transform">
+                      {renderDevIcon(node.devType)}
+                    </div>
+
+                    {/* AUTO ROLE BADGE */}
+                    <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded shadow mt-1 uppercase ${role.bg}`}>
+                      {role.code}
+                    </span>
+                  </motion.div>
+                );
+              })}
           </div>
-
-          {/* HOME PLAYER NODES */}
-          {nodes
-            .filter((n) => n.team === 'home')
-            .map((node) => {
-              const role = getAutoRole(node.y);
-              return (
-                <motion.div
-                  key={node.id}
-                  drag
-                  dragSnapToOrigin={false}
-                  onDragEnd={(_, info) => handleDragEndNode(node.id, homePitchRef, info)}
-                  style={{ left: `${node.x}%`, top: `${node.y}%` }}
-                  className="absolute z-20 -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing flex flex-col items-center group touch-none"
-                >
-                  {/* USER LABEL BADGE */}
-                  <span className="text-[10px] font-mono font-bold text-white bg-[#0c100e]/90 border border-blue-500/50 px-2 py-0.5 rounded shadow-lg uppercase mb-1 tracking-wider whitespace-nowrap">
-                    {node.name}
-                  </span>
-
-                  {/* MAIN AVATAR CIRCLE NODE */}
-                  <div className="w-14 h-14 rounded-full bg-[#111513] border-2 border-[#3B82F6] shadow-xl shadow-blue-500/30 flex items-center justify-center relative group-hover:scale-110 transition-transform">
-                    {renderDevIcon(node.devType)}
-                  </div>
-
-                  {/* AUTO ROLE BADGE */}
-                  <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded shadow mt-1 uppercase ${role.bg}`}>
-                    {role.code}
-                  </span>
-                </motion.div>
-              );
-            })}
         </div>
 
-        {/* RIGHT FULL HEIGHT AWAY PITCH */}
-        <div
-          ref={awayPitchRef}
-          className="relative w-full h-full bg-gradient-to-b from-[#15803d] via-[#16a34a] to-[#15803d] p-4 flex flex-col justify-between overflow-hidden shadow-inner"
-        >
-          {/* PITCH FIELD LINES SVG OVERLAY */}
-          <svg className="absolute inset-0 w-full h-full stroke-white/30 stroke-[2] fill-none pointer-events-none">
-            <rect x="6" y="6" width="calc(100% - 12px)" height="calc(100% - 12px)" rx="6" />
-            <line x1="6" y1="50%" x2="calc(100% - 6px)" y2="50%" />
-            <circle cx="50%" cy="50%" r="45" />
-            {/* Top Penalty Box */}
-            <rect x="22%" y="6" width="56%" height="25%" />
-            {/* Bottom Penalty Box */}
-            <rect x="22%" y="75%" width="56%" height="25%" />
-          </svg>
+        {/* RIGHT AWAY PITCH COLUMN */}
+        <div className="flex items-center justify-center p-4 sm:p-6 h-full w-full">
+          <div
+            ref={awayPitchRef}
+            className="relative w-full max-w-[440px] h-full bg-gradient-to-b from-[#15803d] via-[#16a34a] to-[#15803d] p-4 flex flex-col justify-between overflow-hidden shadow-2xl rounded-xl border-2 border-emerald-400/40"
+          >
+            {/* PITCH FIELD LINES SVG OVERLAY */}
+            <svg className="absolute inset-0 w-full h-full stroke-white/30 stroke-[2] fill-none pointer-events-none">
+              <rect x="6" y="6" width="calc(100% - 12px)" height="calc(100% - 12px)" rx="6" />
+              <line x1="6" y1="50%" x2="calc(100% - 6px)" y2="50%" />
+              <circle cx="50%" cy="50%" r="45" />
+              {/* Top Penalty Box */}
+              <rect x="22%" y="6" width="56%" height="25%" />
+              {/* Bottom Penalty Box */}
+              <rect x="22%" y="75%" width="56%" height="25%" />
+            </svg>
 
-          {/* AWAY TEAM WATERMARK LABEL */}
-          <div className="absolute top-4 right-6 z-10 flex flex-col items-end pointer-events-none">
-            <span className="text-3xl font-black italic uppercase text-white/40 font-['Outfit',sans-serif]">
-              AWAY TEAM
-            </span>
-            <span className="text-xs font-mono font-bold text-amber-400 tracking-widest uppercase">
-              {mode === '2vBot' ? 'AI ENEMY BOTS 🤖' : 'ELECTRIC MINT FC 🇮🇩'}
-            </span>
+            {/* AWAY TEAM WATERMARK LABEL */}
+            <div className="absolute top-4 right-6 z-10 flex flex-col items-end pointer-events-none">
+              <span className="text-2xl sm:text-3xl font-black italic uppercase text-white/40 font-['Outfit',sans-serif]">
+                AWAY TEAM
+              </span>
+              <span className="text-xs font-mono font-bold text-amber-400 tracking-widest uppercase">
+                {mode === '2vBot' ? 'AI ENEMY BOTS 🤖' : 'ELECTRIC MINT FC 🇮🇩'}
+              </span>
+            </div>
+
+            {/* AWAY PLAYER NODES */}
+            {nodes
+              .filter((n) => n.team === 'away')
+              .map((node) => {
+                const role = getAutoRole(node.y);
+                return (
+                  <motion.div
+                    key={node.id}
+                    drag={mode !== '2vBot'}
+                    dragSnapToOrigin={false}
+                    onDragEnd={(_, info) => handleDragEndNode(node.id, awayPitchRef, info)}
+                    style={{ left: `${node.x}%`, top: `${node.y}%` }}
+                    className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group touch-none ${
+                      mode === '2vBot' ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'
+                    }`}
+                  >
+                    {/* USER LABEL BADGE */}
+                    <span className="text-[10px] font-mono font-bold text-white bg-[#0c100e]/90 border border-amber-500/50 px-2 py-0.5 rounded shadow-lg uppercase mb-1 tracking-wider whitespace-nowrap">
+                      {node.name}
+                    </span>
+
+                    {/* MAIN AVATAR CIRCLE NODE */}
+                    <div className="w-14 h-14 rounded-full bg-[#111513] border-2 border-amber-400 shadow-xl shadow-amber-500/30 flex items-center justify-center relative group-hover:scale-110 transition-transform">
+                      {renderDevIcon(node.devType)}
+                    </div>
+
+                    {/* AUTO ROLE BADGE */}
+                    <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded shadow mt-1 uppercase ${role.bg}`}>
+                      {role.code}
+                    </span>
+                  </motion.div>
+                );
+              })}
           </div>
-
-          {/* AWAY PLAYER NODES */}
-          {nodes
-            .filter((n) => n.team === 'away')
-            .map((node) => {
-              const role = getAutoRole(node.y);
-              return (
-                <motion.div
-                  key={node.id}
-                  drag={mode !== '2vBot'}
-                  dragSnapToOrigin={false}
-                  onDragEnd={(_, info) => handleDragEndNode(node.id, awayPitchRef, info)}
-                  style={{ left: `${node.x}%`, top: `${node.y}%` }}
-                  className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group touch-none ${
-                    mode === '2vBot' ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'
-                  }`}
-                >
-                  {/* USER LABEL BADGE */}
-                  <span className="text-[10px] font-mono font-bold text-white bg-[#0c100e]/90 border border-amber-500/50 px-2 py-0.5 rounded shadow-lg uppercase mb-1 tracking-wider whitespace-nowrap">
-                    {node.name}
-                  </span>
-
-                  {/* MAIN AVATAR CIRCLE NODE */}
-                  <div className="w-14 h-14 rounded-full bg-[#111513] border-2 border-amber-400 shadow-xl shadow-amber-500/30 flex items-center justify-center relative group-hover:scale-110 transition-transform">
-                    {renderDevIcon(node.devType)}
-                  </div>
-
-                  {/* AUTO ROLE BADGE */}
-                  <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded shadow mt-1 uppercase ${role.bg}`}>
-                    {role.code}
-                  </span>
-                </motion.div>
-              );
-            })}
         </div>
       </div>
 
