@@ -127,7 +127,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 80 }}
             transition={{ type: 'spring', stiffness: 900, damping: 45 }}
-            className="bg-[#0e1311] border border-white/10 max-w-4xl w-full p-6 sm:p-8 shadow-2xl flex flex-col gap-5 text-[#E2F1F8] relative max-h-[95vh] overflow-y-auto rounded-none"
+            className="bg-[#0b1015] border border-white/10 max-w-4xl w-full p-6 sm:p-8 shadow-2xl flex flex-col gap-5 text-[#E2F1F8] relative max-h-[95vh] overflow-y-auto rounded-none"
           >
             {/* DEDICATED UN-OVERLAPPED MODAL HEADER BAR */}
             <div className="flex justify-between items-center w-full border-b border-white/10 pb-3 font-mono">
@@ -146,16 +146,16 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
               </button>
             </div>
 
-            {/* AUTHENTIC PES CONSOLE LIGHT BOARD (Presisi 100% Gambar Acuan: White/Light Blue Board, Icon Besar tanpa Border Box) */}
-            <div className="w-full bg-[#D4DDF0] border border-slate-400/50 shadow-2xl overflow-hidden relative text-[#0B1026]">
-              {/* HEADER BAR: Home (Left) | Away (Right) - DARK NAVY BANNER */}
-              <div className="grid grid-cols-2 text-white font-bold text-2xl py-3 bg-[#0C1024] border-b border-slate-700">
+            {/* SLEEK AAA CONSOLE BOARD (Nyaman Di Mata, Soft Palette, TANPA EFEK GLOW) */}
+            <div className="w-full bg-[#131a21] border border-white/10 shadow-2xl overflow-hidden relative text-slate-100">
+              {/* HEADER BAR: Home (Left) | Away (Right) - DARK SLATE BANNER */}
+              <div className="grid grid-cols-2 text-white font-bold text-2xl py-3 bg-[#0a0f14] border-b border-white/10">
                 <div className="text-center font-['Outfit',sans-serif] tracking-tight">Home</div>
                 <div className="text-center font-['Outfit',sans-serif] tracking-tight">Away</div>
               </div>
 
-              {/* 2-COLUMN LIGHT BOARD BODY WITH HORIZONTAL ROW DIVIDERS */}
-              <div className="relative w-full p-4 grid grid-cols-2 divide-x divide-slate-400/40 max-h-[340px] sm:max-h-[380px] overflow-y-auto custom-scrollbar bg-[#D8E1F0]">
+              {/* 2-COLUMN BOARD BODY WITH CLEAN ROW DIVIDERS */}
+              <div className="relative w-full p-4 grid grid-cols-2 divide-x divide-white/10 max-h-[340px] sm:max-h-[380px] overflow-y-auto custom-scrollbar bg-[#11171d]">
                 {/* LEFT COLUMN: HOME SEATS */}
                 <div className="flex flex-col items-center">
                   {ALL_5_SLOTS.map((slotIndex) => {
@@ -168,41 +168,41 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                       const userNum = slotIndex * 2 + 1; // User 1, User 3, User 5...
 
                       return (
-                        <div key={slotIndex} className="w-full flex flex-col items-center py-2.5 border-b border-slate-400/30 relative group">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-[11px] font-bold text-[#0C1024] tracking-wide">
+                        <div key={slotIndex} className="w-full flex flex-col items-center py-3 border-b border-white/5 relative group">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[11px] font-bold text-[#17FFBF] tracking-wide font-mono">
                               User {userNum}
                             </span>
                             {slotIndex > 0 && (
                               <button
                                 onClick={() => removeHomeSeat(slotIndex)}
-                                className="text-[10px] text-red-600 hover:text-red-700 font-bold underline"
+                                className="text-[10px] text-red-400 hover:text-red-300 underline"
                               >
                                 Hapus
                               </button>
                             )}
                           </div>
 
-                          {/* LARGE CONTROLLER ICON (TANPA BORDER / KOTAK, CYAN GLOW OUTLINE) */}
-                          <div className="flex items-center gap-2">
+                          {/* LARGE CONTROLLER ICON (BESAR, CRISP WHITE, TANPA BORDER/BOX & TANPA GLOW) */}
+                          <div className="flex items-center gap-3">
                             <button
                               onClick={() => cycleHomeDevice(slotIndex, -1)}
-                              className="p-1 text-slate-600 hover:text-[#0C1024] transition cursor-pointer"
+                              className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
                               title="Peranti Sebelumnya"
                             >
                               <ChevronLeft className="w-5 h-5" />
                             </button>
 
-                            <div className="text-[#0C1024] filter drop-shadow-[0_0_8px_rgba(23,255,191,0.9)] p-1">
+                            <div className="text-white p-1">
                               {dev.type === 'keyboard' && <Keyboard className="w-14 h-14" />}
                               {dev.type === 'gamepad' && <Gamepad className="w-14 h-14" />}
-                              {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-cyan-600" />}
-                              {dev.type === 'bot' && <Bot className="w-14 h-14 text-amber-600" />}
+                              {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-cyan-400" />}
+                              {dev.type === 'bot' && <Bot className="w-14 h-14 text-amber-400" />}
                             </div>
 
                             <button
                               onClick={() => cycleHomeDevice(slotIndex, 1)}
-                              className="p-1 text-slate-600 hover:text-[#0C1024] transition cursor-pointer"
+                              className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
                               title="Peranti Selanjutnya"
                             >
                               <ChevronRight className="w-5 h-5" />
@@ -214,10 +214,10 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
                     if (isAddButtonSlot && homeSeats.length < 5) {
                       return (
-                        <div key={slotIndex} className="w-full py-3 flex justify-center border-b border-slate-400/30">
+                        <div key={slotIndex} className="w-full py-3.5 flex justify-center border-b border-white/5">
                           <button
                             onClick={addHomeSeat}
-                            className="flex items-center gap-1.5 px-3 py-1 bg-[#0C1024] text-[#17FFBF] hover:bg-[#151b38] transition cursor-pointer rounded-lg text-xs font-bold shadow"
+                            className="flex items-center gap-1.5 px-3 py-1 bg-[#1a232b] text-[#17FFBF] hover:bg-[#232e38] transition cursor-pointer border border-[#17FFBF]/30 rounded text-xs font-bold shadow"
                           >
                             <Plus className="w-4 h-4" />
                             <span>Tambah Player</span>
@@ -226,10 +226,10 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                       );
                     }
 
-                    // Large Dark Grey Controller Silhouettes (No Border)
+                    // Large Dark Slate Controller Silhouettes (No Border, No Glow)
                     return (
-                      <div key={slotIndex} className="w-full py-3.5 flex justify-center border-b border-slate-400/30">
-                        <Gamepad className="w-14 h-14 text-[#94A5C4]/60" />
+                      <div key={slotIndex} className="w-full py-4 flex justify-center border-b border-white/5">
+                        <Gamepad className="w-14 h-14 text-slate-700/50" />
                       </div>
                     );
                   })}
@@ -249,47 +249,47 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                       const userNum = slotIndex === 0 && selectedMode === '2vBot' ? 'AI Bot' : `User ${slotIndex * 2 + 2}`;
 
                       return (
-                        <div key={slotIndex} className="w-full flex flex-col items-center py-2.5 border-b border-slate-400/30 relative group">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-[11px] font-bold text-[#0C1024] tracking-wide">
+                        <div key={slotIndex} className="w-full flex flex-col items-center py-3 border-b border-white/5 relative group">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[11px] font-bold text-[#17FFBF] tracking-wide font-mono">
                               {userNum}
                             </span>
                             {slotIndex > 0 && (
                               <button
                                 onClick={() => removeAwaySeat(slotIndex)}
-                                className="text-[10px] text-red-600 hover:text-red-700 font-bold underline"
+                                className="text-[10px] text-red-400 hover:text-red-300 underline"
                               >
                                 Hapus
                               </button>
                             )}
                           </div>
 
-                          {/* LARGE CONTROLLER ICON (TANPA BORDER / KOTAK, CYAN GLOW OUTLINE) */}
-                          <div className="flex items-center gap-2">
+                          {/* LARGE CONTROLLER ICON (BESAR, CRISP WHITE, TANPA BORDER/BOX & TANPA GLOW) */}
+                          <div className="flex items-center gap-3">
                             {selectedMode === '2vBot' && slotIndex === 0 ? (
-                              <div className="text-[#0C1024] filter drop-shadow-[0_0_8px_rgba(255,209,59,0.9)] p-1">
-                                <Bot className="w-14 h-14 text-amber-600" />
+                              <div className="text-amber-400 p-1">
+                                <Bot className="w-14 h-14" />
                               </div>
                             ) : (
                               <>
                                 <button
                                   onClick={() => cycleAwayDevice(slotIndex, -1)}
-                                  className="p-1 text-slate-600 hover:text-[#0C1024] transition cursor-pointer"
+                                  className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
                                   title="Peranti Sebelumnya"
                                 >
                                   <ChevronLeft className="w-5 h-5" />
                                 </button>
 
-                                <div className="text-[#0C1024] filter drop-shadow-[0_0_8px_rgba(23,255,191,0.9)] p-1">
+                                <div className="text-white p-1">
                                   {dev.type === 'keyboard' && <Keyboard className="w-14 h-14" />}
                                   {dev.type === 'gamepad' && <Gamepad className="w-14 h-14" />}
-                                  {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-cyan-600" />}
-                                  {dev.type === 'bot' && <Bot className="w-14 h-14 text-amber-600" />}
+                                  {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-cyan-400" />}
+                                  {dev.type === 'bot' && <Bot className="w-14 h-14 text-amber-400" />}
                                 </div>
 
                                 <button
                                   onClick={() => cycleAwayDevice(slotIndex, 1)}
-                                  className="p-1 text-slate-600 hover:text-[#0C1024] transition cursor-pointer"
+                                  className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
                                   title="Peranti Selanjutnya"
                                 >
                                   <ChevronRight className="w-5 h-5" />
@@ -303,10 +303,10 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
                     if (isAddButtonSlot && awaySeats.length < 5) {
                       return (
-                        <div key={slotIndex} className="w-full py-3 flex justify-center border-b border-slate-400/30">
+                        <div key={slotIndex} className="w-full py-3.5 flex justify-center border-b border-white/5">
                           <button
                             onClick={addAwaySeat}
-                            className="flex items-center gap-1.5 px-3 py-1 bg-[#0C1024] text-[#17FFBF] hover:bg-[#151b38] transition cursor-pointer rounded-lg text-xs font-bold shadow"
+                            className="flex items-center gap-1.5 px-3 py-1 bg-[#1a232b] text-[#17FFBF] hover:bg-[#232e38] transition cursor-pointer border border-[#17FFBF]/30 rounded text-xs font-bold shadow"
                           >
                             <Plus className="w-4 h-4" />
                             <span>Tambah Player</span>
@@ -315,10 +315,10 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                       );
                     }
 
-                    // Large Dark Grey Controller Silhouettes (No Border)
+                    // Large Dark Slate Controller Silhouettes (No Border, No Glow)
                     return (
-                      <div key={slotIndex} className="w-full py-3.5 flex justify-center border-b border-slate-400/30">
-                        <Gamepad className="w-14 h-14 text-[#94A5C4]/60" />
+                      <div key={slotIndex} className="w-full py-4 flex justify-center border-b border-white/5">
+                        <Gamepad className="w-14 h-14 text-slate-700/50" />
                       </div>
                     );
                   })}
