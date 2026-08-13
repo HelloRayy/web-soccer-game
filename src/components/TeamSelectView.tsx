@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Keyboard, Gamepad, Smartphone, Bot, RotateCcw, Lock, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Keyboard, Gamepad, Smartphone, Bot, RotateCcw, Lock, CheckCircle2 } from 'lucide-react';
 import { DeviceType } from './ControllerSelectModal';
 
 export interface SquadPlayer {
@@ -74,11 +74,11 @@ interface TeamSelectViewProps {
   onConfirmStartGame: (p1Char: CharacterData, p2Char: CharacterData) => void;
 }
 
-// Auto role detection based on Y-coordinate percentage (Own Half: 42% - 92%)
+// Auto role detection based on Y-coordinate percentage (Own Half: 50% - 92%)
 const getAutoRole = (yPercent: number): { code: 'FWD' | 'MID' | 'DEF' | 'GK'; label: string; bg: string } => {
-  if (yPercent < 55) return { code: 'FWD', label: 'Penyerang', bg: 'bg-rose-500 text-white shadow-rose-500/30' };
-  if (yPercent < 72) return { code: 'MID', label: 'Gelandang', bg: 'bg-emerald-500 text-white shadow-emerald-500/30' };
-  if (yPercent < 86) return { code: 'DEF', label: 'Bek Bertahan', bg: 'bg-blue-600 text-white shadow-blue-600/30' };
+  if (yPercent < 62) return { code: 'FWD', label: 'Penyerang', bg: 'bg-rose-500 text-white shadow-rose-500/30' };
+  if (yPercent < 78) return { code: 'MID', label: 'Gelandang', bg: 'bg-emerald-500 text-white shadow-emerald-500/30' };
+  if (yPercent < 88) return { code: 'DEF', label: 'Bek Bertahan', bg: 'bg-blue-600 text-white shadow-blue-600/30' };
   return { code: 'GK', label: 'Penjaga Gawang', bg: 'bg-amber-400 text-slate-950 shadow-amber-400/30 font-black' };
 };
 
@@ -93,12 +93,12 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
   const awayPitchRef = useRef<HTMLDivElement>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
-  // Initial Player Spawn Position Nodes (Placed inside Own Half: Y >= 45%)
+  // Initial Player Spawn Position Nodes (Placed strictly inside Own Half: Y >= 50%)
   const [nodes, setNodes] = useState<PlayerNode[]>([
-    { id: 'p1', name: 'Player 1', devType: p1Device, team: 'home', x: 50, y: 48 },
-    { id: 'p1_sub', name: 'Player 2', devType: 'keyboard2', team: 'home', x: 30, y: 68 },
-    { id: 'p2', name: mode === '2vBot' ? 'AI Bot 1' : 'Player 1', devType: mode === '2vBot' ? 'ai_bot' : p2Device, team: 'away', x: 50, y: 48 },
-    { id: 'p2_sub', name: mode === '2vBot' ? 'AI Bot 2' : 'Player 2', devType: mode === '2vBot' ? 'ai_bot' : 'gamepad1', team: 'away', x: 70, y: 68 }
+    { id: 'p1', name: 'Player 1', devType: p1Device, team: 'home', x: 50, y: 55 },
+    { id: 'p1_sub', name: 'Player 2', devType: 'keyboard2', team: 'home', x: 30, y: 72 },
+    { id: 'p2', name: mode === '2vBot' ? 'AI Bot 1' : 'Player 1', devType: mode === '2vBot' ? 'ai_bot' : p2Device, team: 'away', x: 50, y: 55 },
+    { id: 'p2_sub', name: mode === '2vBot' ? 'AI Bot 2' : 'Player 2', devType: mode === '2vBot' ? 'ai_bot' : 'gamepad1', team: 'away', x: 70, y: 72 }
   ]);
 
   const p1Char = CHARACTERS[0];
@@ -107,14 +107,14 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
   // Reset positions to default
   const handleResetPositions = () => {
     setNodes([
-      { id: 'p1', name: 'Player 1', devType: p1Device, team: 'home', x: 50, y: 48 },
-      { id: 'p1_sub', name: 'Player 2', devType: 'keyboard2', team: 'home', x: 30, y: 68 },
-      { id: 'p2', name: mode === '2vBot' ? 'AI Bot 1' : 'Player 1', devType: mode === '2vBot' ? 'ai_bot' : p2Device, team: 'away', x: 50, y: 48 },
-      { id: 'p2_sub', name: mode === '2vBot' ? 'AI Bot 2' : 'Player 2', devType: mode === '2vBot' ? 'ai_bot' : 'gamepad1', team: 'away', x: 70, y: 68 }
+      { id: 'p1', name: 'Player 1', devType: p1Device, team: 'home', x: 50, y: 55 },
+      { id: 'p1_sub', name: 'Player 2', devType: 'keyboard2', team: 'home', x: 30, y: 72 },
+      { id: 'p2', name: mode === '2vBot' ? 'AI Bot 1' : 'Player 1', devType: mode === '2vBot' ? 'ai_bot' : p2Device, team: 'away', x: 50, y: 55 },
+      { id: 'p2_sub', name: mode === '2vBot' ? 'AI Bot 2' : 'Player 2', devType: mode === '2vBot' ? 'ai_bot' : 'gamepad1', team: 'away', x: 70, y: 72 }
     ]);
   };
 
-  // Keyboard navigation support for P1 (WASD) and P2 (Arrows) node movement (Own Half constrained)
+  // Keyboard navigation support for P1 (WASD) and P2 (Arrows) node movement (Own Half constrained: Y >= 50%)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const step = 4; // move step percentage
@@ -126,7 +126,7 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
             let newY = node.y;
             if (e.key === 'a' || e.key === 'A') newX = Math.max(10, node.x - step);
             if (e.key === 'd' || e.key === 'D') newX = Math.min(90, node.x + step);
-            if (e.key === 'w' || e.key === 'W') newY = Math.max(42, node.y - step);
+            if (e.key === 'w' || e.key === 'W') newY = Math.max(50, node.y - step);
             if (e.key === 's' || e.key === 'S') newY = Math.min(92, node.y + step);
             return { ...node, x: newX, y: newY };
           }
@@ -136,7 +136,7 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
             let newY = node.y;
             if (e.key === 'ArrowLeft') newX = Math.max(10, node.x - step);
             if (e.key === 'ArrowRight') newX = Math.min(90, node.x + step);
-            if (e.key === 'ArrowUp') newY = Math.max(42, node.y - step);
+            if (e.key === 'ArrowUp') newY = Math.max(50, node.y - step);
             if (e.key === 'ArrowDown') newY = Math.min(92, node.y + step);
             return { ...node, x: newX, y: newY };
           }
@@ -190,7 +190,7 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
     if (!pitchRef.current) return;
     const rect = pitchRef.current.getBoundingClientRect();
     const relX = Math.max(10, Math.min(90, ((info.point.x - rect.left) / rect.width) * 100));
-    const relY = Math.max(42, Math.min(92, ((info.point.y - rect.top) / rect.height) * 100));
+    const relY = Math.max(50, Math.min(92, ((info.point.y - rect.top) / rect.height) * 100));
 
     setNodes((prev) =>
       prev.map((n) => (n.id === id ? { ...n, x: relX, y: relY } : n))
@@ -272,35 +272,21 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
                   <rect x="33%" y="90%" width="34%" height="10%" />
                 </svg>
 
-                {/* RESTRICTED OPPONENT HALF UI OVERLAY (Top 42%) */}
-                <div className="absolute top-0 left-0 right-0 h-[42%] bg-gradient-to-b from-red-950/70 via-red-950/40 to-transparent backdrop-blur-[2px] border-b-2 border-dashed border-red-500/80 pointer-events-none z-10 flex flex-col items-center justify-center p-3 text-center">
-                  <div className="flex items-center gap-1.5 bg-red-950/90 border border-red-500/50 px-3.5 py-1.5 rounded-full text-red-300 shadow-xl">
-                    <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
-                    <span className="text-[11px] font-bold tracking-wide uppercase font-['Plus_Jakarta_Sans',sans-serif]">
-                      Daerah Lawan (Terkunci)
+                {/* OPPONENT HALF (TOP 50%) - CLEAN & ELEGANT TINT */}
+                <div className="absolute top-0 left-0 right-0 h-[50%] bg-[#05090c]/45 backdrop-blur-[1px] border-b-2 border-dashed border-white/20 pointer-events-none z-10 flex flex-col items-center justify-center">
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#090e12]/80 border border-white/10 text-slate-400 shadow-md">
+                    <Lock className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="text-[11px] font-semibold tracking-wider uppercase font-['Plus_Jakarta_Sans',sans-serif]">
+                      Daerah Lawan
                     </span>
                   </div>
-                  <span className="text-[10px] font-medium text-red-300/70 mt-1.5 tracking-normal">
-                    Pemain hanya dapat spawn di area tim sendiri
-                  </span>
-                </div>
-
-                {/* TACTICAL GUIDE WATERMARKS (YOUR TEAM HALF) */}
-                <div className="absolute top-[45%] left-3 text-[10px] font-black uppercase text-emerald-100/30 tracking-widest pointer-events-none z-0">
-                  Zona Serang (FWD)
-                </div>
-                <div className="absolute top-[60%] left-3 text-[10px] font-black uppercase text-emerald-100/30 tracking-widest pointer-events-none z-0">
-                  Zona Tengah (MID)
-                </div>
-                <div className="absolute top-[76%] left-3 text-[10px] font-black uppercase text-emerald-100/30 tracking-widest pointer-events-none z-0">
-                  Zona Bertahan (DEF / GK)
                 </div>
 
                 {/* VALID SPAWN ZONE INDICATOR (BOTTOM) */}
                 <div className="absolute bottom-2.5 left-0 right-0 flex justify-center pointer-events-none z-10">
                   <span className="text-[10px] font-bold text-emerald-200 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-500/40 shadow flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    Area Bebas Geser Posisi Pemain
+                    Area Spawn Tim Anda
                   </span>
                 </div>
 
@@ -481,35 +467,21 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
                   <rect x="33%" y="90%" width="34%" height="10%" />
                 </svg>
 
-                {/* RESTRICTED OPPONENT HALF UI OVERLAY (Top 42%) */}
-                <div className="absolute top-0 left-0 right-0 h-[42%] bg-gradient-to-b from-red-950/70 via-red-950/40 to-transparent backdrop-blur-[2px] border-b-2 border-dashed border-red-500/80 pointer-events-none z-10 flex flex-col items-center justify-center p-3 text-center">
-                  <div className="flex items-center gap-1.5 bg-red-950/90 border border-red-500/50 px-3.5 py-1.5 rounded-full text-red-300 shadow-xl">
-                    <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
-                    <span className="text-[11px] font-bold tracking-wide uppercase font-['Plus_Jakarta_Sans',sans-serif]">
-                      Daerah Lawan (Terkunci)
+                {/* OPPONENT HALF (TOP 50%) - CLEAN & ELEGANT TINT */}
+                <div className="absolute top-0 left-0 right-0 h-[50%] bg-[#05090c]/45 backdrop-blur-[1px] border-b-2 border-dashed border-white/20 pointer-events-none z-10 flex flex-col items-center justify-center">
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#090e12]/80 border border-white/10 text-slate-400 shadow-md">
+                    <Lock className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="text-[11px] font-semibold tracking-wider uppercase font-['Plus_Jakarta_Sans',sans-serif]">
+                      Daerah Lawan
                     </span>
                   </div>
-                  <span className="text-[10px] font-medium text-red-300/70 mt-1.5 tracking-normal">
-                    Pemain hanya dapat spawn di area tim sendiri
-                  </span>
-                </div>
-
-                {/* TACTICAL GUIDE WATERMARKS (YOUR TEAM HALF) */}
-                <div className="absolute top-[45%] left-3 text-[10px] font-black uppercase text-emerald-100/30 tracking-widest pointer-events-none z-0">
-                  Zona Serang (FWD)
-                </div>
-                <div className="absolute top-[60%] left-3 text-[10px] font-black uppercase text-emerald-100/30 tracking-widest pointer-events-none z-0">
-                  Zona Tengah (MID)
-                </div>
-                <div className="absolute top-[76%] left-3 text-[10px] font-black uppercase text-emerald-100/30 tracking-widest pointer-events-none z-0">
-                  Zona Bertahan (DEF / GK)
                 </div>
 
                 {/* VALID SPAWN ZONE INDICATOR (BOTTOM) */}
                 <div className="absolute bottom-2.5 left-0 right-0 flex justify-center pointer-events-none z-10">
                   <span className="text-[10px] font-bold text-emerald-200 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-500/40 shadow flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    Area Bebas Geser Posisi Pemain
+                    Area Spawn Tim Anda
                   </span>
                 </div>
 
