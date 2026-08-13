@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Swords, Bot, X } from 'lucide-react';
+import { Swords, Bot, X, Gamepad } from 'lucide-react';
 
 interface MatchModeModalProps {
   isOpen: boolean;
@@ -155,9 +155,10 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
             <div className="bg-[#1b201d] px-8 py-4 border-t border-white/10 flex justify-end items-center text-xs font-mono">
               <button
                 onClick={() => onSelectMode(selectedCard)}
-                className="py-2.5 px-6 clip-parallelogram bg-[#2563EB] hover:bg-[#3B82F6] text-white font-mono font-black text-xs tracking-wider transition cursor-pointer"
+                className="py-2.5 px-6 clip-parallelogram bg-[#2563EB] hover:bg-[#3B82F6] text-white font-mono font-black text-xs tracking-wider transition cursor-pointer flex items-center gap-2"
               >
-                SELECT MODE ➔
+                <Gamepad className="w-4 h-4" />
+                <span>SELECT MODE ➔</span>
               </button>
             </div>
           </motion.div>
