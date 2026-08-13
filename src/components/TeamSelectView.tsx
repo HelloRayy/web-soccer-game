@@ -40,19 +40,7 @@ export const CHARACTERS: CharacterData[] = [
     color: '#3B82F6',
     kitHex: '#3B82F6',
     stats: { speed: 92, shot: 95, defense: 60, dribble: 88 },
-    roster: [
-      { pos: 'GK', name: 'B. Samba', rating: 84 },
-      { pos: 'CB', name: 'D. Upamecano', rating: 86 },
-      { pos: 'CB', name: 'I. Konaté', rating: 80 },
-      { pos: 'LB', name: 'T. Hernández', rating: 85 },
-      { pos: 'RB', name: 'J. Clauss', rating: 83 },
-      { pos: 'DMF', name: 'N. Kanté', rating: 82 },
-      { pos: 'CMF', name: 'Y. Fofana', rating: 82 },
-      { pos: 'CMF', name: 'A. Rabiot', rating: 83 },
-      { pos: 'LWF', name: 'K. Coman', rating: 84 },
-      { pos: 'CF', name: 'O. Giroud', rating: 83 },
-      { pos: 'CF', name: 'R. Kolo Muani', rating: 85 }
-    ]
+    roster: []
   },
   {
     id: 'mint_playmaker',
@@ -65,19 +53,7 @@ export const CHARACTERS: CharacterData[] = [
     color: '#3B82F6',
     kitHex: '#3B82F6',
     stats: { speed: 89, shot: 88, defense: 75, dribble: 96 },
-    roster: [
-      { pos: 'GK', name: 'Ernando Ari', rating: 73 },
-      { pos: 'CB', name: 'Rizky Ridho', rating: 71 },
-      { pos: 'LB', name: 'N. Tjoe-A-On', rating: 74 },
-      { pos: 'RWF', name: 'Egy Maulana', rating: 72 },
-      { pos: 'LB', name: 'Pratama Arhan', rating: 72 },
-      { pos: 'CB', name: 'Justin Hubner', rating: 72 },
-      { pos: 'CF', name: 'Hokky Caraka', rating: 68 },
-      { pos: 'RMF', name: 'Witan Sulaeman', rating: 72 },
-      { pos: 'GK', name: 'Nadeo Argawi', rating: 73 },
-      { pos: 'DMF', name: 'Ivar Jenner', rating: 71 },
-      { pos: 'LWF', name: 'R. Oratmangoen', rating: 75 }
-    ]
+    roster: []
   }
 ];
 
@@ -104,29 +80,6 @@ const getAutoRole = (yPercent: number): { code: 'FWD' | 'MID' | 'DEF' | 'GK'; bg
   if (yPercent < 72) return { code: 'MID', bg: 'bg-[#10b981] text-white' };
   if (yPercent < 86) return { code: 'DEF', bg: 'bg-[#2563EB] text-white' };
   return { code: 'GK', bg: 'bg-[#FFD13B] text-[#05090C] font-bold' };
-};
-
-// Helper for Position Badge Styling (PES Gameplan Style)
-const getPosBadgeClass = (pos: string) => {
-  switch (pos) {
-    case 'GK':
-      return 'bg-[#FFD13B] text-[#05090C] font-black';
-    case 'CB':
-    case 'LB':
-    case 'RB':
-      return 'bg-[#2563EB] text-white font-bold';
-    case 'DMF':
-    case 'CMF':
-    case 'RMF':
-      return 'bg-[#10b981] text-white font-bold';
-    case 'CF':
-    case 'SS':
-    case 'LWF':
-    case 'RWF':
-      return 'bg-[#ef4444] text-white font-bold';
-    default:
-      return 'bg-slate-700 text-white font-bold';
-  }
 };
 
 export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
@@ -236,11 +189,11 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
       </button>
 
       {/* FULLSCREEN eFOOTBALL / PES TEAM SHEET CARDS (HOME LEFT vs AWAY RIGHT) */}
-      <div className="relative z-10 w-full h-[calc(100vh-90px)] my-auto mt-10 mb-10 px-2 sm:px-4 grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+      <div className="relative z-10 w-full h-[calc(100vh-85px)] my-auto mt-8 mb-12 px-2 sm:px-4 grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
         {/* HOME TEAM CARD (FRANCE) */}
-        <div className="bg-[#111513] border border-white/10 p-5 rounded-2xl shadow-2xl flex flex-col justify-between">
+        <div className="bg-[#111513] border border-white/10 p-5 rounded-2xl shadow-2xl flex flex-col justify-between h-full">
           {/* HEADER: FLAG + TEAM NAME + SUBHEADER */}
-          <div className="border-b border-white/10 pb-3 mb-4 flex justify-between items-center">
+          <div className="border-b border-white/10 pb-3 mb-3 flex justify-between items-center">
             <div className="flex items-center gap-3">
               <span className="text-3xl sm:text-4xl shadow">{p1Char.flag}</span>
               <div>
@@ -248,19 +201,26 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
                   {p1Char.name}
                 </h3>
                 <span className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider">
-                  Game Plan • HOME TEAM
+                  Spawn Setup • HOME TEAM
                 </span>
               </div>
             </div>
 
-            <div className="text-right font-mono">
+            <div className="flex items-center gap-2 font-mono">
               <span className="text-xs font-bold text-[#3B82F6] bg-blue-950/80 px-2.5 py-1 rounded border border-blue-500/30">
                 DEV: {p1Device.toUpperCase()}
               </span>
+              <button
+                onClick={handleResetPositions}
+                className="p-1.5 bg-[#171d1a] border border-white/10 hover:border-white/30 text-slate-400 hover:text-white rounded cursor-pointer transition"
+                title="Reset Posisi Default"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
-          {/* MAIN CARD BODY: PITCH (LEFT 7 COLS) + ROSTER LIST (RIGHT 5 COLS) */}
+          {/* MAIN CARD BODY: PITCH (LEFT 7 COLS) + CONNECTED PLAYERS ROSTER (RIGHT 5 COLS) */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch my-1 flex-1">
             {/* LEFT 7 COLS: FIELD PITCH WITH DRAGGABLE NODES */}
             <div className="sm:col-span-7 flex flex-col h-full">
@@ -330,34 +290,59 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
               </div>
             </div>
 
-            {/* RIGHT 5 COLS: STARTING SQUAD ROSTER LIST */}
-            <div className="sm:col-span-5 bg-[#0c100e] p-3 rounded-xl border border-white/10 flex flex-col justify-between font-mono h-full">
-              <div className="text-xs font-bold text-slate-200 border-b border-white/10 pb-2 mb-2 flex justify-between items-center">
-                <span>STARTING SQUAD</span>
-                <span className="text-[#3B82F6] font-mono font-bold text-[11px]">{p1Char.formation}</span>
+            {/* RIGHT 5 COLS: CONNECTED PLAYERS SQUAD ROSTER PANEL */}
+            <div className="sm:col-span-5 bg-[#0c100e] p-3.5 rounded-xl border border-white/10 flex flex-col justify-between font-mono h-full">
+              <div>
+                <div className="text-xs font-bold text-slate-200 border-b border-white/10 pb-2.5 mb-3 flex justify-between items-center">
+                  <span>CONNECTED PLAYERS</span>
+                  <span className="text-[#3B82F6] text-[10px] font-bold bg-blue-950/80 px-2 py-0.5 rounded border border-blue-500/30">
+                    {nodes.filter((n) => n.team === 'home').length} ACTIVE
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-2 overflow-y-auto max-h-[400px] lg:max-h-[calc(100vh-280px)] pr-1 custom-scrollbar">
+                  {nodes
+                    .filter((n) => n.team === 'home')
+                    .map((node) => {
+                      const role = getAutoRole(node.y);
+                      return (
+                        <div
+                          key={node.id}
+                          className="flex items-center justify-between p-2 bg-white/5 rounded-lg border border-white/10 hover:border-blue-500/40 transition"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-[#111513] border border-blue-500/60 flex items-center justify-center shrink-0">
+                              {renderDevIcon(node.devType)}
+                            </div>
+                            <div className="flex flex-col truncate">
+                              <span className="text-xs font-bold text-white truncate">{node.name}</span>
+                              <span className="text-[9px] text-slate-400 font-mono">
+                                POS: ({Math.round(node.x)}%, {Math.round(node.y)}%)
+                              </span>
+                            </div>
+                          </div>
+
+                          <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold shrink-0 ${role.bg}`}>
+                            {role.code}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
 
-              <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[420px] sm:max-h-[460px] lg:max-h-[calc(100vh-260px)] pr-1 custom-scrollbar text-xs">
-                {p1Char.roster.map((player, idx) => (
-                  <div key={idx} className="flex items-center justify-between py-1 px-2 bg-white/5 rounded border border-white/5 hover:bg-white/10 transition">
-                    <div className="flex items-center gap-2 truncate">
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] min-w-[30px] text-center ${getPosBadgeClass(player.pos)}`}>
-                        {player.pos}
-                      </span>
-                      <span className="text-slate-100 font-semibold truncate text-[11px]">{player.name}</span>
-                    </div>
-                    <span className="font-bold text-white text-[11px] ml-1">{player.rating}</span>
-                  </div>
-                ))}
+              <div className="mt-3 pt-2.5 border-t border-white/10 text-[10px] text-slate-400 flex justify-between items-center">
+                <span>SPAWN MODE: REAL-TIME</span>
+                <span className="text-emerald-400 font-bold">READY TO SPAWN</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* AWAY TEAM CARD (INDONESIA) */}
-        <div className="bg-[#111513] border border-white/10 p-5 rounded-2xl shadow-2xl flex flex-col justify-between">
+        <div className="bg-[#111513] border border-white/10 p-5 rounded-2xl shadow-2xl flex flex-col justify-between h-full">
           {/* HEADER: FLAG + TEAM NAME + SUBHEADER */}
-          <div className="border-b border-white/10 pb-3 mb-4 flex justify-between items-center">
+          <div className="border-b border-white/10 pb-3 mb-3 flex justify-between items-center">
             <div className="flex items-center gap-3">
               <span className="text-3xl sm:text-4xl shadow">{p2Char.flag}</span>
               <div>
@@ -365,19 +350,26 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
                   {p2Char.name}
                 </h3>
                 <span className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider">
-                  Game Plan • AWAY TEAM
+                  Spawn Setup • AWAY TEAM
                 </span>
               </div>
             </div>
 
-            <div className="text-right font-mono">
+            <div className="flex items-center gap-2 font-mono">
               <span className="text-xs font-bold text-amber-400 bg-amber-950/80 px-2.5 py-1 rounded border border-amber-500/30">
                 {mode === '2vBot' ? 'AUTO BOT 🤖' : `DEV: ${p2Device.toUpperCase()}`}
               </span>
+              <button
+                onClick={handleResetPositions}
+                className="p-1.5 bg-[#171d1a] border border-white/10 hover:border-white/30 text-slate-400 hover:text-white rounded cursor-pointer transition"
+                title="Reset Posisi Default"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
-          {/* MAIN CARD BODY: PITCH (LEFT 7 COLS) + ROSTER LIST (RIGHT 5 COLS) */}
+          {/* MAIN CARD BODY: PITCH (LEFT 7 COLS) + CONNECTED PLAYERS ROSTER (RIGHT 5 COLS) */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch my-1 flex-1">
             {/* LEFT 7 COLS: FIELD PITCH WITH DRAGGABLE NODES */}
             <div className="sm:col-span-7 flex flex-col h-full">
@@ -449,48 +441,72 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
               </div>
             </div>
 
-            {/* RIGHT 5 COLS: STARTING SQUAD ROSTER LIST */}
-            <div className="sm:col-span-5 bg-[#0c100e] p-3 rounded-xl border border-white/10 flex flex-col justify-between font-mono h-full">
-              <div className="text-xs font-bold text-slate-200 border-b border-white/10 pb-2 mb-2 flex justify-between items-center">
-                <span>STARTING SQUAD</span>
-                <span className="text-amber-400 font-mono font-bold text-[11px]">{p2Char.formation}</span>
+            {/* RIGHT 5 COLS: CONNECTED PLAYERS SQUAD ROSTER PANEL */}
+            <div className="sm:col-span-5 bg-[#0c100e] p-3.5 rounded-xl border border-white/10 flex flex-col justify-between font-mono h-full">
+              <div>
+                <div className="text-xs font-bold text-slate-200 border-b border-white/10 pb-2.5 mb-3 flex justify-between items-center">
+                  <span>CONNECTED PLAYERS</span>
+                  <span className="text-amber-400 text-[10px] font-bold bg-amber-950/80 px-2 py-0.5 rounded border border-amber-500/30">
+                    {nodes.filter((n) => n.team === 'away').length} ACTIVE
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-2 overflow-y-auto max-h-[400px] lg:max-h-[calc(100vh-280px)] pr-1 custom-scrollbar">
+                  {nodes
+                    .filter((n) => n.team === 'away')
+                    .map((node) => {
+                      const role = getAutoRole(node.y);
+                      return (
+                        <div
+                          key={node.id}
+                          className="flex items-center justify-between p-2 bg-white/5 rounded-lg border border-white/10 hover:border-amber-500/40 transition"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-[#111513] border border-amber-400/60 flex items-center justify-center shrink-0">
+                              {renderDevIcon(node.devType)}
+                            </div>
+                            <div className="flex flex-col truncate">
+                              <span className="text-xs font-bold text-white truncate">{node.name}</span>
+                              <span className="text-[9px] text-slate-400 font-mono">
+                                POS: ({Math.round(node.x)}%, {Math.round(node.y)}%)
+                              </span>
+                            </div>
+                          </div>
+
+                          <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold shrink-0 ${role.bg}`}>
+                            {role.code}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
 
-              <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[420px] sm:max-h-[460px] lg:max-h-[calc(100vh-260px)] pr-1 custom-scrollbar text-xs">
-                {p2Char.roster.map((player, idx) => (
-                  <div key={idx} className="flex items-center justify-between py-1 px-2 bg-white/5 rounded border border-white/5 hover:bg-white/10 transition">
-                    <div className="flex items-center gap-2 truncate">
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] min-w-[30px] text-center ${getPosBadgeClass(player.pos)}`}>
-                        {player.pos}
-                      </span>
-                      <span className="text-slate-100 font-semibold truncate text-[11px]">{player.name}</span>
-                    </div>
-                    <span className="font-bold text-white text-[11px] ml-1">{player.rating}</span>
-                  </div>
-                ))}
+              <div className="mt-3 pt-2.5 border-t border-white/10 text-[10px] text-slate-400 flex justify-between items-center">
+                <span>SPAWN MODE: REAL-TIME</span>
+                <span className="text-emerald-400 font-bold">READY TO SPAWN</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* FIXED BOTTOM ACTION BAR - CONSOLE DESIGN SYSTEM */}
-      <div className="fixed bottom-4 left-6 right-6 z-30 flex justify-between items-center bg-[#111513]/90 backdrop-blur border border-white/10 px-6 py-3 font-mono text-xs shadow-2xl">
-        <div className="flex items-center gap-6 text-slate-300 font-bold">
-          <span>P1 MOVE: W / A / S / D</span>
-          {mode === '1v1' && <span>P2 MOVE: ◄ / ▲ / ▼ / ►</span>}
-        </div>
-
-        <button
-          onClick={() => onConfirmStartGame(p1Char, p2Char)}
-          className="py-2.5 px-8 clip-parallelogram bg-[#2563EB] hover:bg-[#3B82F6] text-white font-mono font-black text-xs tracking-wider transition cursor-pointer flex items-center gap-2.5 shadow-lg shadow-blue-500/20"
-        >
-          <span className="w-4.5 h-4.5 rounded-full bg-[#10b981] text-white font-black flex items-center justify-center text-[10px] shadow leading-none border border-emerald-400/50">
-            A
-          </span>
-          <span>KICK OFF MATCH ➔</span>
-        </button>
+      {/* FLOATING CORNER MOVEMENT HINTS (BOTTOM-LEFT) */}
+      <div className="fixed bottom-4 left-6 z-30 bg-[#111513]/90 backdrop-blur border border-white/10 px-4 py-2 rounded-xl text-xs font-mono font-bold text-slate-300 shadow-2xl flex items-center gap-4">
+        <span>P1 MOVE: W / A / S / D</span>
+        {mode === '1v1' && <span className="border-l border-white/10 pl-4">P2 MOVE: ◄ / ▲ / ▼ / ►</span>}
       </div>
+
+      {/* FLOATING CORNER KICK-OFF BUTTON (BOTTOM-RIGHT) */}
+      <button
+        onClick={() => onConfirmStartGame(p1Char, p2Char)}
+        className="fixed bottom-4 right-6 z-30 py-3 px-8 clip-parallelogram bg-[#2563EB] hover:bg-[#3B82F6] text-white font-mono font-black text-xs tracking-wider transition cursor-pointer flex items-center gap-2.5 shadow-2xl shadow-blue-500/30 border border-blue-400/40"
+      >
+        <span className="w-4.5 h-4.5 rounded-full bg-[#10b981] text-white font-black flex items-center justify-center text-[10px] shadow leading-none border border-emerald-400/50">
+          A
+        </span>
+        <span>KICK OFF MATCH ➔</span>
+      </button>
     </div>
   );
 };
