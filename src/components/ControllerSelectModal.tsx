@@ -127,18 +127,18 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 80 }}
             transition={{ type: 'spring', stiffness: 900, damping: 45 }}
-            className="bg-[#0b1015] border border-white/10 max-w-4xl w-full p-4 sm:p-5 shadow-2xl flex flex-col gap-4 text-[#E2F1F8] relative max-h-[95vh] overflow-y-auto rounded-none"
+            className="bg-[#151917] border border-white/10 max-w-4xl w-full p-4 sm:p-5 shadow-2xl flex flex-col gap-4 text-[#E2F1F8] relative max-h-[95vh] overflow-y-auto rounded-none"
           >
-            {/* SLEEK AAA CONSOLE BOARD (BOARD CONTAINER SHIFTED UP, NO HEADER PADDING WASTE) */}
-            <div className="w-full bg-[#131a21] border border-white/10 shadow-2xl overflow-hidden relative text-slate-100">
-              {/* HEADER BAR: Home (Left) | Away (Right) WITH INTEGRATED CLOSE BUTTON */}
-              <div className="relative grid grid-cols-2 text-white font-bold text-2xl py-3 bg-[#0a0f14] border-b border-white/10">
+            {/* SLEEK AAA CONSOLE BOARD (100% CONSISTENT PALETTE WITH MATCHMODE MODAL) */}
+            <div className="w-full bg-[#111513] border border-white/10 shadow-2xl overflow-hidden relative text-slate-100">
+              {/* HEADER BAR: Home (Left) | Away (Right) - DARK FOREST SLATE BANNER */}
+              <div className="relative grid grid-cols-2 text-white font-bold text-2xl py-3 bg-[#1b201d] border-b border-white/10">
                 <div className="text-center font-['Outfit',sans-serif] tracking-tight">Home</div>
                 <div className="text-center font-['Outfit',sans-serif] tracking-tight">Away</div>
 
                 <button
                   onClick={onClose}
-                  className="absolute top-1/2 -translate-y-1/2 right-3 p-1.5 bg-[#172029] hover:bg-[#222e3b] border border-white/10 text-slate-400 hover:text-white transition cursor-pointer"
+                  className="absolute top-1/2 -translate-y-1/2 right-3 p-2 bg-[#0c100e] border border-white/10 text-slate-400 hover:text-white transition cursor-pointer"
                   title="Tutup Modal"
                 >
                   <X className="w-5 h-5" />
@@ -146,7 +146,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
               </div>
 
               {/* 2-COLUMN BOARD BODY WITH CLEAN ROW DIVIDERS */}
-              <div className="relative w-full p-4 grid grid-cols-2 divide-x divide-white/10 max-h-[340px] sm:max-h-[380px] overflow-y-auto custom-scrollbar bg-[#11171d]">
+              <div className="relative w-full p-4 grid grid-cols-2 divide-x divide-white/10 max-h-[340px] sm:max-h-[380px] overflow-y-auto custom-scrollbar bg-[#111513]">
                 {/* LEFT COLUMN: HOME SEATS */}
                 <div className="flex flex-col items-center">
                   {ALL_5_SLOTS.map((slotIndex) => {
@@ -159,7 +159,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                       const userNum = slotIndex * 2 + 1; // User 1, User 3, User 5...
 
                       return (
-                        <div key={slotIndex} className="w-full flex flex-col items-center py-3 border-b border-white/5 relative group">
+                        <div key={slotIndex} className="w-full flex flex-col items-center py-3 border-b border-white/10 relative group">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-[11px] font-bold text-[#17FFBF] tracking-wide font-mono">
                               User {userNum}
@@ -187,8 +187,8 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                             <div className="text-white p-1">
                               {dev.type === 'keyboard' && <Keyboard className="w-14 h-14" />}
                               {dev.type === 'gamepad' && <Gamepad className="w-14 h-14" />}
-                              {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-cyan-400" />}
-                              {dev.type === 'bot' && <Bot className="w-14 h-14 text-amber-400" />}
+                              {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-[#17FFBF]" />}
+                              {dev.type === 'bot' && <Bot className="w-14 h-14 text-[#FFD13B]" />}
                             </div>
 
                             <button
@@ -205,10 +205,10 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
                     if (isAddButtonSlot && homeSeats.length < 5) {
                       return (
-                        <div key={slotIndex} className="w-full py-3.5 flex justify-center border-b border-white/5">
+                        <div key={slotIndex} className="w-full py-3.5 flex justify-center border-b border-white/10">
                           <button
                             onClick={addHomeSeat}
-                            className="flex items-center gap-1.5 px-3 py-1 bg-[#1a232b] text-[#17FFBF] hover:bg-[#232e38] transition cursor-pointer border border-[#17FFBF]/30 rounded text-xs font-bold shadow"
+                            className="flex items-center gap-1.5 px-3 py-1 bg-[#18211d]/50 border border-dashed border-[#17FFBF]/40 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer rounded text-xs font-bold shadow"
                           >
                             <Plus className="w-4 h-4" />
                             <span>Tambah Player</span>
@@ -219,8 +219,8 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
                     // Large Dark Slate Controller Silhouettes (No Border, No Glow)
                     return (
-                      <div key={slotIndex} className="w-full py-4 flex justify-center border-b border-white/5">
-                        <Gamepad className="w-14 h-14 text-slate-700/50" />
+                      <div key={slotIndex} className="w-full py-4 flex justify-center border-b border-white/10">
+                        <Gamepad className="w-14 h-14 text-white/10" />
                       </div>
                     );
                   })}
@@ -240,7 +240,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                       const userNum = slotIndex === 0 && selectedMode === '2vBot' ? 'AI Bot' : `User ${slotIndex * 2 + 2}`;
 
                       return (
-                        <div key={slotIndex} className="w-full flex flex-col items-center py-3 border-b border-white/5 relative group">
+                        <div key={slotIndex} className="w-full flex flex-col items-center py-3 border-b border-white/10 relative group">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-[11px] font-bold text-[#17FFBF] tracking-wide font-mono">
                               {userNum}
@@ -258,7 +258,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                           {/* LARGE CONTROLLER ICON (BESAR, CRISP WHITE, TANPA BORDER/BOX & TANPA GLOW) */}
                           <div className="flex items-center gap-3">
                             {selectedMode === '2vBot' && slotIndex === 0 ? (
-                              <div className="text-amber-400 p-1">
+                              <div className="text-[#FFD13B] p-1">
                                 <Bot className="w-14 h-14" />
                               </div>
                             ) : (
@@ -274,8 +274,8 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                                 <div className="text-white p-1">
                                   {dev.type === 'keyboard' && <Keyboard className="w-14 h-14" />}
                                   {dev.type === 'gamepad' && <Gamepad className="w-14 h-14" />}
-                                  {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-cyan-400" />}
-                                  {dev.type === 'bot' && <Bot className="w-14 h-14 text-amber-400" />}
+                                  {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-[#17FFBF]" />}
+                                  {dev.type === 'bot' && <Bot className="w-14 h-14 text-[#FFD13B]" />}
                                 </div>
 
                                 <button
@@ -294,10 +294,10 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
                     if (isAddButtonSlot && awaySeats.length < 5) {
                       return (
-                        <div key={slotIndex} className="w-full py-3.5 flex justify-center border-b border-white/5">
+                        <div key={slotIndex} className="w-full py-3.5 flex justify-center border-b border-white/10">
                           <button
                             onClick={addAwaySeat}
-                            className="flex items-center gap-1.5 px-3 py-1 bg-[#1a232b] text-[#17FFBF] hover:bg-[#232e38] transition cursor-pointer border border-[#17FFBF]/30 rounded text-xs font-bold shadow"
+                            className="flex items-center gap-1.5 px-3 py-1 bg-[#18211d]/50 border border-dashed border-[#17FFBF]/40 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer rounded text-xs font-bold shadow"
                           >
                             <Plus className="w-4 h-4" />
                             <span>Tambah Player</span>
@@ -308,8 +308,8 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
                     // Large Dark Slate Controller Silhouettes (No Border, No Glow)
                     return (
-                      <div key={slotIndex} className="w-full py-4 flex justify-center border-b border-white/5">
-                        <Gamepad className="w-14 h-14 text-slate-700/50" />
+                      <div key={slotIndex} className="w-full py-4 flex justify-center border-b border-white/10">
+                        <Gamepad className="w-14 h-14 text-white/10" />
                       </div>
                     );
                   })}
@@ -348,8 +348,8 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
               </div>
             )}
 
-            {/* BOTTOM ACTION BAR (INSIDE MODAL) */}
-            <div className="flex items-center justify-between gap-4 pt-2 border-t border-white/10 font-mono">
+            {/* BOTTOM ACTION BAR (INSIDE MODAL - 100% MATCHMODE MODAL STYLE) */}
+            <div className="bg-[#1b201d] px-6 py-4 border-t border-white/10 flex items-center justify-between font-mono">
               <div className="flex items-center gap-4 text-xs">
                 <span className="text-slate-400 flex items-center gap-1.5">
                   <kbd className="px-2 py-1 bg-white/10 rounded text-[#17FFBF] font-bold">W/A/S/D</kbd> P1 Keyboard
@@ -361,7 +361,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
               <button
                 onClick={() => onConfirmStart(p1Device, p2Device)}
-                className="py-3.5 px-8 clip-parallelogram bg-[#17FFBF] hover:bg-[#4BFFCE] text-[#05090C] font-mono font-black text-sm tracking-wider shadow-lg shadow-[#17FFBF]/30 transition cursor-pointer flex items-center gap-2"
+                className="py-2.5 px-6 clip-parallelogram bg-[#17FFBF] hover:bg-[#4BFFCE] text-[#05090C] font-mono font-black text-xs tracking-wider transition cursor-pointer flex items-center gap-2"
               >
                 <Play className="w-4 h-4 fill-current" />
                 <span>CONFIRM SIDES ➔</span>
