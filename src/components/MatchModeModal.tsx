@@ -157,7 +157,7 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
                 onClick={() => onSelectMode(selectedCard)}
                 className="py-2.5 px-6 clip-parallelogram bg-[#2563EB] hover:bg-[#3B82F6] text-white font-mono font-black text-xs tracking-wider transition cursor-pointer flex items-center gap-2"
               >
-                <span className="w-4 h-4 rounded-full bg-white text-[#2563EB] font-black flex items-center justify-center text-[10px] shadow leading-none">
+                <span className="w-4.5 h-4.5 rounded-full bg-[#10b981] text-white font-black flex items-center justify-center text-[10px] shadow leading-none border border-emerald-400/50">
                   A
                 </span>
                 <span>SELECT MODE ➔</span>
@@ -168,7 +168,7 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
           {/* AUTHENTIC PES CONSOLE INFO CONTROL BAR (OUTSIDE DIV CONTAINER - FIXED AT BOTTOM LEFT SCREEN) */}
           <div className="fixed bottom-6 left-8 z-50 flex items-center gap-6 text-xs font-sans text-slate-200 select-none pointer-events-auto">
             <div className="flex items-center gap-1.5">
-              <span className="w-5 h-5 rounded-full bg-[#17FFBF] text-[#05090C] font-black flex items-center justify-center text-[10px] shadow">
+              <span className="w-5 h-5 rounded-full bg-[#10b981] text-white font-black flex items-center justify-center text-[10px] shadow">
                 A
               </span>
               <span className="font-semibold text-white">Confirm</span>
