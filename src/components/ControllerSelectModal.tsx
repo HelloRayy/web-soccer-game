@@ -8,16 +8,16 @@ export type DeviceType = 'keyboard1' | 'keyboard2' | 'gamepad0' | 'gamepad1' | '
 interface ControllerOption {
   id: DeviceType;
   name: string;
+  badge: string;
   type: 'keyboard' | 'gamepad' | 'smartphone' | 'bot';
 }
 
 const DEVICE_OPTIONS: ControllerOption[] = [
-  { id: 'keyboard1', name: 'KEYBOARD WASD', type: 'keyboard' },
-  { id: 'keyboard2', name: 'KEYBOARD PANAH', type: 'keyboard' },
-  { id: 'gamepad0', name: 'GAMEPAD USB 1', type: 'gamepad' },
-  { id: 'gamepad1', name: 'GAMEPAD USB 2', type: 'gamepad' },
-  { id: 'hp_remote', name: 'HP REMOTE WIRELESS', type: 'smartphone' },
-  { id: 'ai_bot', name: 'AI ENEMY BOT', type: 'bot' },
+  { id: 'keyboard1', name: 'KEYBOARD WASD', badge: 'WASD', type: 'keyboard' },
+  { id: 'keyboard2', name: 'KEYBOARD PANAH', badge: 'PANAH', type: 'keyboard' },
+  { id: 'gamepad0', name: 'GAMEPAD 1', badge: 'USB 1', type: 'gamepad' },
+  { id: 'gamepad1', name: 'GAMEPAD 2', badge: 'USB 2', type: 'gamepad' },
+  { id: 'hp_remote', name: 'HP REMOTE WIRELESS', badge: 'HP REMOTE', type: 'smartphone' },
 ];
 
 interface ControllerSelectModalProps {
@@ -175,7 +175,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                             )}
                           </div>
 
-                          {/* LARGE CONTROLLER ICON (SOLID WHITE HIGH-CONTRAST ICON) */}
+                          {/* LARGE CONTROLLER ICON (SOLID WHITE HIGH-CONTRAST ICON WITH INSTANT NAME BADGE) */}
                           <div className="flex flex-col items-center gap-1.5">
                             <div className="flex items-center gap-3">
                               <button
@@ -186,7 +186,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                                 <ChevronLeft className="w-5 h-5" />
                               </button>
 
-                              <div className="text-white p-1">
+                              <div className="text-white p-1 flex flex-col items-center">
                                 {dev.type === 'keyboard' && <Keyboard className="w-14 h-14" />}
                                 {dev.type === 'gamepad' && <Gamepad className="w-14 h-14" />}
                                 {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-[#3B82F6]" />}
@@ -202,11 +202,16 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                               </button>
                             </div>
 
+                            {/* DEVICE NAME BADGE (Instant visual feedback on arrow click) */}
+                            <span className="text-[10px] font-mono font-bold text-slate-200 bg-[#1e293b] px-2.5 py-0.5 rounded border border-white/10 shadow-sm uppercase tracking-wider">
+                              {dev.name}
+                            </span>
+
                             {/* HP REMOTE INTERACTIVE BUTTON */}
                             {dev.type === 'smartphone' && (
                               <button
                                 onClick={() => setShowQRPopover(true)}
-                                className="flex items-center gap-1.5 px-3 py-1 bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer text-[11px] font-semibold shadow rounded"
+                                className="flex items-center gap-1.5 px-3 py-1 bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer text-[11px] font-semibold shadow rounded mt-0.5"
                               >
                                 <Smartphone className="w-3.5 h-3.5" />
                                 <span>Connect</span>
@@ -249,7 +254,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                     if (isActiveSeat) {
                       const devIdx = awaySeats[slotIndex];
                       const dev = selectedMode === '2vBot' && slotIndex === 0
-                        ? { id: 'ai_bot' as DeviceType, name: 'AI ENEMY BOT', type: 'bot' as const }
+                        ? { id: 'ai_bot' as DeviceType, name: 'AI ENEMY BOT', badge: 'BOT', type: 'bot' as const }
                         : (DEVICE_OPTIONS[devIdx] || DEVICE_OPTIONS[1]);
                       const userNum = slotIndex === 0 && selectedMode === '2vBot' ? 'AI Bot' : `User ${slotIndex * 2 + 2}`;
 
@@ -269,11 +274,11 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                             )}
                           </div>
 
-                          {/* LARGE CONTROLLER ICON (SOLID WHITE HIGH-CONTRAST ICON) */}
+                          {/* LARGE CONTROLLER ICON (SOLID WHITE HIGH-CONTRAST ICON WITH INSTANT NAME BADGE) */}
                           <div className="flex flex-col items-center gap-1.5">
                             <div className="flex items-center gap-3">
                               {selectedMode === '2vBot' && slotIndex === 0 ? (
-                                <div className="text-amber-400 p-1">
+                                <div className="text-amber-400 p-1 flex flex-col items-center">
                                   <Bot className="w-14 h-14" />
                                 </div>
                               ) : (
@@ -286,7 +291,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                                     <ChevronLeft className="w-5 h-5" />
                                   </button>
 
-                                  <div className="text-white p-1">
+                                  <div className="text-white p-1 flex flex-col items-center">
                                     {dev.type === 'keyboard' && <Keyboard className="w-14 h-14" />}
                                     {dev.type === 'gamepad' && <Gamepad className="w-14 h-14" />}
                                     {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-[#3B82F6]" />}
@@ -304,11 +309,16 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                               )}
                             </div>
 
+                            {/* DEVICE NAME BADGE (Instant visual feedback on arrow click) */}
+                            <span className="text-[10px] font-mono font-bold text-slate-200 bg-[#1e293b] px-2.5 py-0.5 rounded border border-white/10 shadow-sm uppercase tracking-wider">
+                              {dev.name}
+                            </span>
+
                             {/* HP REMOTE INTERACTIVE BUTTON */}
                             {dev.type === 'smartphone' && (
                               <button
                                 onClick={() => setShowQRPopover(true)}
-                                className="flex items-center gap-1.5 px-3 py-1 bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer text-[11px] font-semibold shadow rounded"
+                                className="flex items-center gap-1.5 px-3 py-1 bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer text-[11px] font-semibold shadow rounded mt-0.5"
                               >
                                 <Smartphone className="w-3.5 h-3.5" />
                                 <span>Connect</span>
