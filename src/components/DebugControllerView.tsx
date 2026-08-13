@@ -26,9 +26,9 @@ export const DebugControllerView: React.FC = () => {
   // Real-Time Mobile Controller Telemetry
   const [remoteGamepadState, setRemoteGamepadState] = useState<GamepadState>(createEmptyGamepadState());
 
-  // Use physical USB gamepad if active, otherwise use remote HP gamepad
-  const physicalGamepad0 = physicalGamepads[0];
-  const physicalGamepad1 = physicalGamepads[1];
+  // Use physical USB gamepad if active in any slot, otherwise use remote HP gamepad
+  const physicalGamepad0 = physicalGamepads[0] || Object.values(physicalGamepads)[0];
+  const physicalGamepad1 = physicalGamepads[1] || (Object.values(physicalGamepads).length > 1 ? Object.values(physicalGamepads)[1] : undefined);
   const activeGamepadState = physicalGamepad0 || remoteGamepadState;
 
   // Local Wi-Fi IP helper for QR code

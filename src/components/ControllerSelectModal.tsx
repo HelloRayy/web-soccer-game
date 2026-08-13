@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Gamepad, Keyboard, Smartphone, Bot, ChevronRight, ChevronLeft, Play, X, Plus } from 'lucide-react';
+import { Gamepad, Keyboard, Smartphone, Bot, ChevronRight, ChevronLeft, Play, X, Plus, CheckCircle2, AlertCircle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { useGamepad } from '../hooks/useGamepad';
 
 export type DeviceType = 'keyboard1' | 'keyboard2' | 'gamepad0' | 'gamepad1' | 'hp_remote' | 'ai_bot';
 
@@ -10,13 +11,14 @@ interface ControllerOption {
   name: string;
   badge: string;
   type: 'keyboard' | 'gamepad' | 'smartphone' | 'bot';
+  gpIndex?: number;
 }
 
 const DEVICE_OPTIONS: ControllerOption[] = [
   { id: 'keyboard1', name: 'KEYBOARD WASD', badge: 'WASD', type: 'keyboard' },
   { id: 'keyboard2', name: 'KEYBOARD PANAH', badge: 'PANAH', type: 'keyboard' },
-  { id: 'gamepad0', name: 'GAMEPAD 1', badge: 'USB 1', type: 'gamepad' },
-  { id: 'gamepad1', name: 'GAMEPAD 2', badge: 'USB 2', type: 'gamepad' },
+  { id: 'gamepad0', name: 'GAMEPAD 1', badge: 'USB 1', type: 'gamepad', gpIndex: 0 },
+  { id: 'gamepad1', name: 'GAMEPAD 2', badge: 'USB 2', type: 'gamepad', gpIndex: 1 },
   { id: 'hp_remote', name: 'HP REMOTE WIRELESS', badge: 'HP REMOTE', type: 'smartphone' },
 ];
 
@@ -39,12 +41,62 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
   connectedPeerCount = 0,
   selectedMode,
 }) => {
+  const { gamepads, triggerVibration } = useGamepad();
+  const prevGpConnectedRef = useRef<{ [index: number]: boolean }>({});
+
   // Up to 5 Seats for Home & Away
   const [homeSeats, setHomeSeats] = useState<number[]>([0]); // Device indices for Home players
   const [awaySeats, setAwaySeats] = useState<number[]>([1]); // Device indices for Away players
 
   const [ipAddress, setIpAddress] = useState<string>(() => window.location.hostname || '192.168.1.100');
   const [showQRPopover, setShowQRPopover] = useState<boolean>(false);
+
+  // Haptic feedback & Gamepad Input Navigation in Modal
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Check if new gamepad connected and vibrate
+    Object.values(gamepads).forEach((gp) => {
+      if (gp && gp.connected && !prevGpConnectedRef.current[gp.index]) {
+        prevGpConnectedRef.current[gp.index] = true;
+        triggerVibration(gp.index, 0.4, 0.6, 250);
+      }
+    });
+
+    // Gamepad button debounce tracker
+    let lastNavTime = 0;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (now - lastNavTime < 220) return;
+
+      // Check Gamepad 0 (Home Controller)
+      const gp0 = gamepads[0] || Object.values(gamepads)[0];
+      if (gp0) {
+        if (gp0.axes.leftStickX < -0.6 || gp0.buttons.lb) {
+          cycleHomeDevice(0, -1);
+          lastNavTime = now;
+        } else if (gp0.axes.leftStickX > 0.6 || gp0.buttons.rb) {
+          cycleHomeDevice(0, 1);
+          lastNavTime = now;
+        }
+      }
+
+      // Check Gamepad 1 (Away Controller)
+      const gp1 = gamepads[1];
+      if (gp1 && selectedMode === '1v1') {
+        if (gp1.axes.leftStickX < -0.6 || gp1.buttons.lb) {
+          cycleAwayDevice(0, -1);
+          lastNavTime = now;
+        } else if (gp1.axes.leftStickX > 0.6 || gp1.buttons.rb) {
+          cycleAwayDevice(0, 1);
+          lastNavTime = now;
+        }
+      }
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, [isOpen, gamepads, selectedMode]);
 
   // Keyboard navigation for Primary Players (Home P1 & Away P2)
   useEffect(() => {
@@ -214,6 +266,23 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                                 {homeDev.name}
                               </span>
 
+                              {homeDev.type === 'gamepad' && (() => {
+                                const gp = gamepads[homeDev.gpIndex ?? 0] || (homeDev.gpIndex === 0 ? Object.values(gamepads)[0] : undefined);
+                                return gp && gp.connected ? (
+                                  <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 text-[9px] font-bold mt-1 shadow">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                    <span className="truncate max-w-[120px]">
+                                      {gp.id.includes('Xbox') ? 'Xbox 360' : gp.id.includes('Wireless') ? 'Wireless' : 'Stik Aktif'}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-500/40 text-amber-300 text-[9px] font-bold mt-1 animate-pulse">
+                                    <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />
+                                    <span>Tekan tombol stik...</span>
+                                  </div>
+                                );
+                              })()}
+
                               {homeDev.type === 'smartphone' && (
                                 <button
                                   onClick={() => setShowQRPopover(true)}
@@ -290,6 +359,23 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                               <span className="text-[10px] font-mono font-semibold text-slate-300 uppercase tracking-widest">
                                 {awayDev.name}
                               </span>
+
+                              {awayDev.type === 'gamepad' && (() => {
+                                const gp = gamepads[awayDev.gpIndex ?? 1] || (awayDev.gpIndex === 1 && Object.values(gamepads).length > 1 ? Object.values(gamepads)[1] : undefined);
+                                return gp && gp.connected ? (
+                                  <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 text-[9px] font-bold mt-1 shadow">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                    <span className="truncate max-w-[120px]">
+                                      {gp.id.includes('Xbox') ? 'Xbox 360' : gp.id.includes('Wireless') ? 'Wireless' : 'Stik Aktif'}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-500/40 text-amber-300 text-[9px] font-bold mt-1 animate-pulse">
+                                    <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />
+                                    <span>Tekan tombol stik...</span>
+                                  </div>
+                                );
+                              })()}
 
                               {awayDev.type === 'smartphone' && (
                                 <button

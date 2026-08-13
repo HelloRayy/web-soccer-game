@@ -158,24 +158,24 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
             if (keys.has('arrowdown')) dy += speed;
           }
 
-          // 3. Gamepad Analog Stick & D-Pad Inputs
-          let gpIndex = -1;
-          if (node.devType === 'gamepad0') gpIndex = 0;
-          else if (node.devType === 'gamepad1') gpIndex = 1;
+          // 3. Gamepad Analog Stick & D-Pad Inputs (With Fallback Auto-Detection)
+          let gp: Gamepad | null = null;
+          if (node.devType === 'gamepad0') {
+            gp = rawGamepads[0] || rawGamepads.find((g) => g && g.connected) || null;
+          } else if (node.devType === 'gamepad1') {
+            gp = rawGamepads[1] || (rawGamepads.filter((g) => g && g.connected).length > 1 ? rawGamepads.filter((g) => g && g.connected)[1] : null);
+          }
 
-          if (gpIndex >= 0 && rawGamepads[gpIndex]) {
-            const gp = rawGamepads[gpIndex];
-            if (gp) {
-              const leftStickX = Math.abs(gp.axes[0] || 0) > 0.15 ? gp.axes[0] : 0;
-              const leftStickY = Math.abs(gp.axes[1] || 0) > 0.15 ? gp.axes[1] : 0;
-              const dpadLeft = gp.buttons[14]?.pressed ? -1 : 0;
-              const dpadRight = gp.buttons[15]?.pressed ? 1 : 0;
-              const dpadUp = gp.buttons[12]?.pressed ? -1 : 0;
-              const dpadDown = gp.buttons[13]?.pressed ? 1 : 0;
+          if (gp && gp.connected) {
+            const leftStickX = Math.abs(gp.axes[0] || 0) > 0.12 ? gp.axes[0] : 0;
+            const leftStickY = Math.abs(gp.axes[1] || 0) > 0.12 ? gp.axes[1] : 0;
+            const dpadLeft = gp.buttons[14]?.pressed ? -1 : 0;
+            const dpadRight = gp.buttons[15]?.pressed ? 1 : 0;
+            const dpadUp = gp.buttons[12]?.pressed ? -1 : 0;
+            const dpadDown = gp.buttons[13]?.pressed ? 1 : 0;
 
-              dx += (leftStickX + dpadLeft + dpadRight) * speed;
-              dy += (leftStickY + dpadUp + dpadDown) * speed;
-            }
+            dx += (leftStickX + dpadLeft + dpadRight) * speed;
+            dy += (leftStickY + dpadUp + dpadDown) * speed;
           }
 
           if (dx !== 0 || dy !== 0) {
