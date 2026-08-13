@@ -253,8 +253,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
           x: showMatchModeModal || showControllerSelectModal ? -80 : 0,
           opacity: showMatchModeModal || showControllerSelectModal ? 0 : 1,
         }}
-        transition={{ type: 'spring', stiffness: 900, damping: 45 }}
-        className="relative z-10 my-auto w-full max-w-2xl flex flex-col items-start justify-center pl-6 sm:pl-16 md:pl-24"
+        transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+        style={{ willChange: 'transform, opacity' }}
+        className="relative z-10 my-auto w-full max-w-2xl flex flex-col items-start justify-center pl-6 sm:pl-16 md:pl-24 will-change-transform transform-gpu"
       >
         <div className="flex flex-col gap-5 sm:gap-6 w-full max-w-xl relative">
           {MENU_ITEMS.map((item) => {

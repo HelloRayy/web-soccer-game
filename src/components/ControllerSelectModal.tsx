@@ -121,13 +121,14 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 bg-[#05090C]/96 backdrop-blur-lg flex items-center justify-center p-4 sm:p-6 select-none font-['Poppins',sans-serif]">
+        <div className="fixed inset-0 z-50 bg-[#05090C]/94 flex items-center justify-center p-4 sm:p-6 select-none font-['Poppins',sans-serif]">
           <motion.div
             initial={{ opacity: 0, x: 80 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 80 }}
-            transition={{ type: 'spring', stiffness: 900, damping: 45 }}
-            className="bg-[#151917] border border-white/10 max-w-4xl w-full p-4 sm:p-5 shadow-2xl flex flex-col gap-4 text-[#E2F1F8] relative max-h-[95vh] overflow-y-auto rounded-none"
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            style={{ willChange: 'transform, opacity' }}
+            className="bg-[#151917] border border-white/10 max-w-4xl w-full p-4 sm:p-5 shadow-2xl flex flex-col gap-4 text-[#E2F1F8] relative max-h-[95vh] overflow-y-auto rounded-none will-change-transform transform-gpu"
           >
             {/* SLEEK AAA CONSOLE BOARD (100% CONSISTENT PALETTE WITH MATCHMODE MODAL) */}
             <div className="w-full bg-[#111513] border border-white/10 shadow-2xl overflow-hidden relative text-slate-100">

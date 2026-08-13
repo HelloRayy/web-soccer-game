@@ -39,14 +39,15 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 bg-[#05090C]/96 backdrop-blur-lg flex items-center justify-center p-4 sm:p-6 select-none font-['Poppins',sans-serif]">
-          {/* 100% PES 26 CONSOLE CARD SELECTOR MODAL CONTAINER WITH DIRECTIONAL SLIDE MOTION */}
+        <div className="fixed inset-0 z-50 bg-[#05090C]/94 flex items-center justify-center p-4 sm:p-6 select-none font-['Poppins',sans-serif]">
+          {/* 100% PES 26 CONSOLE CARD SELECTOR MODAL CONTAINER WITH GPU-ACCELERATED HARDWARE SLIDE MOTION */}
           <motion.div
             initial={{ opacity: 0, x: 80 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 80 }}
-            transition={{ type: 'spring', stiffness: 900, damping: 45 }}
-            className="bg-[#151917] border border-white/10 max-w-4xl w-full shadow-2xl flex flex-col overflow-hidden relative font-['Poppins',sans-serif]"
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            style={{ willChange: 'transform, opacity' }}
+            className="bg-[#151917] border border-white/10 max-w-4xl w-full shadow-2xl flex flex-col overflow-hidden relative font-['Poppins',sans-serif] will-change-transform transform-gpu"
           >
             
             {/* TOP HEADER SECTION (Presisi PES 26 Console UI) */}
