@@ -44,16 +44,13 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
       <div className="bg-[#151917] border border-white/10 max-w-4xl w-full shadow-2xl flex flex-col overflow-hidden relative font-['Poppins',sans-serif]">
         
         {/* TOP HEADER SECTION (Presisi PES 26 Console UI) */}
-        <div className="bg-[#1b201d] p-6 sm:p-8 border-b border-white/10 flex flex-col gap-2 relative">
+        <div className="bg-[#1b201d] p-6 sm:p-8 border-b border-white/10 flex flex-col gap-1.5 relative">
           <button
             onClick={onClose}
             className="absolute top-6 right-6 p-2 bg-[#0c100e] border border-white/10 text-slate-400 hover:text-white transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-[#17FFBF] font-bold tracking-wider uppercase">PES26 MATCH SELECTION</span>
-          </div>
           <h2 className="text-3xl sm:text-4xl font-bold text-white font-['Outfit',sans-serif] tracking-tight">
             Match Mode
           </h2>
@@ -69,17 +66,17 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
           <div
             onMouseEnter={() => setSelectedCard('1v1')}
             onClick={() => onSelectMode('1v1')}
-            className={`cursor-pointer transition-all duration-150 p-6 flex flex-col items-center text-center gap-4 relative group rounded-none ${
+            className={`cursor-pointer transition-colors duration-100 p-6 flex flex-col items-center text-center gap-4 relative group rounded-none border ${
               selectedCard === '1v1'
-                ? 'bg-[#d8e2de] text-[#09100d] shadow-2xl shadow-[#17FFBF]/20 scale-[1.02]'
-                : 'bg-[#171d1a] text-white border border-white/10 hover:border-white/30 opacity-80 hover:opacity-100'
+                ? 'bg-[#d8e2de] text-[#09100d] border-[#17FFBF] shadow-xl'
+                : 'bg-[#171d1a] text-white border-white/10 hover:border-white/30 opacity-75 hover:opacity-100'
             }`}
           >
             {/* INNER LOGO CARD GRAPHIC */}
             <div
               className={`w-full h-44 rounded-2xl flex flex-col items-center justify-center p-4 border transition-colors ${
                 selectedCard === '1v1'
-                  ? 'bg-gradient-to-br from-[#0c1310] via-[#101b17] to-[#0a120f] border-[#17FFBF]/60 text-white'
+                  ? 'bg-gradient-to-br from-[#0c1310] via-[#101b17] to-[#0a120f] border-[#17FFBF]/80 text-white'
                   : 'bg-[#0e1311] border-white/10 text-slate-300'
               }`}
             >
@@ -102,7 +99,7 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
                 Player vs Player
               </h3>
               <p className={`text-xs max-w-xs font-normal leading-relaxed ${
-                selectedCard === '1v1' ? 'text-slate-700' : 'text-slate-400'
+                selectedCard === '1v1' ? 'text-slate-800 font-medium' : 'text-slate-400'
               }`}>
                 Play local & multi-remote match with your friends in PVP arena.
               </p>
@@ -113,10 +110,10 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
           <div
             onMouseEnter={() => setSelectedCard('2vBot')}
             onClick={() => onSelectMode('2vBot')}
-            className={`cursor-pointer transition-all duration-150 p-6 flex flex-col items-center text-center gap-4 relative group rounded-none ${
+            className={`cursor-pointer transition-colors duration-100 p-6 flex flex-col items-center text-center gap-4 relative group rounded-none border ${
               selectedCard === '2vBot'
-                ? 'bg-[#d8e2de] text-[#09100d] shadow-2xl shadow-[#17FFBF]/20 scale-[1.02]'
-                : 'bg-[#171d1a] text-white border border-white/10 hover:border-white/30 opacity-80 hover:opacity-100'
+                ? 'bg-[#d8e2de] text-[#09100d] border-[#17FFBF] shadow-xl'
+                : 'bg-[#171d1a] text-white border-white/10 hover:border-white/30 opacity-75 hover:opacity-100'
             }`}
           >
             {/* INNER LOGO CARD GRAPHIC */}
