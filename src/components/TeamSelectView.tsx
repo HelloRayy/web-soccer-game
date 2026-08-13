@@ -56,7 +56,7 @@ export const CHARACTERS: CharacterData[] = [
   }
 ];
 
-interface PlayerNode {
+export interface PlayerNode {
   id: string;
   name: string;
   devType: DeviceType;
@@ -70,7 +70,7 @@ interface TeamSelectViewProps {
   p1Device: DeviceType;
   p2Device: DeviceType;
   onBackToControllers: () => void;
-  onConfirmStartGame: (p1Char: CharacterData, p2Char: CharacterData) => void;
+  onConfirmStartGame: (p1Char: CharacterData, p2Char: CharacterData, customSpawns: PlayerNode[]) => void;
 }
 
 // Auto role detection based on Y-coordinate percentage (Own Half: 50% - 92%)
@@ -698,7 +698,7 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
 
       {/* FLOATING CORNER KICK-OFF BUTTON (BOTTOM-RIGHT) */}
       <button
-        onClick={() => onConfirmStartGame(p1Char, p2Char)}
+        onClick={() => onConfirmStartGame(p1Char, p2Char, nodes)}
         className="fixed bottom-4 right-6 z-30 py-3.5 px-8 clip-parallelogram bg-[#2563EB] hover:bg-[#3B82F6] text-white font-['Plus_Jakarta_Sans',sans-serif] font-black text-xs tracking-wider transition cursor-pointer flex items-center gap-2.5 shadow-2xl shadow-blue-500/30 border border-blue-400/40 hover:scale-105 active:scale-95"
       >
         <span className="w-5 h-5 rounded-full bg-[#10b981] text-white font-black flex items-center justify-center text-[10px] shadow leading-none border border-emerald-400/50">

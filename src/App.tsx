@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { SplashScreen } from './components/SplashScreen';
 import { LobbyView } from './components/LobbyView';
-import { TeamSelectView, CharacterData } from './components/TeamSelectView';
+import { TeamSelectView, CharacterData, PlayerNode } from './components/TeamSelectView';
 import { GameView } from './components/GameView';
 import { MobileControllerView } from './components/MobileControllerView';
 import { DebugControllerView } from './components/DebugControllerView';
@@ -17,6 +17,7 @@ const MainGameContainer: React.FC = () => {
   const [p2Device, setP2Device] = useState<DeviceType>('keyboard2');
   const [p1Character, setP1Character] = useState<CharacterData | null>(null);
   const [p2Character, setP2Character] = useState<CharacterData | null>(null);
+  const [customSpawns, setCustomSpawns] = useState<PlayerNode[] | null>(null);
 
   const [peerRoomId, setPeerRoomId] = useState('8492');
   const [isPeerConnected, setIsPeerConnected] = useState(false);
@@ -56,10 +57,11 @@ const MainGameContainer: React.FC = () => {
     setCurrentView('team-select');
   };
 
-  // Step 2: Confirm Teams/Characters in TeamSelectView ➔ Launch Match Engine
-  const handleConfirmTeamsAndStart = (p1Char: CharacterData, p2Char: CharacterData) => {
+  // Step 2: Confirm Teams/Characters in TeamSelectView ➔ Launch Match Engine with Custom Spawns
+  const handleConfirmTeamsAndStart = (p1Char: CharacterData, p2Char: CharacterData, spawns: PlayerNode[]) => {
     setP1Character(p1Char);
     setP2Character(p2Char);
+    setCustomSpawns(spawns);
     setCurrentView('game');
   };
 
@@ -99,6 +101,7 @@ const MainGameContainer: React.FC = () => {
       selectedMode={selectedMode}
       p1Device={p1Device}
       p2Device={p2Device}
+      customSpawns={customSpawns}
       onReturnToLobby={handleReturnToLobby}
       peerRoomId={peerRoomId}
       isPeerConnected={isPeerConnected}

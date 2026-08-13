@@ -10,15 +10,36 @@ import { HUDOverlay } from './HUDOverlay';
 import { MatchMode, MatchRulesState, GamepadState } from '../types/game';
 import { HostPeerService } from '../services/peerService';
 import { DeviceType } from './ControllerSelectModal';
+import { PlayerNode } from './TeamSelectView';
 
 // Large Virtual Stadium World Dimensions
 const WORLD_WIDTH = 2200;
 const WORLD_HEIGHT = 1350;
 
+// Coordinate Mapping from Setup View (Vertical) to Match Stadium Canvas (Horizontal)
+function mapSpawnCoords(node: PlayerNode, worldWidth: number, worldHeight: number): { x: number; y: number } {
+  if (node.team === 'home') {
+    // Width X in setup (10% - 90%) -> Stadium Flank Y (0 Top to 1350 Bottom)
+    const gameY = Math.max(120, Math.min(worldHeight - 120, (node.x / 100) * worldHeight));
+    // Depth Y in setup (50% Center Line -> 92% Goal Line) -> Stadium Length X (1040 down to 260)
+    const depthFrac = Math.max(0, Math.min(1, (node.y - 50) / 42));
+    const gameX = Math.max(260, Math.min(worldWidth * 0.5 - 60, (worldWidth * 0.5 - 60) - depthFrac * (worldWidth * 0.36)));
+    return { x: gameX, y: gameY };
+  } else {
+    // Away team (attacks to left). Mirror setup width X so right flank corresponds to bottom flank in stadium
+    const gameY = Math.max(120, Math.min(worldHeight - 120, (1 - node.x / 100) * worldHeight));
+    // Depth Y in setup (50% Center Line -> 92% Goal Line) -> Stadium Length X (1160 up to 1940)
+    const depthFrac = Math.max(0, Math.min(1, (node.y - 50) / 42));
+    const gameX = Math.max(worldWidth * 0.5 + 60, Math.min(worldWidth - 260, (worldWidth * 0.5 + 60) + depthFrac * (worldWidth * 0.36)));
+    return { x: gameX, y: gameY };
+  }
+}
+
 interface GameViewProps {
   selectedMode?: '1v1' | '2vBot';
   p1Device?: DeviceType;
   p2Device?: DeviceType;
+  customSpawns?: PlayerNode[] | null;
   onReturnToLobby?: () => void;
   peerRoomId?: string;
   isPeerConnected?: boolean;
@@ -29,6 +50,7 @@ export const GameView: React.FC<GameViewProps> = ({
   selectedMode = '1v1',
   p1Device = 'keyboard1',
   p2Device = 'keyboard2',
+  customSpawns = null,
   onReturnToLobby,
   peerRoomId = '8492',
   isPeerConnected = false,
@@ -102,18 +124,46 @@ export const GameView: React.FC<GameViewProps> = ({
       p.hasPossession = false;
     });
 
-    if (selectedMode === '1v1') {
-      if (players.length >= 2) {
-        players[0].reset(WORLD_WIDTH * 0.42, WORLD_HEIGHT * 0.5);
-        players[1].reset(WORLD_WIDTH * 0.58, WORLD_HEIGHT * 0.5);
-      }
+    if (customSpawns && customSpawns.length > 0) {
+      // Map customized spawn positions directly to each player
+      const homeNodes = customSpawns.filter((n) => n.team === 'home');
+      const awayNodes = customSpawns.filter((n) => n.team === 'away');
+
+      let homeIdx = 0;
+      let awayIdx = 0;
+
+      players.forEach((player) => {
+        if (player.team === 'home') {
+          const node = homeNodes[homeIdx] || homeNodes[0];
+          if (node) {
+            const coords = mapSpawnCoords(node, WORLD_WIDTH, WORLD_HEIGHT);
+            player.reset(coords.x, coords.y);
+          }
+          homeIdx++;
+        } else {
+          const node = awayNodes[awayIdx] || awayNodes[0];
+          if (node) {
+            const coords = mapSpawnCoords(node, WORLD_WIDTH, WORLD_HEIGHT);
+            player.reset(coords.x, coords.y);
+          }
+          awayIdx++;
+        }
+      });
     } else {
-      // 2 vs BOT Mode
-      if (players.length >= 4) {
-        players[0].reset(WORLD_WIDTH * 0.38, WORLD_HEIGHT * 0.42);
-        players[1].reset(WORLD_WIDTH * 0.38, WORLD_HEIGHT * 0.58);
-        players[2].reset(WORLD_WIDTH * 0.62, WORLD_HEIGHT * 0.42);
-        players[3].reset(WORLD_WIDTH * 0.62, WORLD_HEIGHT * 0.58);
+      // Default Fallback Formations
+      if (selectedMode === '1v1') {
+        if (players.length >= 2) {
+          players[0].reset(WORLD_WIDTH * 0.42, WORLD_HEIGHT * 0.5);
+          players[1].reset(WORLD_WIDTH * 0.58, WORLD_HEIGHT * 0.5);
+        }
+      } else {
+        // 2 vs BOT Mode
+        if (players.length >= 4) {
+          players[0].reset(WORLD_WIDTH * 0.38, WORLD_HEIGHT * 0.42);
+          players[1].reset(WORLD_WIDTH * 0.38, WORLD_HEIGHT * 0.58);
+          players[2].reset(WORLD_WIDTH * 0.62, WORLD_HEIGHT * 0.42);
+          players[3].reset(WORLD_WIDTH * 0.62, WORLD_HEIGHT * 0.58);
+        }
       }
     }
 
@@ -121,9 +171,9 @@ export const GameView: React.FC<GameViewProps> = ({
       x: WORLD_WIDTH * 0.5,
       y: WORLD_HEIGHT * 0.5
     };
-  }, [selectedMode]);
+  }, [selectedMode, customSpawns]);
 
-  // Re-instantiate players whenever selectedMode changes
+  // Re-instantiate players whenever selectedMode or customSpawns changes
   useEffect(() => {
     if (selectedMode === '1v1') {
       playersRef.current = [
