@@ -200,8 +200,8 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                               </button>
                             </div>
 
-                            {/* DEVICE NAME BADGE (Instant visual feedback on arrow click) */}
-                            <span className="text-[10px] font-mono font-bold text-slate-200 bg-[#1e293b] px-2.5 py-0.5 rounded border border-white/10 shadow-sm uppercase tracking-wider">
+                            {/* DEVICE NAME LABEL (CLEAN TEXT LABEL WITHOUT BACKGROUND/BORDER) */}
+                            <span className="text-[11px] font-mono font-semibold text-slate-300 uppercase tracking-widest">
                               {dev.name}
                             </span>
 
@@ -307,8 +307,8 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                               )}
                             </div>
 
-                            {/* DEVICE NAME BADGE (Instant visual feedback on arrow click) */}
-                            <span className="text-[10px] font-mono font-bold text-slate-200 bg-[#1e293b] px-2.5 py-0.5 rounded border border-white/10 shadow-sm uppercase tracking-wider">
+                            {/* DEVICE NAME LABEL (CLEAN TEXT LABEL WITHOUT BACKGROUND/BORDER) */}
+                            <span className="text-[11px] font-mono font-semibold text-slate-300 uppercase tracking-widest">
                               {dev.name}
                             </span>
 
