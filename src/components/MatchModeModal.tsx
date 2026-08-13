@@ -39,35 +39,35 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 bg-[#060a14]/94 flex items-center justify-center p-4 sm:p-6 select-none font-['Poppins',sans-serif]">
-          {/* 100% PES 2021 CONSOLE CARD SELECTOR MODAL CONTAINER WITH MIDNIGHT NAVY PALETTE */}
+        <div className="fixed inset-0 z-50 bg-[#05090C]/94 flex items-center justify-center p-4 sm:p-6 select-none font-['Poppins',sans-serif]">
+          {/* 100% PES CONSOLE CARD SELECTOR MODAL CONTAINER WITH NEUTRAL DARK GRAPHITE PALETTE */}
           <motion.div
             initial={{ opacity: 0, x: 80 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 80 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
             style={{ willChange: 'transform, opacity' }}
-            className="bg-[#111728] border border-white/10 max-w-4xl w-full shadow-2xl flex flex-col overflow-hidden relative font-['Poppins',sans-serif] will-change-transform transform-gpu"
+            className="bg-[#151917] border border-white/10 max-w-4xl w-full shadow-2xl flex flex-col overflow-hidden relative font-['Poppins',sans-serif] will-change-transform transform-gpu"
           >
             
-            {/* TOP HEADER SECTION (Presisi PES 2021 Midnight Navy) */}
-            <div className="bg-[#1a253d] p-6 sm:p-8 border-b border-white/10 flex flex-col gap-1.5 relative">
+            {/* TOP HEADER SECTION */}
+            <div className="bg-[#1b201d] p-6 sm:p-8 border-b border-white/10 flex flex-col gap-1.5 relative">
               <button
                 onClick={onClose}
-                className="absolute top-6 right-6 p-2 bg-[#0d1322] border border-white/10 text-slate-400 hover:text-white transition cursor-pointer"
+                className="absolute top-6 right-6 p-2 bg-[#0c100e] border border-white/10 text-slate-400 hover:text-white transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
               <h2 className="text-3xl sm:text-4xl font-bold text-white font-['Outfit',sans-serif] tracking-tight">
                 Match Mode
               </h2>
-              <p className="text-sm text-slate-300 font-normal">
+              <p className="text-sm text-slate-400 font-normal">
                 Select the type of match mode you want to use in Kick Off.
               </p>
             </div>
 
             {/* CENTER CARDS BODY: 2 HORIZONTAL SELECTOR CARDS */}
-            <div className="p-6 sm:p-10 grid grid-cols-1 sm:grid-cols-2 gap-6 bg-[#0e1424]">
+            <div className="p-6 sm:p-10 grid grid-cols-1 sm:grid-cols-2 gap-6 bg-[#111513]">
               
               {/* CARD 1: PLAYER VS PLAYER */}
               <div
@@ -75,25 +75,25 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
                 onClick={() => onSelectMode('1v1')}
                 className={`cursor-pointer transition-all duration-150 p-6 flex flex-col items-center text-center gap-4 relative group rounded-none border ${
                   selectedCard === '1v1'
-                    ? 'bg-[#1a253d] text-white border-2 border-[#00F5B4] shadow-lg shadow-[#00F5B4]/10'
-                    : 'bg-[#131928] text-white border-white/10 hover:border-white/30 opacity-75 hover:opacity-100'
+                    ? 'bg-[#18231e] text-white border-2 border-[#17FFBF] shadow-lg shadow-[#17FFBF]/10'
+                    : 'bg-[#171d1a] text-white border-white/10 hover:border-white/30 opacity-75 hover:opacity-100'
                 }`}
               >
                 {/* INNER LOGO CARD GRAPHIC */}
                 <div
                   className={`w-full h-44 rounded-2xl flex flex-col items-center justify-center p-4 border transition-colors ${
                     selectedCard === '1v1'
-                      ? 'bg-gradient-to-br from-[#0c1426] via-[#121c33] to-[#0a1020] border-[#00F5B4]/80 text-white'
-                      : 'bg-[#0d1322] border-white/10 text-slate-300'
+                      ? 'bg-gradient-to-br from-[#0c1511] via-[#12201a] to-[#09100d] border-[#17FFBF]/80 text-white'
+                      : 'bg-[#0e1311] border-white/10 text-slate-300'
                   }`}
                 >
                   <div className="w-12 h-12 rounded-full border-2 border-current flex items-center justify-center mb-2">
-                    <Swords className="w-6 h-6 text-[#00F5B4]" />
+                    <Swords className="w-6 h-6 text-[#17FFBF]" />
                   </div>
                   <span className="text-xl font-black italic tracking-tighter font-['Outfit',sans-serif] uppercase">
                     KICK OFF
                   </span>
-                  <span className="text-xs font-mono font-bold tracking-widest text-[#00F5B4] mt-0.5">
+                  <span className="text-xs font-mono font-bold tracking-widest text-[#17FFBF] mt-0.5">
                     PLAYER VS PLAYER
                   </span>
                 </div>
@@ -115,16 +115,16 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
                 onClick={() => onSelectMode('2vBot')}
                 className={`cursor-pointer transition-all duration-150 p-6 flex flex-col items-center text-center gap-4 relative group rounded-none border ${
                   selectedCard === '2vBot'
-                    ? 'bg-[#1a253d] text-white border-2 border-[#00F5B4] shadow-lg shadow-[#00F5B4]/10'
-                    : 'bg-[#131928] text-white border-white/10 hover:border-white/30 opacity-75 hover:opacity-100'
+                    ? 'bg-[#18231e] text-white border-2 border-[#17FFBF] shadow-lg shadow-[#17FFBF]/10'
+                    : 'bg-[#171d1a] text-white border-white/10 hover:border-white/30 opacity-75 hover:opacity-100'
                 }`}
               >
                 {/* INNER LOGO CARD GRAPHIC */}
                 <div
                   className={`w-full h-44 rounded-2xl flex flex-col items-center justify-center p-4 border transition-colors ${
                     selectedCard === '2vBot'
-                      ? 'bg-gradient-to-br from-[#0c1426] via-[#121c33] to-[#0a1020] border-[#00F5B4]/80 text-white'
-                      : 'bg-[#0d1322] border-white/10 text-slate-300'
+                      ? 'bg-gradient-to-br from-[#0c1511] via-[#12201a] to-[#09100d] border-[#17FFBF]/80 text-white'
+                      : 'bg-[#0e1311] border-white/10 text-slate-300'
                   }`}
                 >
                   <div className="w-12 h-12 rounded-full border-2 border-current flex items-center justify-center mb-2">
@@ -152,10 +152,10 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
             </div>
 
             {/* BOTTOM HELPER BAR */}
-            <div className="bg-[#1a253d] px-8 py-4 border-t border-white/10 flex justify-end items-center text-xs font-mono">
+            <div className="bg-[#1b201d] px-8 py-4 border-t border-white/10 flex justify-end items-center text-xs font-mono">
               <button
                 onClick={() => onSelectMode(selectedCard)}
-                className="py-2.5 px-6 clip-parallelogram bg-[#00F5B4] hover:bg-[#34FFC8] text-[#081020] font-mono font-black text-xs tracking-wider transition cursor-pointer"
+                className="py-2.5 px-6 clip-parallelogram bg-[#17FFBF] hover:bg-[#4BFFCE] text-[#05090C] font-mono font-black text-xs tracking-wider transition cursor-pointer"
               >
                 SELECT MODE ➔
               </button>

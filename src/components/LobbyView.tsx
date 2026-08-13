@@ -121,15 +121,15 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
   };
 
   return (
-    <div className="relative w-screen h-screen select-none overflow-hidden font-['Inter',sans-serif] text-slate-100 flex flex-col justify-between p-6 sm:p-10 bg-[#2546D8]">
+    <div className="relative w-screen h-screen select-none overflow-hidden font-['Inter',sans-serif] text-slate-100 flex flex-col justify-between p-6 sm:p-10 bg-[#070b0e]">
       
-      {/* PES 2021 ROYAL BLUE BASE WITH RED CORNER ACCENT PATTERNS */}
-      <div className="absolute top-0 left-0 w-48 h-48 bg-[#D90429] opacity-80 pointer-events-none z-0" />
-      <div className="absolute bottom-0 right-0 w-60 h-60 bg-[#D90429] opacity-75 pointer-events-none z-0" />
+      {/* VIBRANT MESH BACKGROUND GRADIENT BLOBS */}
+      <div className="absolute top-1/4 -left-24 w-[650px] h-[650px] bg-gradient-to-br from-[#10E894]/30 via-[#00E676]/15 to-transparent rounded-full blur-[140px] pointer-events-none z-0" />
+      <div className="absolute bottom-1/4 -right-24 w-[650px] h-[650px] bg-gradient-to-tl from-[#00E676]/25 via-[#17FFBF]/15 to-transparent rounded-full blur-[140px] pointer-events-none z-0" />
 
-      {/* BACKGROUND VIGNETTE GRADIENT (Authentic PES 2021 Left Dark Overlay) */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0a1020] via-[#0a1020]/80 to-transparent z-0 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0a1020]/85 via-transparent to-[#0a1020]/60 z-0 pointer-events-none" />
+      {/* BACKGROUND VIGNETTE GRADIENT */}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#030608] via-[#030608]/85 to-transparent z-0 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#030608]/90 via-transparent to-[#030608]/70 z-0 pointer-events-none" />
 
       {/* System Modals */}
       <QRCodeModal
