@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Swords, Shield, Zap, Target, CheckCircle2, ChevronLeft, ChevronRight, Play, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowLeft, Check, Play } from 'lucide-react';
 import { DeviceType } from './ControllerSelectModal';
 
 export interface CharacterData {
@@ -26,8 +26,8 @@ export const CHARACTERS: CharacterData[] = [
     club: 'RED CYBER FC',
     role: 'POWER FORWARD',
     avatar: '⚡',
-    color: '#FF4655',
-    kitHex: '#FF4655',
+    color: '#3B82F6',
+    kitHex: '#3B82F6',
     stats: { speed: 92, shot: 95, defense: 60, dribble: 88 }
   },
   {
@@ -36,8 +36,8 @@ export const CHARACTERS: CharacterData[] = [
     club: 'ELECTRIC MINT FC',
     role: 'TACTICAL PLAYMAKER',
     avatar: '⚽',
-    color: '#17FFBF',
-    kitHex: '#17FFBF',
+    color: '#3B82F6',
+    kitHex: '#3B82F6',
     stats: { speed: 89, shot: 88, defense: 75, dribble: 96 }
   },
   {
@@ -46,8 +46,8 @@ export const CHARACTERS: CharacterData[] = [
     club: 'BLUE SHIELD FC',
     role: 'DEFENSIVE TANK',
     avatar: '🛡️',
-    color: '#00D8F6',
-    kitHex: '#00D8F6',
+    color: '#3B82F6',
+    kitHex: '#3B82F6',
     stats: { speed: 78, shot: 82, defense: 96, dribble: 75 }
   },
   {
@@ -133,48 +133,53 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
   };
 
   return (
-    <div className="relative w-screen h-screen bg-[#060D17] bg-stadium-pattern text-[#E2F1F8] flex flex-col justify-between p-6 sm:p-10 select-none overflow-hidden font-['Inter',sans-serif]">
-      {/* TOP HEADER */}
-      <div className="relative z-10 w-full flex justify-between items-center">
+    <div className="relative w-screen h-screen bg-[#070b0e] text-[#E2F1F8] flex flex-col justify-between p-6 sm:p-10 select-none overflow-hidden font-['Inter',sans-serif]">
+      {/* TOP HEADER - DARK OBSIDIAN CONSOLE BANNER */}
+      <div className="relative z-10 w-full flex justify-between items-center bg-[#111513] border border-white/10 p-4 shadow-2xl">
         <button
           onClick={onBackToControllers}
-          className="flex items-center gap-2 bg-[#0A1526] border border-[#142840] hover:border-[#17FFBF] text-slate-300 hover:text-white px-4 py-2 font-mono text-xs font-bold cursor-pointer transition"
+          className="flex items-center gap-2 bg-[#151917] border border-white/10 hover:border-white/30 text-slate-300 hover:text-white px-4 py-2 font-mono text-xs font-bold cursor-pointer transition"
         >
-          <ArrowLeft className="w-4 h-4" /> BACK TO CONTROLLERS
+          <ArrowLeft className="w-4 h-4" />
+          <span>BACK TO CONTROLLERS</span>
         </button>
 
         <div className="flex flex-col items-center">
-          <h2 className="text-2xl sm:text-4xl font-black italic tracking-tighter text-white font-['Plus_Jakarta_Sans',sans-serif] uppercase">
+          <h2 className="text-xl sm:text-3xl font-black italic tracking-tighter text-white font-['Outfit',sans-serif] uppercase">
             CHARACTER & TEAM SELECT ({mode.toUpperCase()})
           </h2>
-          <span className="text-xs font-mono text-[#17FFBF] tracking-widest uppercase">
+          <span className="text-xs font-mono text-[#3B82F6] tracking-widest uppercase font-bold mt-0.5">
             PES SPLIT-SCREEN ARENA
           </span>
         </div>
 
-        <div className="text-xs font-mono font-bold text-slate-400">
+        <div className="text-xs font-mono font-bold text-slate-400 bg-white/5 px-3 py-1.5 border border-white/10">
           STEP 2 OF 2
         </div>
       </div>
 
       {/* SPLIT SCREEN CARDS (P1 HOME LEFT vs P2 AWAY RIGHT) */}
       <div className="relative z-10 my-auto grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl mx-auto">
-        {/* PLAYER 1 (HOME / RED-CYAN TEAM) */}
-        <div className="bg-[#0A1526] border-2 border-[#17FFBF]/60 p-6 flex flex-col justify-between relative clip-parallelogram shadow-xl">
-          <div className="flex justify-between items-center border-b border-[#142840] pb-3 mb-4">
-            <span className="text-sm font-mono font-black text-[#17FFBF] tracking-wider uppercase">
+        {/* PLAYER 1 (HOME / BLUE TEAM) */}
+        <div
+          className={`bg-[#111513] p-6 flex flex-col justify-between relative shadow-2xl transition-all border-2 ${
+            p1Ready ? 'border-[#10b981] shadow-emerald-500/10' : 'border-[#3B82F6]'
+          }`}
+        >
+          <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4 font-mono">
+            <span className="text-xs font-bold text-[#3B82F6] tracking-wider uppercase">
               PLAYER 1 (HOME)
             </span>
-            <span className="text-xs font-mono text-slate-400">DEV: {p1Device.toUpperCase()}</span>
+            <span className="text-xs text-slate-400">DEV: {p1Device.toUpperCase()}</span>
           </div>
 
-          <div className="flex items-center justify-between gap-4 my-2">
+          <div className="flex items-center justify-between gap-4 my-2 relative px-8">
             <button
               disabled={p1Ready}
               onClick={() => setP1Index((prev) => (prev - 1 + CHARACTERS.length) % CHARACTERS.length)}
-              className="w-10 h-10 bg-[#060D17] border border-[#142840] hover:border-[#17FFBF] flex items-center justify-center cursor-pointer disabled:opacity-30"
+              className="absolute left-0 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-white transition cursor-pointer disabled:opacity-30"
             >
-              <ChevronLeft className="w-6 h-6 text-white" />
+              <ChevronLeft className="w-8 h-8 stroke-[2.5]" />
             </button>
 
             <AnimatePresence mode="wait">
@@ -184,16 +189,13 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={FIFA_SPRING}
-                className="flex flex-col items-center text-center"
+                className="flex flex-col items-center text-center w-full"
               >
                 <div className="text-7xl mb-2">{p1Char.avatar}</div>
-                <h3 className="text-2xl font-black italic uppercase text-white font-['Plus_Jakarta_Sans',sans-serif]">
+                <h3 className="text-2xl font-black italic uppercase text-white font-['Outfit',sans-serif] tracking-tight">
                   {p1Char.name}
                 </h3>
-                <span
-                  className="text-xs font-mono font-bold uppercase tracking-widest px-3 py-0.5 mt-1 border"
-                  style={{ color: p1Char.color, borderColor: p1Char.color }}
-                >
+                <span className="text-xs font-mono font-bold uppercase tracking-widest px-3 py-1 mt-2 bg-[#1e293b] border border-white/10 text-slate-200 rounded">
                   {p1Char.role}
                 </span>
               </motion.div>
@@ -202,63 +204,80 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
             <button
               disabled={p1Ready}
               onClick={() => setP1Index((prev) => (prev + 1) % CHARACTERS.length)}
-              className="w-10 h-10 bg-[#060D17] border border-[#142840] hover:border-[#17FFBF] flex items-center justify-center cursor-pointer disabled:opacity-30"
+              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-white transition cursor-pointer disabled:opacity-30"
             >
-              <ChevronRight className="w-6 h-6 text-white" />
+              <ChevronRight className="w-8 h-8 stroke-[2.5]" />
             </button>
           </div>
 
           {/* STATS BARS */}
-          <div className="flex flex-col gap-2 my-4 bg-[#060D17] p-4 border border-[#142840] text-xs font-mono">
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400">SPEED</span>
-              <span className="font-bold text-[#17FFBF]">{p1Char.stats.speed}</span>
-            </div>
-            <div className="w-full bg-[#0A1526] h-1.5 overflow-hidden">
-              <div className="bg-[#17FFBF] h-full" style={{ width: `${p1Char.stats.speed}%` }} />
+          <div className="flex flex-col gap-3 my-4 bg-[#0c100e] p-4 border border-white/10 text-xs font-mono">
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-slate-400">SPEED</span>
+                <span className="font-bold text-[#3B82F6]">{p1Char.stats.speed}</span>
+              </div>
+              <div className="w-full bg-white/10 h-2 overflow-hidden rounded-full">
+                <div className="bg-[#3B82F6] h-full transition-all duration-300" style={{ width: `${p1Char.stats.speed}%` }} />
+              </div>
             </div>
 
-            <div className="flex justify-between items-center mt-1">
-              <span className="text-slate-400">SHOT POWER</span>
-              <span className="font-bold text-amber-400">{p1Char.stats.shot}</span>
-            </div>
-            <div className="w-full bg-[#0A1526] h-1.5 overflow-hidden">
-              <div className="bg-amber-400 h-full" style={{ width: `${p1Char.stats.shot}%` }} />
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-slate-400">SHOT POWER</span>
+                <span className="font-bold text-amber-400">{p1Char.stats.shot}</span>
+              </div>
+              <div className="w-full bg-white/10 h-2 overflow-hidden rounded-full">
+                <div className="bg-amber-400 h-full transition-all duration-300" style={{ width: `${p1Char.stats.shot}%` }} />
+              </div>
             </div>
           </div>
 
           {/* READY BUTTON P1 */}
           <button
             onClick={() => setP1Ready(!p1Ready)}
-            className={`w-full py-3 font-mono font-black text-sm tracking-widest uppercase cursor-pointer transition clip-parallelogram ${
+            className={`w-full py-3 font-mono font-black text-xs tracking-wider uppercase cursor-pointer transition clip-parallelogram flex items-center justify-center gap-2 ${
               p1Ready
-                ? 'bg-[#17FFBF] text-[#060D17]'
-                : 'bg-[#060D17] border border-[#17FFBF] text-[#17FFBF] hover:bg-[#17FFBF]/10'
+                ? 'bg-[#10b981] text-white shadow-lg shadow-emerald-500/20'
+                : 'bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6]'
             }`}
           >
-            {p1Ready ? '✓ PLAYER 1 READY' : 'PRESS SPACE TO READY'}
+            {p1Ready ? (
+              <>
+                <Check className="w-4 h-4" />
+                <span>PLAYER 1 READY</span>
+              </>
+            ) : (
+              <span>PRESS SPACE TO READY</span>
+            )}
           </button>
         </div>
 
-        {/* PLAYER 2 (AWAY / BLUE-AMBER TEAM OR BOT) */}
-        <div className="bg-[#0A1526] border-2 border-amber-400/60 p-6 flex flex-col justify-between relative clip-parallelogram shadow-xl">
-          <div className="flex justify-between items-center border-b border-[#142840] pb-3 mb-4">
-            <span className="text-sm font-mono font-black text-amber-400 tracking-wider uppercase">
+        {/* PLAYER 2 (AWAY / BLUE TEAM OR BOT) */}
+        <div
+          className={`bg-[#111513] p-6 flex flex-col justify-between relative shadow-2xl transition-all border-2 ${
+            p2Ready ? 'border-[#10b981] shadow-emerald-500/10' : 'border-[#3B82F6]'
+          }`}
+        >
+          <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-4 font-mono">
+            <span className="text-xs font-bold text-[#3B82F6] tracking-wider uppercase">
               {mode === '2vBot' ? 'AI ENEMY BOT' : 'PLAYER 2 (AWAY)'}
             </span>
-            <span className="text-xs font-mono text-slate-400">
+            <span className="text-xs text-slate-400">
               {mode === '2vBot' ? 'AUTO BOT' : `DEV: ${p2Device.toUpperCase()}`}
             </span>
           </div>
 
-          <div className="flex items-center justify-between gap-4 my-2">
-            <button
-              disabled={p2Ready || mode === '2vBot'}
-              onClick={() => setP2Index((prev) => (prev - 1 + CHARACTERS.length) % CHARACTERS.length)}
-              className="w-10 h-10 bg-[#060D17] border border-[#142840] hover:border-amber-400 flex items-center justify-center cursor-pointer disabled:opacity-30"
-            >
-              <ChevronLeft className="w-6 h-6 text-white" />
-            </button>
+          <div className="flex items-center justify-between gap-4 my-2 relative px-8">
+            {mode !== '2vBot' && (
+              <button
+                disabled={p2Ready}
+                onClick={() => setP2Index((prev) => (prev - 1 + CHARACTERS.length) % CHARACTERS.length)}
+                className="absolute left-0 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-white transition cursor-pointer disabled:opacity-30"
+              >
+                <ChevronLeft className="w-8 h-8 stroke-[2.5]" />
+              </button>
+            )}
 
             <AnimatePresence mode="wait">
               <motion.div
@@ -267,46 +286,49 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={FIFA_SPRING}
-                className="flex flex-col items-center text-center"
+                className="flex flex-col items-center text-center w-full"
               >
                 <div className="text-7xl mb-2">{p2Char.avatar}</div>
-                <h3 className="text-2xl font-black italic uppercase text-white font-['Plus_Jakarta_Sans',sans-serif]">
+                <h3 className="text-2xl font-black italic uppercase text-white font-['Outfit',sans-serif] tracking-tight">
                   {p2Char.name}
                 </h3>
-                <span
-                  className="text-xs font-mono font-bold uppercase tracking-widest px-3 py-0.5 mt-1 border"
-                  style={{ color: p2Char.color, borderColor: p2Char.color }}
-                >
+                <span className="text-xs font-mono font-bold uppercase tracking-widest px-3 py-1 mt-2 bg-[#1e293b] border border-white/10 text-slate-200 rounded">
                   {p2Char.role}
                 </span>
               </motion.div>
             </AnimatePresence>
 
-            <button
-              disabled={p2Ready || mode === '2vBot'}
-              onClick={() => setP2Index((prev) => (prev + 1) % CHARACTERS.length)}
-              className="w-10 h-10 bg-[#060D17] border border-[#142840] hover:border-amber-400 flex items-center justify-center cursor-pointer disabled:opacity-30"
-            >
-              <ChevronRight className="w-6 h-6 text-white" />
-            </button>
+            {mode !== '2vBot' && (
+              <button
+                disabled={p2Ready}
+                onClick={() => setP2Index((prev) => (prev + 1) % CHARACTERS.length)}
+                className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-white transition cursor-pointer disabled:opacity-30"
+              >
+                <ChevronRight className="w-8 h-8 stroke-[2.5]" />
+              </button>
+            )}
           </div>
 
           {/* STATS BARS */}
-          <div className="flex flex-col gap-2 my-4 bg-[#060D17] p-4 border border-[#142840] text-xs font-mono">
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400">SPEED</span>
-              <span className="font-bold text-amber-400">{p2Char.stats.speed}</span>
-            </div>
-            <div className="w-full bg-[#0A1526] h-1.5 overflow-hidden">
-              <div className="bg-amber-400 h-full" style={{ width: `${p2Char.stats.speed}%` }} />
+          <div className="flex flex-col gap-3 my-4 bg-[#0c100e] p-4 border border-white/10 text-xs font-mono">
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-slate-400">SPEED</span>
+                <span className="font-bold text-[#3B82F6]">{p2Char.stats.speed}</span>
+              </div>
+              <div className="w-full bg-white/10 h-2 overflow-hidden rounded-full">
+                <div className="bg-[#3B82F6] h-full transition-all duration-300" style={{ width: `${p2Char.stats.speed}%` }} />
+              </div>
             </div>
 
-            <div className="flex justify-between items-center mt-1">
-              <span className="text-slate-400">SHOT POWER</span>
-              <span className="font-bold text-cyan-400">{p2Char.stats.shot}</span>
-            </div>
-            <div className="w-full bg-[#0A1526] h-1.5 overflow-hidden">
-              <div className="bg-cyan-400 h-full" style={{ width: `${p2Char.stats.shot}%` }} />
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-slate-400">SHOT POWER</span>
+                <span className="font-bold text-amber-400">{p2Char.stats.shot}</span>
+              </div>
+              <div className="w-full bg-white/10 h-2 overflow-hidden rounded-full">
+                <div className="bg-amber-400 h-full transition-all duration-300" style={{ width: `${p2Char.stats.shot}%` }} />
+              </div>
             </div>
           </div>
 
@@ -314,34 +336,44 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
           <button
             disabled={mode === '2vBot'}
             onClick={() => setP2Ready(!p2Ready)}
-            className={`w-full py-3 font-mono font-black text-sm tracking-widest uppercase cursor-pointer transition clip-parallelogram ${
+            className={`w-full py-3 font-mono font-black text-xs tracking-wider uppercase transition clip-parallelogram flex items-center justify-center gap-2 ${
               p2Ready
-                ? 'bg-amber-400 text-[#060D17]'
-                : 'bg-[#060D17] border border-amber-400 text-amber-400 hover:bg-amber-400/10'
+                ? 'bg-[#10b981] text-white shadow-lg shadow-emerald-500/20'
+                : 'bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6]'
             }`}
           >
-            {p2Ready ? '✓ READY' : 'PRESS ENTER TO READY'}
+            {p2Ready ? (
+              <>
+                <Check className="w-4 h-4" />
+                <span>{mode === '2vBot' ? 'AI BOT READY' : 'PLAYER 2 READY'}</span>
+              </>
+            ) : (
+              <span>PRESS ENTER TO READY</span>
+            )}
           </button>
         </div>
       </div>
 
-      {/* BOTTOM ACTION BAR */}
-      <div className="relative z-10 w-full flex justify-between items-center pt-4 border-t border-[#142840]/80 font-mono text-xs">
-        <div className="flex items-center gap-6 text-slate-400 font-bold">
-          <span>P1 NAV: A / D | READY: SPACE</span>
-          <span>P2 NAV: ◄ / ► | READY: ENTER</span>
+      {/* BOTTOM ACTION BAR - PES CONSOLE DESIGN SYSTEM */}
+      <div className="relative z-10 w-full flex justify-between items-center bg-[#111513] border border-white/10 px-6 py-4 font-mono text-xs shadow-2xl">
+        <div className="flex items-center gap-6 text-slate-300 font-bold">
+          <span>P1: A / D (SPACE)</span>
+          {mode === '1v1' && <span>P2: ◄ / ► (ENTER)</span>}
         </div>
 
         <button
           disabled={!bothReady}
           onClick={handleStart}
-          className={`px-8 py-3.5 font-mono font-black text-sm tracking-widest uppercase transition clip-parallelogram ${
+          className={`py-3 px-8 clip-parallelogram font-mono font-black text-xs tracking-wider uppercase transition cursor-pointer flex items-center gap-2.5 ${
             bothReady
-              ? 'bg-[#17FFBF] text-[#060D17] hover:bg-[#4BFFCE] cursor-pointer shadow-lg shadow-[#17FFBF]/30'
-              : 'bg-[#0A1526] border border-[#142840] text-slate-500 cursor-not-allowed opacity-50'
+              ? 'bg-[#2563EB] hover:bg-[#3B82F6] text-white shadow-lg shadow-blue-500/20'
+              : 'bg-[#151917] border border-white/10 text-slate-500 cursor-not-allowed opacity-50'
           }`}
         >
-          KICK OFF MATCH ⚽ ➔
+          <span className="w-4.5 h-4.5 rounded-full bg-[#10b981] text-white font-black flex items-center justify-center text-[10px] shadow leading-none border border-emerald-400/50">
+            A
+          </span>
+          <span>KICK OFF MATCH ➔</span>
         </button>
       </div>
     </div>
