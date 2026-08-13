@@ -239,8 +239,15 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
         </div>
       </div>
 
-      {/* 2. CENTER-LEFT VERTICAL MENU STACK (Kick Off = Bold, Other Items = Medium) */}
-      <div className="relative z-10 my-auto w-full max-w-2xl flex flex-col items-start justify-center pl-6 sm:pl-16 md:pl-24">
+      {/* 2. CENTER-LEFT VERTICAL MENU STACK WITH DIRECTIONAL SLIDE OUT TO LEFT */}
+      <motion.div
+        animate={{
+          x: showMatchModeModal || showControllerSelectModal ? -80 : 0,
+          opacity: showMatchModeModal || showControllerSelectModal ? 0 : 1,
+        }}
+        transition={{ type: 'spring', stiffness: 900, damping: 45 }}
+        className="relative z-10 my-auto w-full max-w-2xl flex flex-col items-start justify-center pl-6 sm:pl-16 md:pl-24"
+      >
         <div className="flex flex-col gap-5 sm:gap-6 w-full max-w-xl relative">
           {MENU_ITEMS.map((item) => {
             const isActive = activeItem === item.id;
@@ -269,7 +276,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
             );
           })}
         </div>
-      </div>
+      </motion.div>
 
       {/* 3. BOTTOM HUD BAR (FL 25 Soundtrack Widget & Helpers) */}
       <div className="relative z-10 w-full flex items-center justify-between pointer-events-auto pt-4 font-mono text-xs pl-2 sm:pl-6">
