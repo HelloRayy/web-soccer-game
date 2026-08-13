@@ -166,20 +166,30 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                   return (
                     <div key={slotIndex} className="grid grid-cols-2 divide-x divide-white/10 min-h-[148px] items-center">
                       {/* HOME CELL */}
-                      <div className="flex flex-col items-center justify-center p-3 h-full relative px-10">
+                      <div className="flex flex-col items-center justify-center p-3 h-full relative overflow-hidden">
                         {isHomeActive ? (
                           <>
-                            {/* LARGE EDGE ARROWS */}
+                            {/* HALF-WIDTH LEFT TRIGGER ZONE WITH LIGHT GRAY HOVER */}
                             <button
                               onClick={() => cycleHomeDevice(slotIndex, -1)}
-                              className="absolute left-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white transition cursor-pointer"
+                              className="absolute left-0 top-0 bottom-0 w-1/2 h-full flex items-center justify-start pl-4 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer group z-0"
                               title="Peranti Sebelumnya"
                             >
-                              <ChevronLeft className="w-7 h-7 stroke-[2.5]" />
+                              <ChevronLeft className="w-7 h-7 stroke-[2.5] group-hover:scale-110 transition-transform" />
                             </button>
 
-                            <div className="flex flex-col items-center gap-1">
-                              <div className="flex items-center gap-2">
+                            {/* HALF-WIDTH RIGHT TRIGGER ZONE WITH LIGHT GRAY HOVER */}
+                            <button
+                              onClick={() => cycleHomeDevice(slotIndex, 1)}
+                              className="absolute right-0 top-0 bottom-0 w-1/2 h-full flex items-center justify-end pr-4 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer group z-0"
+                              title="Peranti Selanjutnya"
+                            >
+                              <ChevronRight className="w-7 h-7 stroke-[2.5] group-hover:scale-110 transition-transform" />
+                            </button>
+
+                            {/* CENTER CONTENT */}
+                            <div className="flex flex-col items-center gap-1 z-10 pointer-events-none">
+                              <div className="flex items-center gap-2 pointer-events-auto">
                                 <span className="text-[11px] font-bold text-[#3B82F6] tracking-wide font-mono">
                                   User {homeUserNum}
                                 </span>
@@ -207,21 +217,13 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                               {homeDev.type === 'smartphone' && (
                                 <button
                                   onClick={() => setShowQRPopover(true)}
-                                  className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer text-[10px] font-semibold shadow rounded mt-0.5"
+                                  className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer text-[10px] font-semibold shadow rounded mt-0.5 pointer-events-auto"
                                 >
                                   <Smartphone className="w-3 h-3" />
                                   <span>Connect</span>
                                 </button>
                               )}
                             </div>
-
-                            <button
-                              onClick={() => cycleHomeDevice(slotIndex, 1)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white transition cursor-pointer"
-                              title="Peranti Selanjutnya"
-                            >
-                              <ChevronRight className="w-7 h-7 stroke-[2.5]" />
-                            </button>
                           </>
                         ) : isHomeAdd && homeSeats.length < 5 ? (
                           <button
@@ -237,22 +239,34 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                       </div>
 
                       {/* AWAY CELL */}
-                      <div className="flex flex-col items-center justify-center p-3 h-full relative px-10">
+                      <div className="flex flex-col items-center justify-center p-3 h-full relative overflow-hidden">
                         {isAwayActive ? (
                           <>
-                            {/* LARGE EDGE ARROWS */}
+                            {/* HALF-WIDTH LEFT TRIGGER ZONE WITH LIGHT GRAY HOVER */}
                             {!(selectedMode === '2vBot' && slotIndex === 0) && (
                               <button
                                 onClick={() => cycleAwayDevice(slotIndex, -1)}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white transition cursor-pointer"
+                                className="absolute left-0 top-0 bottom-0 w-1/2 h-full flex items-center justify-start pl-4 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer group z-0"
                                 title="Peranti Sebelumnya"
                               >
-                                <ChevronLeft className="w-7 h-7 stroke-[2.5]" />
+                                <ChevronLeft className="w-7 h-7 stroke-[2.5] group-hover:scale-110 transition-transform" />
                               </button>
                             )}
 
-                            <div className="flex flex-col items-center gap-1">
-                              <div className="flex items-center gap-2">
+                            {/* HALF-WIDTH RIGHT TRIGGER ZONE WITH LIGHT GRAY HOVER */}
+                            {!(selectedMode === '2vBot' && slotIndex === 0) && (
+                              <button
+                                onClick={() => cycleAwayDevice(slotIndex, 1)}
+                                className="absolute right-0 top-0 bottom-0 w-1/2 h-full flex items-center justify-end pr-4 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer group z-0"
+                                title="Peranti Selanjutnya"
+                              >
+                                <ChevronRight className="w-7 h-7 stroke-[2.5] group-hover:scale-110 transition-transform" />
+                              </button>
+                            )}
+
+                            {/* CENTER CONTENT */}
+                            <div className="flex flex-col items-center gap-1 z-10 pointer-events-none">
+                              <div className="flex items-center gap-2 pointer-events-auto">
                                 <span className="text-[11px] font-bold text-[#3B82F6] tracking-wide font-mono">
                                   {awayUserNum}
                                 </span>
@@ -280,23 +294,13 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                               {awayDev.type === 'smartphone' && (
                                 <button
                                   onClick={() => setShowQRPopover(true)}
-                                  className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer text-[10px] font-semibold shadow rounded mt-0.5"
+                                  className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer text-[10px] font-semibold shadow rounded mt-0.5 pointer-events-auto"
                                 >
                                   <Smartphone className="w-3 h-3" />
                                   <span>Connect</span>
                                 </button>
                               )}
                             </div>
-
-                            {!(selectedMode === '2vBot' && slotIndex === 0) && (
-                              <button
-                                onClick={() => cycleAwayDevice(slotIndex, 1)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white transition cursor-pointer"
-                                title="Peranti Selanjutnya"
-                              >
-                                <ChevronRight className="w-7 h-7 stroke-[2.5]" />
-                              </button>
-                            )}
                           </>
                         ) : isAwayAdd && awaySeats.length < 5 ? (
                           <button
