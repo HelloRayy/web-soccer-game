@@ -224,13 +224,13 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
                     if (isAddButtonSlot && homeSeats.length < 5) {
                       return (
-                        <div key={slotIndex} className="w-full py-3.5 flex justify-center border-b border-white/10">
+                        <div key={slotIndex} className="w-full py-4 flex justify-center border-b border-white/10">
                           <button
                             onClick={addHomeSeat}
-                            className="flex items-center gap-1.5 px-3 py-1 bg-[#1a2332]/50 border border-dashed border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer rounded text-xs font-bold shadow"
+                            className="p-2 text-white/30 hover:text-[#3B82F6] hover:scale-110 transition cursor-pointer flex items-center justify-center group"
+                            title="Tambah Player"
                           >
-                            <Plus className="w-4 h-4" />
-                            <span>Tambah Player</span>
+                            <Plus className="w-10 h-10 stroke-[2.5]" />
                           </button>
                         </div>
                       );
@@ -331,13 +331,13 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
                     if (isAddButtonSlot && awaySeats.length < 5) {
                       return (
-                        <div key={slotIndex} className="w-full py-3.5 flex justify-center border-b border-white/10">
+                        <div key={slotIndex} className="w-full py-4 flex justify-center border-b border-white/10">
                           <button
                             onClick={addAwaySeat}
-                            className="flex items-center gap-1.5 px-3 py-1 bg-[#1a2332]/50 border border-dashed border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer rounded text-xs font-bold shadow"
+                            className="p-2 text-white/30 hover:text-[#3B82F6] hover:scale-110 transition cursor-pointer flex items-center justify-center group"
+                            title="Tambah Player"
                           >
-                            <Plus className="w-4 h-4" />
-                            <span>Tambah Player</span>
+                            <Plus className="w-10 h-10 stroke-[2.5]" />
                           </button>
                         </div>
                       );
