@@ -114,40 +114,94 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
     ]);
   };
 
-  // Keyboard navigation support for P1 (WASD) and P2 (Arrows) node movement (Own Half constrained: Y >= 50%)
+  // Continuous Smooth Sliding Game Loop for Keyboard (WASD & Arrows) and Gamepads
+  const pressedKeysRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const step = 4; // move step percentage
+      pressedKeysRef.current.add(e.key.toLowerCase());
+    };
 
-      setNodes((prevNodes) =>
-        prevNodes.map((node) => {
+    const handleKeyUp = (e: KeyboardEvent) => {
+      pressedKeysRef.current.delete(e.key.toLowerCase());
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    let animationId: number;
+
+    const gameLoop = () => {
+      const keys = pressedKeysRef.current;
+      const speed = 0.6; // percentage per frame for fluid 60fps sliding
+      const rawGamepads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
+
+      setNodes((prevNodes) => {
+        let changed = false;
+
+        const nextNodes = prevNodes.map((node) => {
+          let dx = 0;
+          let dy = 0;
+
+          // 1. Keyboard P1 Inputs (WASD)
           if (node.id === 'p1') {
-            let newX = node.x;
-            let newY = node.y;
-            if (e.key === 'a' || e.key === 'A') newX = Math.max(10, node.x - step);
-            if (e.key === 'd' || e.key === 'D') newX = Math.min(90, node.x + step);
-            if (e.key === 'w' || e.key === 'W') newY = Math.max(50, node.y - step);
-            if (e.key === 's' || e.key === 'S') newY = Math.min(92, node.y + step);
-            return { ...node, x: newX, y: newY };
+            if (keys.has('a')) dx -= speed;
+            if (keys.has('d')) dx += speed;
+            if (keys.has('w')) dy -= speed;
+            if (keys.has('s')) dy += speed;
           }
 
-          if (node.id === 'p2' && mode === '1v1') {
-            let newX = node.x;
-            let newY = node.y;
-            if (e.key === 'ArrowLeft') newX = Math.max(10, node.x - step);
-            if (e.key === 'ArrowRight') newX = Math.min(90, node.x + step);
-            if (e.key === 'ArrowUp') newY = Math.max(50, node.y - step);
-            if (e.key === 'ArrowDown') newY = Math.min(92, node.y + step);
+          // 2. Keyboard P1 Sub & P2 Inputs (Arrow Keys)
+          if ((node.id === 'p2' && mode === '1v1') || node.id === 'p1_sub') {
+            if (keys.has('arrowleft')) dx -= speed;
+            if (keys.has('arrowright')) dx += speed;
+            if (keys.has('arrowup')) dy -= speed;
+            if (keys.has('arrowdown')) dy += speed;
+          }
+
+          // 3. Gamepad Analog Stick & D-Pad Inputs
+          let gpIndex = -1;
+          if (node.devType === 'gamepad0') gpIndex = 0;
+          else if (node.devType === 'gamepad1') gpIndex = 1;
+
+          if (gpIndex >= 0 && rawGamepads[gpIndex]) {
+            const gp = rawGamepads[gpIndex];
+            if (gp) {
+              const leftStickX = Math.abs(gp.axes[0] || 0) > 0.15 ? gp.axes[0] : 0;
+              const leftStickY = Math.abs(gp.axes[1] || 0) > 0.15 ? gp.axes[1] : 0;
+              const dpadLeft = gp.buttons[14]?.pressed ? -1 : 0;
+              const dpadRight = gp.buttons[15]?.pressed ? 1 : 0;
+              const dpadUp = gp.buttons[12]?.pressed ? -1 : 0;
+              const dpadDown = gp.buttons[13]?.pressed ? 1 : 0;
+
+              dx += (leftStickX + dpadLeft + dpadRight) * speed;
+              dy += (leftStickY + dpadUp + dpadDown) * speed;
+            }
+          }
+
+          if (dx !== 0 || dy !== 0) {
+            changed = true;
+            const newX = Math.max(10, Math.min(90, node.x + dx));
+            const newY = Math.max(50, Math.min(92, node.y + dy));
             return { ...node, x: newX, y: newY };
           }
 
           return node;
-        })
-      );
+        });
+
+        return changed ? nextNodes : prevNodes;
+      });
+
+      animationId = requestAnimationFrame(gameLoop);
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    animationId = requestAnimationFrame(gameLoop);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      cancelAnimationFrame(animationId);
+    };
   }, [mode]);
 
   const renderDevIcon = (devType: DeviceType) => {
