@@ -334,7 +334,9 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                 onClick={() => onConfirmStart(p1Device, p2Device)}
                 className="py-2.5 px-6 clip-parallelogram bg-[#2563EB] hover:bg-[#3B82F6] text-white font-mono font-black text-xs tracking-wider transition cursor-pointer flex items-center gap-2"
               >
-                <Gamepad className="w-4 h-4" />
+                <span className="w-4 h-4 rounded-full bg-white text-[#2563EB] font-black flex items-center justify-center text-[10px] shadow leading-none">
+                  A
+                </span>
                 <span>CONFIRM SIDES ➔</span>
               </button>
             </div>
