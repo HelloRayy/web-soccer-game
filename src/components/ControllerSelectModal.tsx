@@ -127,31 +127,22 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 80 }}
             transition={{ type: 'spring', stiffness: 900, damping: 45 }}
-            className="bg-[#0b1015] border border-white/10 max-w-4xl w-full p-6 sm:p-8 shadow-2xl flex flex-col gap-5 text-[#E2F1F8] relative max-h-[95vh] overflow-y-auto rounded-none"
+            className="bg-[#0b1015] border border-white/10 max-w-4xl w-full p-4 sm:p-5 shadow-2xl flex flex-col gap-4 text-[#E2F1F8] relative max-h-[95vh] overflow-y-auto rounded-none"
           >
-            {/* DEDICATED UN-OVERLAPPED MODAL HEADER BAR */}
-            <div className="flex justify-between items-center w-full border-b border-white/10 pb-3 font-mono">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 bg-[#17FFBF] rounded-full animate-pulse" />
-                <span className="text-xs font-bold text-[#17FFBF] uppercase tracking-widest">
-                  SELECT SIDES & CONTROLLER ASSIGNMENT
-                </span>
-              </div>
-              <button
-                onClick={onClose}
-                className="p-1.5 bg-[#05090C] border border-white/10 text-slate-400 hover:text-white transition cursor-pointer"
-                title="Tutup Modal"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* SLEEK AAA CONSOLE BOARD (Nyaman Di Mata, Soft Palette, TANPA EFEK GLOW) */}
+            {/* SLEEK AAA CONSOLE BOARD (BOARD CONTAINER SHIFTED UP, NO HEADER PADDING WASTE) */}
             <div className="w-full bg-[#131a21] border border-white/10 shadow-2xl overflow-hidden relative text-slate-100">
-              {/* HEADER BAR: Home (Left) | Away (Right) - DARK SLATE BANNER */}
-              <div className="grid grid-cols-2 text-white font-bold text-2xl py-3 bg-[#0a0f14] border-b border-white/10">
+              {/* HEADER BAR: Home (Left) | Away (Right) WITH INTEGRATED CLOSE BUTTON */}
+              <div className="relative grid grid-cols-2 text-white font-bold text-2xl py-3 bg-[#0a0f14] border-b border-white/10">
                 <div className="text-center font-['Outfit',sans-serif] tracking-tight">Home</div>
                 <div className="text-center font-['Outfit',sans-serif] tracking-tight">Away</div>
+
+                <button
+                  onClick={onClose}
+                  className="absolute top-1/2 -translate-y-1/2 right-3 p-1.5 bg-[#172029] hover:bg-[#222e3b] border border-white/10 text-slate-400 hover:text-white transition cursor-pointer"
+                  title="Tutup Modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
               {/* 2-COLUMN BOARD BODY WITH CLEAN ROW DIVIDERS */}
