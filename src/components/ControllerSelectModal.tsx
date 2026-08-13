@@ -144,37 +144,45 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                 </button>
               </div>
 
-              {/* 2-COLUMN DARK BASE BOARD BODY WITH CLEAN ROW DIVIDERS */}
-              <div className="relative w-full p-4 grid grid-cols-2 divide-x divide-white/10 max-h-[340px] sm:max-h-[380px] overflow-y-auto custom-scrollbar bg-[#111513]">
-                {/* LEFT COLUMN: HOME SEATS */}
-                <div className="flex flex-col items-center">
-                  {ALL_5_SLOTS.map((slotIndex) => {
-                    const isActiveSeat = slotIndex < homeSeats.length;
-                    const isAddButtonSlot = slotIndex === homeSeats.length;
+              {/* 5 SYMMETRICAL UNIFIED ROWS (100% PERFECT HORIZONTAL & VERTICAL ALIGNMENT) */}
+              <div className="relative w-full p-4 flex flex-col divide-y divide-white/10 max-h-[340px] sm:max-h-[380px] overflow-y-auto custom-scrollbar bg-[#111513]">
+                {ALL_5_SLOTS.map((slotIndex) => {
+                  // HOME SEAT DATA
+                  const isHomeActive = slotIndex < homeSeats.length;
+                  const isHomeAdd = slotIndex === homeSeats.length;
+                  const homeDevIdx = homeSeats[slotIndex];
+                  const homeDev = DEVICE_OPTIONS[homeDevIdx] || DEVICE_OPTIONS[0];
+                  const homeUserNum = slotIndex * 2 + 1;
 
-                    if (isActiveSeat) {
-                      const devIdx = homeSeats[slotIndex];
-                      const dev = DEVICE_OPTIONS[devIdx] || DEVICE_OPTIONS[0];
-                      const userNum = slotIndex * 2 + 1; // User 1, User 3, User 5...
+                  // AWAY SEAT DATA
+                  const isAwayActive = slotIndex < awaySeats.length;
+                  const isAwayAdd = slotIndex === awaySeats.length;
+                  const awayDevIdx = awaySeats[slotIndex];
+                  const awayDev = selectedMode === '2vBot' && slotIndex === 0
+                    ? { id: 'ai_bot' as DeviceType, name: 'AI ENEMY BOT', badge: 'BOT', type: 'bot' as const }
+                    : (DEVICE_OPTIONS[awayDevIdx] || DEVICE_OPTIONS[1]);
+                  const awayUserNum = slotIndex === 0 && selectedMode === '2vBot' ? 'AI Bot' : `User ${slotIndex * 2 + 2}`;
 
-                      return (
-                        <div key={slotIndex} className="w-full flex flex-col items-center py-3 border-b border-white/10 relative group">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[11px] font-bold text-[#3B82F6] tracking-wide font-mono">
-                              User {userNum}
-                            </span>
-                            {slotIndex > 0 && (
-                              <button
-                                onClick={() => removeHomeSeat(slotIndex)}
-                                className="text-[10px] text-red-400 hover:text-red-300 underline"
-                              >
-                                Hapus
-                              </button>
-                            )}
-                          </div>
+                  return (
+                    <div key={slotIndex} className="grid grid-cols-2 divide-x divide-white/10 min-h-[148px] items-center">
+                      {/* HOME CELL */}
+                      <div className="flex flex-col items-center justify-center p-3 h-full">
+                        {isHomeActive ? (
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-bold text-[#3B82F6] tracking-wide font-mono">
+                                User {homeUserNum}
+                              </span>
+                              {slotIndex > 0 && (
+                                <button
+                                  onClick={() => removeHomeSeat(slotIndex)}
+                                  className="text-[10px] text-red-400 hover:text-red-300 underline cursor-pointer"
+                                >
+                                  Hapus
+                                </button>
+                              )}
+                            </div>
 
-                          {/* LARGE CONTROLLER ICON (SOLID WHITE HIGH-CONTRAST ICON WITH INSTANT NAME BADGE) */}
-                          <div className="flex flex-col items-center gap-1.5">
                             <div className="flex items-center gap-3">
                               <button
                                 onClick={() => cycleHomeDevice(slotIndex, -1)}
@@ -185,10 +193,10 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                               </button>
 
                               <div className="text-white p-1 flex flex-col items-center">
-                                {dev.type === 'keyboard' && <Keyboard className="w-14 h-14" />}
-                                {dev.type === 'gamepad' && <Gamepad className="w-14 h-14" />}
-                                {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-[#3B82F6]" />}
-                                {dev.type === 'bot' && <Bot className="w-14 h-14 text-amber-400" />}
+                                {homeDev.type === 'keyboard' && <Keyboard className="w-12 h-12" />}
+                                {homeDev.type === 'gamepad' && <Gamepad className="w-12 h-12" />}
+                                {homeDev.type === 'smartphone' && <Smartphone className="w-12 h-12 text-[#3B82F6]" />}
+                                {homeDev.type === 'bot' && <Bot className="w-12 h-12 text-amber-400" />}
                               </div>
 
                               <button
@@ -200,29 +208,21 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                               </button>
                             </div>
 
-                            {/* DEVICE NAME LABEL (CLEAN TEXT LABEL WITHOUT BACKGROUND/BORDER) */}
-                            <span className="text-[11px] font-mono font-semibold text-slate-300 uppercase tracking-widest">
-                              {dev.name}
+                            <span className="text-[10px] font-mono font-semibold text-slate-300 uppercase tracking-widest">
+                              {homeDev.name}
                             </span>
 
-                            {/* HP REMOTE INTERACTIVE BUTTON */}
-                            {dev.type === 'smartphone' && (
+                            {homeDev.type === 'smartphone' && (
                               <button
                                 onClick={() => setShowQRPopover(true)}
-                                className="flex items-center gap-1.5 px-3 py-1 bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer text-[11px] font-semibold shadow rounded mt-0.5"
+                                className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer text-[10px] font-semibold shadow rounded mt-0.5"
                               >
-                                <Smartphone className="w-3.5 h-3.5" />
+                                <Smartphone className="w-3 h-3" />
                                 <span>Connect</span>
                               </button>
                             )}
                           </div>
-                        </div>
-                      );
-                    }
-
-                    if (isAddButtonSlot && homeSeats.length < 5) {
-                      return (
-                        <div key={slotIndex} className="w-full py-4 flex justify-center border-b border-white/10">
+                        ) : isHomeAdd && homeSeats.length < 5 ? (
                           <button
                             onClick={addHomeSeat}
                             className="p-2 text-white/30 hover:text-[#3B82F6] hover:scale-110 transition cursor-pointer flex items-center justify-center group"
@@ -230,54 +230,33 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                           >
                             <Plus className="w-10 h-10 stroke-[2.5]" />
                           </button>
-                        </div>
-                      );
-                    }
-
-                    // Large Dark Slate Controller Silhouettes
-                    return (
-                      <div key={slotIndex} className="w-full py-4 flex justify-center border-b border-white/10">
-                        <Gamepad className="w-14 h-14 text-white/10" />
+                        ) : (
+                          <Gamepad className="w-12 h-12 text-white/10" />
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
 
-                {/* RIGHT COLUMN: AWAY SEATS */}
-                <div className="flex flex-col items-center">
-                  {ALL_5_SLOTS.map((slotIndex) => {
-                    const isActiveSeat = slotIndex < awaySeats.length;
-                    const isAddButtonSlot = slotIndex === awaySeats.length;
+                      {/* AWAY CELL */}
+                      <div className="flex flex-col items-center justify-center p-3 h-full">
+                        {isAwayActive ? (
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-bold text-[#3B82F6] tracking-wide font-mono">
+                                {awayUserNum}
+                              </span>
+                              {slotIndex > 0 && (
+                                <button
+                                  onClick={() => removeAwaySeat(slotIndex)}
+                                  className="text-[10px] text-red-400 hover:text-red-300 underline cursor-pointer"
+                                >
+                                  Hapus
+                                </button>
+                              )}
+                            </div>
 
-                    if (isActiveSeat) {
-                      const devIdx = awaySeats[slotIndex];
-                      const dev = selectedMode === '2vBot' && slotIndex === 0
-                        ? { id: 'ai_bot' as DeviceType, name: 'AI ENEMY BOT', badge: 'BOT', type: 'bot' as const }
-                        : (DEVICE_OPTIONS[devIdx] || DEVICE_OPTIONS[1]);
-                      const userNum = slotIndex === 0 && selectedMode === '2vBot' ? 'AI Bot' : `User ${slotIndex * 2 + 2}`;
-
-                      return (
-                        <div key={slotIndex} className="w-full flex flex-col items-center py-3 border-b border-white/10 relative group">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[11px] font-bold text-[#3B82F6] tracking-wide font-mono">
-                              {userNum}
-                            </span>
-                            {slotIndex > 0 && (
-                              <button
-                                onClick={() => removeAwaySeat(slotIndex)}
-                                className="text-[10px] text-red-400 hover:text-red-300 underline"
-                              >
-                                Hapus
-                              </button>
-                            )}
-                          </div>
-
-                          {/* LARGE CONTROLLER ICON (SOLID WHITE HIGH-CONTRAST ICON WITH INSTANT NAME BADGE) */}
-                          <div className="flex flex-col items-center gap-1.5">
                             <div className="flex items-center gap-3">
                               {selectedMode === '2vBot' && slotIndex === 0 ? (
                                 <div className="text-amber-400 p-1 flex flex-col items-center">
-                                  <Bot className="w-14 h-14" />
+                                  <Bot className="w-12 h-12" />
                                 </div>
                               ) : (
                                 <>
@@ -290,10 +269,10 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                                   </button>
 
                                   <div className="text-white p-1 flex flex-col items-center">
-                                    {dev.type === 'keyboard' && <Keyboard className="w-14 h-14" />}
-                                    {dev.type === 'gamepad' && <Gamepad className="w-14 h-14" />}
-                                    {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-[#3B82F6]" />}
-                                    {dev.type === 'bot' && <Bot className="w-14 h-14 text-amber-400" />}
+                                    {awayDev.type === 'keyboard' && <Keyboard className="w-12 h-12" />}
+                                    {awayDev.type === 'gamepad' && <Gamepad className="w-12 h-12" />}
+                                    {awayDev.type === 'smartphone' && <Smartphone className="w-12 h-12 text-[#3B82F6]" />}
+                                    {awayDev.type === 'bot' && <Bot className="w-12 h-12 text-amber-400" />}
                                   </div>
 
                                   <button
@@ -307,29 +286,21 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                               )}
                             </div>
 
-                            {/* DEVICE NAME LABEL (CLEAN TEXT LABEL WITHOUT BACKGROUND/BORDER) */}
-                            <span className="text-[11px] font-mono font-semibold text-slate-300 uppercase tracking-widest">
-                              {dev.name}
+                            <span className="text-[10px] font-mono font-semibold text-slate-300 uppercase tracking-widest">
+                              {awayDev.name}
                             </span>
 
-                            {/* HP REMOTE INTERACTIVE BUTTON */}
-                            {dev.type === 'smartphone' && (
+                            {awayDev.type === 'smartphone' && (
                               <button
                                 onClick={() => setShowQRPopover(true)}
-                                className="flex items-center gap-1.5 px-3 py-1 bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer text-[11px] font-semibold shadow rounded mt-0.5"
+                                className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6] transition cursor-pointer text-[10px] font-semibold shadow rounded mt-0.5"
                               >
-                                <Smartphone className="w-3.5 h-3.5" />
+                                <Smartphone className="w-3 h-3" />
                                 <span>Connect</span>
                               </button>
                             )}
                           </div>
-                        </div>
-                      );
-                    }
-
-                    if (isAddButtonSlot && awaySeats.length < 5) {
-                      return (
-                        <div key={slotIndex} className="w-full py-4 flex justify-center border-b border-white/10">
+                        ) : isAwayAdd && awaySeats.length < 5 ? (
                           <button
                             onClick={addAwaySeat}
                             className="p-2 text-white/30 hover:text-[#3B82F6] hover:scale-110 transition cursor-pointer flex items-center justify-center group"
@@ -337,18 +308,13 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                           >
                             <Plus className="w-10 h-10 stroke-[2.5]" />
                           </button>
-                        </div>
-                      );
-                    }
-
-                    // Large Dark Slate Controller Silhouettes
-                    return (
-                      <div key={slotIndex} className="w-full py-4 flex justify-center border-b border-white/10">
-                        <Gamepad className="w-14 h-14 text-white/10" />
+                        ) : (
+                          <Gamepad className="w-12 h-12 text-white/10" />
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
               </div>
 
             {/* BOTTOM ACTION BAR (INSIDE MODAL - 100% MATCHMODE MODAL STYLE) */}
