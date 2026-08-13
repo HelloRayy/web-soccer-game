@@ -206,10 +206,10 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                             {dev.type === 'smartphone' && (
                               <button
                                 onClick={() => setShowQRPopover(true)}
-                                className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#18211d] border border-[#17FFBF]/40 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer text-[11px] font-medium shadow rounded-sm"
+                                className="flex items-center gap-1.5 px-3 py-1 bg-[#18211d] border border-[#17FFBF]/40 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer text-[11px] font-semibold shadow rounded"
                               >
                                 <Smartphone className="w-3.5 h-3.5" />
-                                <span>Scan QR Code HP</span>
+                                <span>Connect</span>
                               </button>
                             )}
                           </div>
@@ -308,10 +308,10 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                             {dev.type === 'smartphone' && (
                               <button
                                 onClick={() => setShowQRPopover(true)}
-                                className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#18211d] border border-[#17FFBF]/40 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer text-[11px] font-medium shadow rounded-sm"
+                                className="flex items-center gap-1.5 px-3 py-1 bg-[#18211d] border border-[#17FFBF]/40 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer text-[11px] font-semibold shadow rounded"
                               >
                                 <Smartphone className="w-3.5 h-3.5" />
-                                <span>Scan QR Code HP</span>
+                                <span>Connect</span>
                               </button>
                             )}
                           </div>
