@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, ArrowLeft, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Keyboard, Gamepad, Smartphone, Bot, RotateCcw } from 'lucide-react';
 import { DeviceType } from './ControllerSelectModal';
 
 export interface SquadPlayer {
@@ -76,56 +76,17 @@ export const CHARACTERS: CharacterData[] = [
       { pos: 'RWF', name: 'Egy Maulana', rating: 72 },
       { pos: 'CF', name: 'Rafael S.', rating: 69 }
     ]
-  },
-  {
-    id: 'blue_titan',
-    name: 'TITAN GUARDIAN',
-    club: 'BLUE SHIELD FC',
-    role: 'DEFENSIVE TANK',
-    avatar: '🛡️',
-    flag: '🇦🇷',
-    formation: '4-4-2',
-    color: '#3B82F6',
-    kitHex: '#3B82F6',
-    stats: { speed: 78, shot: 82, defense: 96, dribble: 75 },
-    roster: [
-      { pos: 'GK', name: 'E. Martínez', rating: 87 },
-      { pos: 'CB', name: 'C. Romero', rating: 85 },
-      { pos: 'CB', name: 'N. Otamendi', rating: 82 },
-      { pos: 'LB', name: 'N. Tagliafico', rating: 81 },
-      { pos: 'RB', name: 'N. Molina', rating: 82 },
-      { pos: 'CMF', name: 'R. De Paul', rating: 84 },
-      { pos: 'CMF', name: 'E. Fernández', rating: 83 },
-      { pos: 'LWF', name: 'A. Di María', rating: 85 },
-      { pos: 'CF', name: 'L. Messi', rating: 91 },
-      { pos: 'CF', name: 'J. Álvarez', rating: 86 }
-    ]
-  },
-  {
-    id: 'gold_legend',
-    name: 'GOLDEN LEGEND',
-    club: 'CHAMPIONS GOLD FC',
-    role: 'ALL-AROUND CAPTAIN',
-    avatar: '🏆',
-    flag: '🇪🇸',
-    formation: '4-2-3-1',
-    color: '#FFD13B',
-    kitHex: '#FFD13B',
-    stats: { speed: 90, shot: 92, defense: 85, dribble: 90 },
-    roster: [
-      { pos: 'GK', name: 'T. Courtois', rating: 89 },
-      { pos: 'CB', name: 'A. Rüdiger', rating: 87 },
-      { pos: 'CB', name: 'E. Militão', rating: 85 },
-      { pos: 'LB', name: 'D. Alaba', rating: 84 },
-      { pos: 'RB', name: 'D. Carvajal', rating: 86 },
-      { pos: 'DMF', name: 'J. Bellingham', rating: 90 },
-      { pos: 'CMF', name: 'F. Valverde', rating: 88 },
-      { pos: 'LWF', name: 'Vinícius Jr.', rating: 90 },
-      { pos: 'RWF', name: 'Rodrygo', rating: 86 },
-      { pos: 'CF', name: 'K. Benzema', rating: 89 }
-    ]
   }
 ];
+
+interface PlayerNode {
+  id: string;
+  name: string;
+  devType: DeviceType;
+  team: 'home' | 'away';
+  x: number; // 0 - 100%
+  y: number; // 0 - 100%
+}
 
 interface TeamSelectViewProps {
   mode: '1v1' | '2vBot';
@@ -135,114 +96,12 @@ interface TeamSelectViewProps {
   onConfirmStartGame: (p1Char: CharacterData, p2Char: CharacterData) => void;
 }
 
-const FIFA_SPRING = { type: 'spring' as const, stiffness: 950, damping: 45 };
-
-// Helper for Position Badge Styling (PES Gameplan Style)
-const getPosBadgeClass = (pos: string) => {
-  switch (pos) {
-    case 'GK':
-      return 'bg-[#FFD13B] text-[#05090C] font-bold';
-    case 'CB':
-    case 'LB':
-    case 'RB':
-      return 'bg-[#2563EB] text-white font-bold';
-    case 'DMF':
-    case 'CMF':
-      return 'bg-[#10b981] text-white font-bold';
-    case 'CF':
-    case 'SS':
-    case 'LWF':
-    case 'RWF':
-      return 'bg-[#ef4444] text-white font-bold';
-    default:
-      return 'bg-slate-700 text-white font-bold';
-  }
-};
-
-// MINI TACTICAL FOOTBALL PITCH COMPONENT (eFootball / PES STYLE)
-const MiniTacticalPitch: React.FC<{ character: CharacterData }> = ({ character }) => {
-  const { roster, avatar, formation } = character;
-  const gk = roster.find((p) => p.pos === 'GK') || roster[0];
-  const defs = roster.filter((p) => ['CB', 'LB', 'RB'].includes(p.pos));
-  const mids = roster.filter((p) => ['CMF', 'DMF'].includes(p.pos));
-  const fwds = roster.filter((p) => ['CF', 'SS', 'LWF', 'RWF'].includes(p.pos));
-
-  return (
-    <div className="bg-gradient-to-b from-[#15803d] via-[#16a34a] to-[#15803d] rounded border border-emerald-400/40 p-2.5 relative h-[220px] sm:h-[250px] flex flex-col justify-between overflow-hidden shadow-inner select-none">
-      {/* PITCH FIELD LINES SVG OVERLAY */}
-      <svg className="absolute inset-0 w-full h-full stroke-white/25 stroke-[1.5] fill-none pointer-events-none">
-        {/* Outer Boundary */}
-        <rect x="4" y="4" width="calc(100% - 8px)" height="calc(100% - 8px)" rx="4" />
-        {/* Halfway Line */}
-        <line x1="4" y1="50%" x2="calc(100% - 4px)" y2="50%" />
-        {/* Center Circle */}
-        <circle cx="50%" cy="50%" r="28" />
-        {/* Top Penalty Box */}
-        <rect x="25%" y="4" width="50%" height="28%" />
-        {/* Bottom Penalty Box */}
-        <rect x="25%" y="68%" width="50%" height="28%" />
-      </svg>
-
-      {/* FORMATION BADGE TOP CORNER */}
-      <div className="absolute top-1.5 left-2 z-10 bg-black/50 backdrop-blur px-2 py-0.5 rounded border border-white/20 text-[9px] font-mono font-bold text-white uppercase">
-        {formation}
-      </div>
-
-      {/* FORWARDS (TOP) */}
-      <div className="relative z-10 flex justify-around items-center pt-2">
-        {fwds.map((p, idx) => (
-          <div key={idx} className="flex flex-col items-center group">
-            <div className="w-6 h-6 rounded-full bg-red-600/90 border border-white flex items-center justify-center text-[11px] shadow">
-              {avatar}
-            </div>
-            <span className="text-[9px] font-mono font-bold text-white bg-black/70 px-1 rounded mt-0.5 max-w-[55px] truncate">
-              {p.name.split(' ').pop()} {p.rating}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* MIDFIELDERS (CENTER) */}
-      <div className="relative z-10 flex justify-around items-center my-auto">
-        {mids.map((p, idx) => (
-          <div key={idx} className="flex flex-col items-center">
-            <span className="text-[8px] font-mono font-bold px-1 rounded bg-emerald-900/90 text-emerald-200 border border-emerald-400/40">
-              {p.pos} {p.rating}
-            </span>
-            <span className="text-[8px] font-mono font-semibold text-white bg-black/60 px-1 rounded mt-0.5 max-w-[55px] truncate">
-              {p.name.split(' ').pop()}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* DEFENDERS (LOWER) */}
-      <div className="relative z-10 flex justify-around items-center">
-        {defs.slice(0, 4).map((p, idx) => (
-          <div key={idx} className="flex flex-col items-center">
-            <span className="text-[8px] font-mono font-bold px-1 rounded bg-blue-900/90 text-blue-200 border border-blue-400/40">
-              {p.pos} {p.rating}
-            </span>
-            <span className="text-[8px] font-mono font-semibold text-white bg-black/60 px-1 rounded mt-0.5 max-w-[50px] truncate">
-              {p.name.split(' ').pop()}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* GOALKEEPER (BOTTOM) */}
-      <div className="relative z-10 flex justify-center items-center pb-1">
-        <div className="flex flex-col items-center">
-          <span className="text-[8px] font-mono font-bold px-1.5 rounded bg-amber-500 text-black">
-            GK {gk.rating}
-          </span>
-          <span className="text-[8px] font-mono font-bold text-white bg-black/70 px-1 rounded mt-0.5">
-            {gk.name}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
+// Auto role detection based on Y-coordinate percentage
+const getAutoRole = (yPercent: number): { code: 'FWD' | 'MID' | 'DEF' | 'GK'; bg: string } => {
+  if (yPercent < 35) return { code: 'FWD', bg: 'bg-[#ef4444] text-white' };
+  if (yPercent < 65) return { code: 'MID', bg: 'bg-[#10b981] text-white' };
+  if (yPercent < 85) return { code: 'DEF', bg: 'bg-[#2563EB] text-white' };
+  return { code: 'GK', bg: 'bg-[#FFD13B] text-[#05090C] font-bold' };
 };
 
 export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
@@ -252,292 +111,256 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
   onBackToControllers,
   onConfirmStartGame
 }) => {
-  const [p1Index, setP1Index] = useState(0);
-  const [p2Index, setP2Index] = useState(1);
+  const homePitchRef = useRef<HTMLDivElement>(null);
+  const awayPitchRef = useRef<HTMLDivElement>(null);
 
-  const [p1Ready, setP1Ready] = useState(false);
-  const [p2Ready, setP2Ready] = useState(mode === '2vBot'); // AI Bot is auto ready in 2vBot mode
+  // Initial Player Spawn Position Nodes
+  const [nodes, setNodes] = useState<PlayerNode[]>([
+    { id: 'p1', name: 'User 1 (HOME)', devType: p1Device, team: 'home', x: 50, y: 25 },
+    { id: 'p1_sub', name: 'User 3 (HOME)', devType: 'keyboard2', team: 'home', x: 30, y: 55 },
+    { id: 'p2', name: mode === '2vBot' ? 'AI BOT 1' : 'User 2 (AWAY)', devType: mode === '2vBot' ? 'ai_bot' : p2Device, team: 'away', x: 50, y: 25 },
+    { id: 'p2_sub', name: mode === '2vBot' ? 'AI BOT 2' : 'User 4 (AWAY)', devType: mode === '2vBot' ? 'ai_bot' : 'gamepad1', team: 'away', x: 70, y: 55 }
+  ]);
 
-  const p1Char = CHARACTERS[p1Index];
-  const p2Char = CHARACTERS[p2Index];
+  const p1Char = CHARACTERS[0];
+  const p2Char = CHARACTERS[1];
 
-  // Keyboard navigation for character selection
+  // Reset positions to default
+  const handleResetPositions = () => {
+    setNodes([
+      { id: 'p1', name: 'User 1 (HOME)', devType: p1Device, team: 'home', x: 50, y: 25 },
+      { id: 'p1_sub', name: 'User 3 (HOME)', devType: 'keyboard2', team: 'home', x: 30, y: 55 },
+      { id: 'p2', name: mode === '2vBot' ? 'AI BOT 1' : 'User 2 (AWAY)', devType: mode === '2vBot' ? 'ai_bot' : p2Device, team: 'away', x: 50, y: 25 },
+      { id: 'p2_sub', name: mode === '2vBot' ? 'AI BOT 2' : 'User 4 (AWAY)', devType: mode === '2vBot' ? 'ai_bot' : 'gamepad1', team: 'away', x: 70, y: 55 }
+    ]);
+  };
+
+  // Keyboard navigation support for P1 (WASD) and P2 (Arrows) node movement
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // P1 controls (WASD / A & D)
-      if (!p1Ready) {
-        if (e.key === 'a' || e.key === 'A') {
-          setP1Index((prev) => (prev - 1 + CHARACTERS.length) % CHARACTERS.length);
-        } else if (e.key === 'd' || e.key === 'D') {
-          setP1Index((prev) => (prev + 1) % CHARACTERS.length);
-        } else if (e.key === ' ') {
-          setP1Ready(true);
-        }
-      } else if (e.key === ' ') {
-        setP1Ready(false);
-      }
+      const step = 5; // move step percentage
 
-      // P2 controls (Arrows / Left & Right)
-      if (mode === '1v1') {
-        if (!p2Ready) {
-          if (e.key === 'ArrowLeft') {
-            setP2Index((prev) => (prev - 1 + CHARACTERS.length) % CHARACTERS.length);
-          } else if (e.key === 'ArrowRight') {
-            setP2Index((prev) => (prev + 1) % CHARACTERS.length);
-          } else if (e.key === 'Enter') {
-            setP2Ready(true);
+      setNodes((prevNodes) =>
+        prevNodes.map((node) => {
+          if (node.id === 'p1') {
+            let newX = node.x;
+            let newY = node.y;
+            if (e.key === 'a' || e.key === 'A') newX = Math.max(10, node.x - step);
+            if (e.key === 'd' || e.key === 'D') newX = Math.min(90, node.x + step);
+            if (e.key === 'w' || e.key === 'W') newY = Math.max(10, node.y - step);
+            if (e.key === 's' || e.key === 'S') newY = Math.min(90, node.y + step);
+            return { ...node, x: newX, y: newY };
           }
-        } else if (e.key === 'Enter') {
-          setP2Ready(false);
-        }
-      }
+
+          if (node.id === 'p2' && mode === '1v1') {
+            let newX = node.x;
+            let newY = node.y;
+            if (e.key === 'ArrowLeft') newX = Math.max(10, node.x - step);
+            if (e.key === 'ArrowRight') newX = Math.min(90, node.x + step);
+            if (e.key === 'ArrowUp') newY = Math.max(10, node.y - step);
+            if (e.key === 'ArrowDown') newY = Math.min(90, node.y + step);
+            return { ...node, x: newX, y: newY };
+          }
+
+          return node;
+        })
+      );
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [p1Ready, p2Ready, mode]);
+  }, [mode]);
 
-  const bothReady = p1Ready && p2Ready;
-
-  const handleStart = () => {
-    if (bothReady) {
-      onConfirmStartGame(p1Char, p2Char);
+  const renderDevIcon = (devType: DeviceType) => {
+    switch (devType) {
+      case 'keyboard1':
+      case 'keyboard2':
+        return <Keyboard className="w-6 h-6 text-white" />;
+      case 'gamepad0':
+      case 'gamepad1':
+        return <Gamepad className="w-6 h-6 text-white" />;
+      case 'hp_remote':
+        return <Smartphone className="w-6 h-6 text-[#3B82F6]" />;
+      case 'ai_bot':
+        return <Bot className="w-6 h-6 text-amber-400" />;
+      default:
+        return <Gamepad className="w-6 h-6 text-white" />;
     }
   };
 
+  const handleDragEndNode = (id: string, pitchRef: React.RefObject<HTMLDivElement | null>, info: { point: { x: number; y: number } }) => {
+    if (!pitchRef.current) return;
+    const rect = pitchRef.current.getBoundingClientRect();
+    const relX = Math.max(10, Math.min(90, ((info.point.x - rect.left) / rect.width) * 100));
+    const relY = Math.max(10, Math.min(90, ((info.point.y - rect.top) / rect.height) * 100));
+
+    setNodes((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, x: relX, y: relY } : n))
+    );
+  };
+
   return (
-    <div className="relative w-screen h-screen bg-[#070b0e] text-[#E2F1F8] flex flex-col justify-between p-4 sm:p-6 select-none overflow-hidden font-['Inter',sans-serif]">
-      {/* TOP HEADER - DARK OBSIDIAN CONSOLE BANNER */}
-      <div className="relative z-10 w-full flex justify-between items-center bg-[#111513] border border-white/10 p-3.5 shadow-2xl">
+    <div className="relative w-screen h-screen bg-[#070b0e] text-[#E2F1F8] flex flex-col justify-between select-none overflow-hidden font-['Inter',sans-serif]">
+      {/* FLOATING TOP-LEFT BACK BUTTON */}
+      <button
+        onClick={onBackToControllers}
+        className="fixed top-4 left-6 z-30 bg-[#151917]/90 backdrop-blur border border-white/10 hover:border-white/30 text-slate-300 hover:text-white px-4 py-2 font-mono text-xs font-bold cursor-pointer transition flex items-center gap-2 shadow-2xl"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span>BACK TO CONTROLLERS</span>
+      </button>
+
+      {/* FLOATING TOP-CENTER INSTRUCTION BADGE */}
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-30 bg-[#111513]/90 backdrop-blur border border-white/10 px-5 py-2 shadow-2xl flex items-center gap-3 text-xs font-mono">
+        <span className="font-black italic text-white uppercase font-['Outfit',sans-serif] text-sm tracking-tight">
+          POSITION SETUP ({mode.toUpperCase()})
+        </span>
+        <span className="text-[#3B82F6] font-bold tracking-wider uppercase border-l border-white/10 pl-3">
+          DRAG NODE TO SET SPAWN LOCATION
+        </span>
         <button
-          onClick={onBackToControllers}
-          className="flex items-center gap-2 bg-[#151917] border border-white/10 hover:border-white/30 text-slate-300 hover:text-white px-4 py-2 font-mono text-xs font-bold cursor-pointer transition"
+          onClick={handleResetPositions}
+          className="ml-2 flex items-center gap-1 text-[10px] text-slate-400 hover:text-white underline cursor-pointer"
+          title="Reset Posisi Default"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>BACK TO CONTROLLERS</span>
+          <RotateCcw className="w-3 h-3" />
+          <span>Reset</span>
         </button>
+      </div>
 
-        <div className="flex flex-col items-center">
-          <h2 className="text-xl sm:text-2xl font-black italic tracking-tighter text-white font-['Outfit',sans-serif] uppercase">
-            GAME PLAN & SQUAD SELECT ({mode.toUpperCase()})
-          </h2>
-          <span className="text-xs font-mono text-[#3B82F6] tracking-widest uppercase font-bold mt-0.5">
-            PES CONSOLE GAMEPLAY ARENA
-          </span>
+      {/* FULLSCREEN SPLIT PITCHES (LEFT = HOME PITCH, RIGHT = AWAY PITCH) */}
+      <div className="relative z-10 w-full h-full grid grid-cols-2 divide-x divide-white/10 pt-16 pb-16">
+        {/* LEFT FULL HEIGHT HOME PITCH */}
+        <div
+          ref={homePitchRef}
+          className="relative w-full h-full bg-gradient-to-b from-[#15803d] via-[#16a34a] to-[#15803d] p-4 flex flex-col justify-between overflow-hidden shadow-inner"
+        >
+          {/* PITCH FIELD LINES SVG OVERLAY */}
+          <svg className="absolute inset-0 w-full h-full stroke-white/30 stroke-[2] fill-none pointer-events-none">
+            <rect x="6" y="6" width="calc(100% - 12px)" height="calc(100% - 12px)" rx="6" />
+            <line x1="6" y1="50%" x2="calc(100% - 6px)" y2="50%" />
+            <circle cx="50%" cy="50%" r="45" />
+            {/* Top Penalty Box */}
+            <rect x="22%" y="6" width="56%" height="25%" />
+            {/* Bottom Penalty Box */}
+            <rect x="22%" y="75%" width="56%" height="25%" />
+          </svg>
+
+          {/* HOME TEAM WATERMARK LABEL */}
+          <div className="absolute top-4 left-6 z-10 flex flex-col pointer-events-none">
+            <span className="text-3xl font-black italic uppercase text-white/40 font-['Outfit',sans-serif]">
+              HOME TEAM
+            </span>
+            <span className="text-xs font-mono font-bold text-[#3B82F6] tracking-widest uppercase">
+              RED CYBER FC 🇫🇷
+            </span>
+          </div>
+
+          {/* HOME PLAYER NODES */}
+          {nodes
+            .filter((n) => n.team === 'home')
+            .map((node) => {
+              const role = getAutoRole(node.y);
+              return (
+                <motion.div
+                  key={node.id}
+                  drag
+                  dragSnapToOrigin={false}
+                  onDragEnd={(_, info) => handleDragEndNode(node.id, homePitchRef, info)}
+                  style={{ left: `${node.x}%`, top: `${node.y}%` }}
+                  className="absolute z-20 -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing flex flex-col items-center group touch-none"
+                >
+                  {/* USER LABEL BADGE */}
+                  <span className="text-[10px] font-mono font-bold text-white bg-[#0c100e]/90 border border-blue-500/50 px-2 py-0.5 rounded shadow-lg uppercase mb-1 tracking-wider whitespace-nowrap">
+                    {node.name}
+                  </span>
+
+                  {/* MAIN AVATAR CIRCLE NODE */}
+                  <div className="w-14 h-14 rounded-full bg-[#111513] border-2 border-[#3B82F6] shadow-xl shadow-blue-500/30 flex items-center justify-center relative group-hover:scale-110 transition-transform">
+                    {renderDevIcon(node.devType)}
+                  </div>
+
+                  {/* AUTO ROLE BADGE */}
+                  <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded shadow mt-1 uppercase ${role.bg}`}>
+                    {role.code}
+                  </span>
+                </motion.div>
+              );
+            })}
         </div>
 
-        <div className="text-xs font-mono font-bold text-slate-400 bg-white/5 px-3 py-1.5 border border-white/10">
-          STEP 2 OF 2
+        {/* RIGHT FULL HEIGHT AWAY PITCH */}
+        <div
+          ref={awayPitchRef}
+          className="relative w-full h-full bg-gradient-to-b from-[#15803d] via-[#16a34a] to-[#15803d] p-4 flex flex-col justify-between overflow-hidden shadow-inner"
+        >
+          {/* PITCH FIELD LINES SVG OVERLAY */}
+          <svg className="absolute inset-0 w-full h-full stroke-white/30 stroke-[2] fill-none pointer-events-none">
+            <rect x="6" y="6" width="calc(100% - 12px)" height="calc(100% - 12px)" rx="6" />
+            <line x1="6" y1="50%" x2="calc(100% - 6px)" y2="50%" />
+            <circle cx="50%" cy="50%" r="45" />
+            {/* Top Penalty Box */}
+            <rect x="22%" y="6" width="56%" height="25%" />
+            {/* Bottom Penalty Box */}
+            <rect x="22%" y="75%" width="56%" height="25%" />
+          </svg>
+
+          {/* AWAY TEAM WATERMARK LABEL */}
+          <div className="absolute top-4 right-6 z-10 flex flex-col items-end pointer-events-none">
+            <span className="text-3xl font-black italic uppercase text-white/40 font-['Outfit',sans-serif]">
+              AWAY TEAM
+            </span>
+            <span className="text-xs font-mono font-bold text-amber-400 tracking-widest uppercase">
+              {mode === '2vBot' ? 'AI ENEMY BOTS 🤖' : 'ELECTRIC MINT FC 🇮🇩'}
+            </span>
+          </div>
+
+          {/* AWAY PLAYER NODES */}
+          {nodes
+            .filter((n) => n.team === 'away')
+            .map((node) => {
+              const role = getAutoRole(node.y);
+              return (
+                <motion.div
+                  key={node.id}
+                  drag={mode !== '2vBot'}
+                  dragSnapToOrigin={false}
+                  onDragEnd={(_, info) => handleDragEndNode(node.id, awayPitchRef, info)}
+                  style={{ left: `${node.x}%`, top: `${node.y}%` }}
+                  className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group touch-none ${
+                    mode === '2vBot' ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'
+                  }`}
+                >
+                  {/* USER LABEL BADGE */}
+                  <span className="text-[10px] font-mono font-bold text-white bg-[#0c100e]/90 border border-amber-500/50 px-2 py-0.5 rounded shadow-lg uppercase mb-1 tracking-wider whitespace-nowrap">
+                    {node.name}
+                  </span>
+
+                  {/* MAIN AVATAR CIRCLE NODE */}
+                  <div className="w-14 h-14 rounded-full bg-[#111513] border-2 border-amber-400 shadow-xl shadow-amber-500/30 flex items-center justify-center relative group-hover:scale-110 transition-transform">
+                    {renderDevIcon(node.devType)}
+                  </div>
+
+                  {/* AUTO ROLE BADGE */}
+                  <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded shadow mt-1 uppercase ${role.bg}`}>
+                    {role.code}
+                  </span>
+                </motion.div>
+              );
+            })}
         </div>
       </div>
 
-      {/* SPLIT SCREEN CARDS (HOME LEFT vs AWAY RIGHT - eFootball GAME PLAN UI) */}
-      <div className="relative z-10 my-auto grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-6xl mx-auto">
-        {/* PLAYER 1 (HOME GAME PLAN BLOCK) */}
-        <div
-          className={`bg-[#111513] p-5 flex flex-col justify-between relative shadow-2xl transition-all border-2 rounded-none ${
-            p1Ready ? 'border-[#10b981] shadow-emerald-500/10' : 'border-[#3B82F6]'
-          }`}
-        >
-          {/* TEAM HEADER */}
-          <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-3">
-            <div className="flex items-center gap-2.5">
-              <span className="text-2xl">{p1Char.flag}</span>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-black uppercase text-white font-['Outfit',sans-serif] tracking-tight">
-                    {p1Char.name}
-                  </h3>
-                  <span className="text-[10px] font-mono font-bold text-[#3B82F6] bg-blue-950/80 px-2 py-0.5 border border-blue-500/30 rounded">
-                    User 1 (HOME)
-                  </span>
-                </div>
-                <span className="text-[11px] font-mono text-slate-400">{p1Char.club} • DEV: {p1Device.toUpperCase()}</span>
-              </div>
-            </div>
-
-            {/* SELECTION ARROWS */}
-            <div className="flex items-center gap-1">
-              <button
-                disabled={p1Ready}
-                onClick={() => setP1Index((prev) => (prev - 1 + CHARACTERS.length) % CHARACTERS.length)}
-                className="p-1.5 bg-[#171d1a] border border-white/10 hover:border-white/40 text-slate-300 hover:text-white transition cursor-pointer disabled:opacity-30"
-              >
-                <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
-              </button>
-              <button
-                disabled={p1Ready}
-                onClick={() => setP1Index((prev) => (prev + 1) % CHARACTERS.length)}
-                className="p-1.5 bg-[#171d1a] border border-white/10 hover:border-white/40 text-slate-300 hover:text-white transition cursor-pointer disabled:opacity-30"
-              >
-                <ChevronRight className="w-5 h-5 stroke-[2.5]" />
-              </button>
-            </div>
-          </div>
-
-          {/* 2-COLUMN INNER GAME PLAN: PITCH (LEFT) + ROSTER (RIGHT) */}
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 my-1 items-stretch">
-            {/* LEFT 3 COLS: TACTICAL PITCH GRAPHIC */}
-            <div className="sm:col-span-3">
-              <MiniTacticalPitch character={p1Char} />
-            </div>
-
-            {/* RIGHT 2 COLS: SQUAD ROSTER LIST */}
-            <div className="sm:col-span-2 bg-[#0c100e] p-2.5 border border-white/10 flex flex-col justify-between">
-              <div className="text-[11px] font-mono font-bold text-slate-300 border-b border-white/10 pb-1 mb-2 flex justify-between">
-                <span>STARTING SQUAD</span>
-                <span className="text-[#3B82F6]">{p1Char.formation}</span>
-              </div>
-
-              <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[185px] pr-1 custom-scrollbar text-[10px] font-mono">
-                {p1Char.roster.map((player, idx) => (
-                  <div key={idx} className="flex items-center justify-between py-0.5 px-1 bg-white/5 rounded border border-white/5">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <span className={`px-1 rounded text-[9px] min-w-[26px] text-center ${getPosBadgeClass(player.pos)}`}>
-                        {player.pos}
-                      </span>
-                      <span className="text-slate-200 truncate">{player.name}</span>
-                    </div>
-                    <span className="font-bold text-slate-100 ml-1">{player.rating}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* READY BUTTON P1 */}
-          <button
-            onClick={() => setP1Ready(!p1Ready)}
-            className={`w-full py-2.5 mt-3 font-mono font-black text-xs tracking-wider uppercase cursor-pointer transition clip-parallelogram flex items-center justify-center gap-2 ${
-              p1Ready
-                ? 'bg-[#10b981] text-white shadow-lg shadow-emerald-500/20'
-                : 'bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6]'
-            }`}
-          >
-            {p1Ready ? (
-              <>
-                <Check className="w-4 h-4" />
-                <span>PLAYER 1 READY</span>
-              </>
-            ) : (
-              <span>PRESS SPACE TO READY</span>
-            )}
-          </button>
-        </div>
-
-        {/* PLAYER 2 (AWAY GAME PLAN BLOCK) */}
-        <div
-          className={`bg-[#111513] p-5 flex flex-col justify-between relative shadow-2xl transition-all border-2 rounded-none ${
-            p2Ready ? 'border-[#10b981] shadow-emerald-500/10' : 'border-[#3B82F6]'
-          }`}
-        >
-          {/* TEAM HEADER */}
-          <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-3">
-            <div className="flex items-center gap-2.5">
-              <span className="text-2xl">{p2Char.flag}</span>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-black uppercase text-white font-['Outfit',sans-serif] tracking-tight">
-                    {p2Char.name}
-                  </h3>
-                  <span className="text-[10px] font-mono font-bold text-[#3B82F6] bg-blue-950/80 px-2 py-0.5 border border-blue-500/30 rounded">
-                    {mode === '2vBot' ? 'AI ENEMY BOT' : 'User 2 (AWAY)'}
-                  </span>
-                </div>
-                <span className="text-[11px] font-mono text-slate-400">
-                  {p2Char.club} • {mode === '2vBot' ? 'AUTO BOT' : `DEV: ${p2Device.toUpperCase()}`}
-                </span>
-              </div>
-            </div>
-
-            {/* SELECTION ARROWS */}
-            {mode !== '2vBot' && (
-              <div className="flex items-center gap-1">
-                <button
-                  disabled={p2Ready}
-                  onClick={() => setP2Index((prev) => (prev - 1 + CHARACTERS.length) % CHARACTERS.length)}
-                  className="p-1.5 bg-[#171d1a] border border-white/10 hover:border-white/40 text-slate-300 hover:text-white transition cursor-pointer disabled:opacity-30"
-                >
-                  <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
-                </button>
-                <button
-                  disabled={p2Ready}
-                  onClick={() => setP2Index((prev) => (prev + 1) % CHARACTERS.length)}
-                  className="p-1.5 bg-[#171d1a] border border-white/10 hover:border-white/40 text-slate-300 hover:text-white transition cursor-pointer disabled:opacity-30"
-                >
-                  <ChevronRight className="w-5 h-5 stroke-[2.5]" />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* 2-COLUMN INNER GAME PLAN: PITCH (LEFT) + ROSTER (RIGHT) */}
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 my-1 items-stretch">
-            {/* LEFT 3 COLS: TACTICAL PITCH GRAPHIC */}
-            <div className="sm:col-span-3">
-              <MiniTacticalPitch character={p2Char} />
-            </div>
-
-            {/* RIGHT 2 COLS: SQUAD ROSTER LIST */}
-            <div className="sm:col-span-2 bg-[#0c100e] p-2.5 border border-white/10 flex flex-col justify-between">
-              <div className="text-[11px] font-mono font-bold text-slate-300 border-b border-white/10 pb-1 mb-2 flex justify-between">
-                <span>STARTING SQUAD</span>
-                <span className="text-[#3B82F6]">{p2Char.formation}</span>
-              </div>
-
-              <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[185px] pr-1 custom-scrollbar text-[10px] font-mono">
-                {p2Char.roster.map((player, idx) => (
-                  <div key={idx} className="flex items-center justify-between py-0.5 px-1 bg-white/5 rounded border border-white/5">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <span className={`px-1 rounded text-[9px] min-w-[26px] text-center ${getPosBadgeClass(player.pos)}`}>
-                        {player.pos}
-                      </span>
-                      <span className="text-slate-200 truncate">{player.name}</span>
-                    </div>
-                    <span className="font-bold text-slate-100 ml-1">{player.rating}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* READY BUTTON P2 */}
-          <button
-            disabled={mode === '2vBot'}
-            onClick={() => setP2Ready(!p2Ready)}
-            className={`w-full py-2.5 mt-3 font-mono font-black text-xs tracking-wider uppercase cursor-pointer transition clip-parallelogram flex items-center justify-center gap-2 ${
-              p2Ready
-                ? 'bg-[#10b981] text-white shadow-lg shadow-emerald-500/20'
-                : 'bg-[#1a2332] border border-blue-500/40 hover:border-blue-500 hover:bg-blue-600/10 text-[#3B82F6]'
-            }`}
-          >
-            {p2Ready ? (
-              <>
-                <Check className="w-4 h-4" />
-                <span>{mode === '2vBot' ? 'AI BOT READY' : 'PLAYER 2 READY'}</span>
-              </>
-            ) : (
-              <span>PRESS ENTER TO READY</span>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* BOTTOM ACTION BAR - PES CONSOLE DESIGN SYSTEM */}
-      <div className="relative z-10 w-full flex justify-between items-center bg-[#111513] border border-white/10 px-6 py-3.5 font-mono text-xs shadow-2xl">
+      {/* FIXED BOTTOM ACTION BAR - CONSOLE DESIGN SYSTEM */}
+      <div className="fixed bottom-4 left-6 right-6 z-30 flex justify-between items-center bg-[#111513]/90 backdrop-blur border border-white/10 px-6 py-3 font-mono text-xs shadow-2xl">
         <div className="flex items-center gap-6 text-slate-300 font-bold">
-          <span>P1: A / D (SPACE)</span>
-          {mode === '1v1' && <span>P2: ◄ / ► (ENTER)</span>}
+          <span>P1 MOVE: W / A / S / D</span>
+          {mode === '1v1' && <span>P2 MOVE: ◄ / ▲ / ▼ / ►</span>}
         </div>
 
         <button
-          disabled={!bothReady}
-          onClick={handleStart}
-          className={`py-2.5 px-8 clip-parallelogram font-mono font-black text-xs tracking-wider uppercase transition cursor-pointer flex items-center gap-2.5 ${
-            bothReady
-              ? 'bg-[#2563EB] hover:bg-[#3B82F6] text-white shadow-lg shadow-blue-500/20'
-              : 'bg-[#151917] border border-white/10 text-slate-500 cursor-not-allowed opacity-50'
-          }`}
+          onClick={() => onConfirmStartGame(p1Char, p2Char)}
+          className="py-2.5 px-8 clip-parallelogram bg-[#2563EB] hover:bg-[#3B82F6] text-white font-mono font-black text-xs tracking-wider transition cursor-pointer flex items-center gap-2.5 shadow-lg shadow-blue-500/20"
         >
           <span className="w-4.5 h-4.5 rounded-full bg-[#10b981] text-white font-black flex items-center justify-center text-[10px] shadow leading-none border border-emerald-400/50">
             A
