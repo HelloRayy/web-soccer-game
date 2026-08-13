@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
 import { ArrowLeft, Keyboard, Gamepad, Smartphone, Bot, RotateCcw, Lock, CheckCircle2 } from 'lucide-react';
 import { DeviceType } from './ControllerSelectModal';
 
@@ -240,15 +239,43 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
     }
   };
 
-  const handleDragEndNode = (id: string, pitchRef: React.RefObject<HTMLDivElement | null>, info: { point: { x: number; y: number } }) => {
-    if (!pitchRef.current) return;
-    const rect = pitchRef.current.getBoundingClientRect();
-    const relX = Math.max(10, Math.min(90, ((info.point.x - rect.left) / rect.width) * 100));
-    const relY = Math.max(50, Math.min(92, ((info.point.y - rect.top) / rect.height) * 100));
+  // Robust, Direct Pointer Drag Handler (Zero Transform Conflict, Zero Random Sliding)
+  const handlePointerDownNode = (
+    id: string,
+    team: 'home' | 'away',
+    e: React.PointerEvent<HTMLDivElement>
+  ) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    if (team === 'away' && mode === '2vBot') return; // AI Bot not manually draggable
 
-    setNodes((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, x: relX, y: relY } : n))
-    );
+    e.preventDefault();
+    e.stopPropagation();
+
+    const pitchRef = team === 'home' ? homePitchRef : awayPitchRef;
+    if (!pitchRef.current) return;
+
+    const updatePos = (clientX: number, clientY: number) => {
+      if (!pitchRef.current) return;
+      const rect = pitchRef.current.getBoundingClientRect();
+      const relX = Math.max(10, Math.min(90, ((clientX - rect.left) / rect.width) * 100));
+      const relY = Math.max(50, Math.min(92, ((clientY - rect.top) / rect.height) * 100));
+
+      setNodes((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, x: relX, y: relY } : n))
+      );
+    };
+
+    const onPointerMove = (ev: PointerEvent) => {
+      updatePos(ev.clientX, ev.clientY);
+    };
+
+    const onPointerUp = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
   };
 
   return (
@@ -351,18 +378,16 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
                     const role = getAutoRole(node.y);
                     const isHovered = hoveredNodeId === node.id;
                     return (
-                      <motion.div
+                      <div
                         key={node.id}
-                        drag
-                        dragSnapToOrigin={false}
-                        onDragEnd={(_, info) => handleDragEndNode(node.id, homePitchRef, info)}
+                        onPointerDown={(e) => handlePointerDownNode(node.id, 'home', e)}
                         onMouseEnter={() => setHoveredNodeId(node.id)}
                         onMouseLeave={() => setHoveredNodeId(null)}
                         style={{ left: `${node.x}%`, top: `${node.y}%` }}
-                        className="absolute z-20 -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing flex flex-col items-center group touch-none"
+                        className="absolute z-20 -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing flex flex-col items-center group touch-none select-none"
                       >
                         {/* USER LABEL BADGE */}
-                        <div className="flex items-center gap-1 bg-[#0c100e]/95 border border-sky-500/60 px-2 py-0.5 rounded-full shadow-lg mb-1 whitespace-nowrap">
+                        <div className="flex items-center gap-1 bg-[#0c100e]/95 border border-sky-500/60 px-2 py-0.5 rounded-full shadow-lg mb-1 whitespace-nowrap pointer-events-none">
                           <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
                           <span className="text-[10px] font-bold text-white font-['Plus_Jakarta_Sans',sans-serif]">
                             {node.name}
@@ -370,17 +395,17 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
                         </div>
 
                         {/* MAIN AVATAR CIRCLE NODE */}
-                        <div className={`w-12 h-12 rounded-full bg-[#0c100e] border-2 border-sky-400 shadow-xl flex items-center justify-center relative transition-all duration-150 ${
+                        <div className={`w-12 h-12 rounded-full bg-[#0c100e] border-2 border-sky-400 shadow-xl flex items-center justify-center relative transition-all duration-150 pointer-events-none ${
                           isHovered ? 'scale-125 shadow-sky-500/60 ring-4 ring-sky-400/30' : 'group-hover:scale-110 shadow-sky-500/30'
                         }`}>
                           {renderDevIcon(node.devType)}
                         </div>
 
                         {/* AUTO ROLE BADGE */}
-                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-md shadow-md mt-1 uppercase font-['Plus_Jakarta_Sans',sans-serif] ${role.bg}`}>
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-md shadow-md mt-1 uppercase font-['Plus_Jakarta_Sans',sans-serif] pointer-events-none ${role.bg}`}>
                           {role.code}
                         </span>
-                      </motion.div>
+                      </div>
                     );
                   })}
               </div>
@@ -546,20 +571,18 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
                     const role = getAutoRole(node.y);
                     const isHovered = hoveredNodeId === node.id;
                     return (
-                      <motion.div
+                      <div
                         key={node.id}
-                        drag={mode !== '2vBot'}
-                        dragSnapToOrigin={false}
-                        onDragEnd={(_, info) => handleDragEndNode(node.id, awayPitchRef, info)}
+                        onPointerDown={(e) => handlePointerDownNode(node.id, 'away', e)}
                         onMouseEnter={() => setHoveredNodeId(node.id)}
                         onMouseLeave={() => setHoveredNodeId(null)}
                         style={{ left: `${node.x}%`, top: `${node.y}%` }}
-                        className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group touch-none ${
+                        className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group touch-none select-none ${
                           mode === '2vBot' ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'
                         }`}
                       >
                         {/* USER LABEL BADGE */}
-                        <div className="flex items-center gap-1 bg-[#0c100e]/95 border border-amber-500/60 px-2 py-0.5 rounded-full shadow-lg mb-1 whitespace-nowrap">
+                        <div className="flex items-center gap-1 bg-[#0c100e]/95 border border-amber-500/60 px-2 py-0.5 rounded-full shadow-lg mb-1 whitespace-nowrap pointer-events-none">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                           <span className="text-[10px] font-bold text-white font-['Plus_Jakarta_Sans',sans-serif]">
                             {node.name}
@@ -567,17 +590,17 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
                         </div>
 
                         {/* MAIN AVATAR CIRCLE NODE */}
-                        <div className={`w-12 h-12 rounded-full bg-[#0c100e] border-2 border-amber-400 shadow-xl flex items-center justify-center relative transition-all duration-150 ${
+                        <div className={`w-12 h-12 rounded-full bg-[#0c100e] border-2 border-amber-400 shadow-xl flex items-center justify-center relative transition-all duration-150 pointer-events-none ${
                           isHovered ? 'scale-125 shadow-amber-500/60 ring-4 ring-amber-400/30' : 'group-hover:scale-110 shadow-amber-500/30'
                         }`}>
                           {renderDevIcon(node.devType)}
                         </div>
 
                         {/* AUTO ROLE BADGE */}
-                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-md shadow-md mt-1 uppercase font-['Plus_Jakarta_Sans',sans-serif] ${role.bg}`}>
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-md shadow-md mt-1 uppercase font-['Plus_Jakarta_Sans',sans-serif] pointer-events-none ${role.bg}`}>
                           {role.code}
                         </span>
-                      </motion.div>
+                      </div>
                     );
                   })}
               </div>
