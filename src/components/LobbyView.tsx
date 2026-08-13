@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Smartphone, Swords, Bot, Info, Settings, User, Gem, Shield, Music } from 'lucide-react';
 import { QRCodeModal } from './QRCodeModal';
 import { ControllerSelectModal, DeviceType } from './ControllerSelectModal';
+import { MatchModeModal } from './MatchModeModal';
 
 interface LobbyViewProps {
   onStartMatch: (mode: '1v1' | '2vBot', p1Device?: DeviceType, p2Device?: DeviceType) => void;
@@ -67,6 +68,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
   const [activeItem, setActiveItem] = useState<MenuItemId>('1v1');
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [showControlsModal, setShowControlsModal] = useState(false);
+  const [showMatchModeModal, setShowMatchModeModal] = useState(false);
   const [showControllerSelectModal, setShowControllerSelectModal] = useState(false);
 
   const currentConfig = MENU_ITEMS.find((item) => item.id === activeItem) || MENU_ITEMS[0];
@@ -74,7 +76,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
   // Console Keyboard Navigation (UP / DOWN / ENTER)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (showControlsModal || showControllerSelectModal || isQRModalOpen) return;
+      if (showControlsModal || showControllerSelectModal || showMatchModeModal || isQRModalOpen) return;
 
       const currentIndex = MENU_ITEMS.findIndex((item) => item.id === activeItem);
 
@@ -94,18 +96,23 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeItem, showControlsModal, showControllerSelectModal, isQRModalOpen, currentConfig]);
+  }, [activeItem, showControlsModal, showControllerSelectModal, showMatchModeModal, isQRModalOpen, currentConfig]);
 
   const handleItemClick = (item: MenuItemConfig) => {
     setActiveItem(item.id);
     if (item.id === '1v1' || item.id === '2vBot') {
-      setSelectedMode(item.id);
-      setShowControllerSelectModal(true);
+      setShowMatchModeModal(true);
     } else if (item.id === 'extras') {
       setShowControlsModal(true);
     } else if (item.id === 'settings') {
       setIsQRModalOpen(true);
     }
+  };
+
+  const handleSelectMatchMode = (mode: '1v1' | '2vBot') => {
+    setSelectedMode(mode);
+    setShowMatchModeModal(false);
+    setShowControllerSelectModal(true);
   };
 
   const handleConfirmControllerStart = (p1Device: DeviceType, p2Device: DeviceType) => {
@@ -139,6 +146,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
         onClose={() => setIsQRModalOpen(false)}
         roomId={peerRoomId}
         isConnected={isPeerConnected}
+      />
+
+      <MatchModeModal
+        isOpen={showMatchModeModal}
+        onClose={() => setShowMatchModeModal(false)}
+        onSelectMode={handleSelectMatchMode}
       />
 
       <ControllerSelectModal
