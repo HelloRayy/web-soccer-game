@@ -96,11 +96,11 @@ interface TeamSelectViewProps {
   onConfirmStartGame: (p1Char: CharacterData, p2Char: CharacterData) => void;
 }
 
-// Auto role detection based on Y-coordinate percentage
+// Auto role detection based on Y-coordinate percentage (Own Half: 42% - 92%)
 const getAutoRole = (yPercent: number): { code: 'FWD' | 'MID' | 'DEF' | 'GK'; bg: string } => {
-  if (yPercent < 35) return { code: 'FWD', bg: 'bg-[#ef4444] text-white' };
-  if (yPercent < 65) return { code: 'MID', bg: 'bg-[#10b981] text-white' };
-  if (yPercent < 85) return { code: 'DEF', bg: 'bg-[#2563EB] text-white' };
+  if (yPercent < 55) return { code: 'FWD', bg: 'bg-[#ef4444] text-white' };
+  if (yPercent < 72) return { code: 'MID', bg: 'bg-[#10b981] text-white' };
+  if (yPercent < 86) return { code: 'DEF', bg: 'bg-[#2563EB] text-white' };
   return { code: 'GK', bg: 'bg-[#FFD13B] text-[#05090C] font-bold' };
 };
 
@@ -114,12 +114,12 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
   const homePitchRef = useRef<HTMLDivElement>(null);
   const awayPitchRef = useRef<HTMLDivElement>(null);
 
-  // Initial Player Spawn Position Nodes
+  // Initial Player Spawn Position Nodes (Placed inside Own Half: Y >= 45%)
   const [nodes, setNodes] = useState<PlayerNode[]>([
-    { id: 'p1', name: 'User 1 (HOME)', devType: p1Device, team: 'home', x: 50, y: 25 },
-    { id: 'p1_sub', name: 'User 3 (HOME)', devType: 'keyboard2', team: 'home', x: 30, y: 55 },
-    { id: 'p2', name: mode === '2vBot' ? 'AI BOT 1' : 'User 2 (AWAY)', devType: mode === '2vBot' ? 'ai_bot' : p2Device, team: 'away', x: 50, y: 25 },
-    { id: 'p2_sub', name: mode === '2vBot' ? 'AI BOT 2' : 'User 4 (AWAY)', devType: mode === '2vBot' ? 'ai_bot' : 'gamepad1', team: 'away', x: 70, y: 55 }
+    { id: 'p1', name: 'User 1 (HOME)', devType: p1Device, team: 'home', x: 50, y: 48 },
+    { id: 'p1_sub', name: 'User 3 (HOME)', devType: 'keyboard2', team: 'home', x: 30, y: 68 },
+    { id: 'p2', name: mode === '2vBot' ? 'AI BOT 1' : 'User 2 (AWAY)', devType: mode === '2vBot' ? 'ai_bot' : p2Device, team: 'away', x: 50, y: 48 },
+    { id: 'p2_sub', name: mode === '2vBot' ? 'AI BOT 2' : 'User 4 (AWAY)', devType: mode === '2vBot' ? 'ai_bot' : 'gamepad1', team: 'away', x: 70, y: 68 }
   ]);
 
   const p1Char = CHARACTERS[0];
@@ -128,14 +128,14 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
   // Reset positions to default
   const handleResetPositions = () => {
     setNodes([
-      { id: 'p1', name: 'User 1 (HOME)', devType: p1Device, team: 'home', x: 50, y: 25 },
-      { id: 'p1_sub', name: 'User 3 (HOME)', devType: 'keyboard2', team: 'home', x: 30, y: 55 },
-      { id: 'p2', name: mode === '2vBot' ? 'AI BOT 1' : 'User 2 (AWAY)', devType: mode === '2vBot' ? 'ai_bot' : p2Device, team: 'away', x: 50, y: 25 },
-      { id: 'p2_sub', name: mode === '2vBot' ? 'AI BOT 2' : 'User 4 (AWAY)', devType: mode === '2vBot' ? 'ai_bot' : 'gamepad1', team: 'away', x: 70, y: 55 }
+      { id: 'p1', name: 'User 1 (HOME)', devType: p1Device, team: 'home', x: 50, y: 48 },
+      { id: 'p1_sub', name: 'User 3 (HOME)', devType: 'keyboard2', team: 'home', x: 30, y: 68 },
+      { id: 'p2', name: mode === '2vBot' ? 'AI BOT 1' : 'User 2 (AWAY)', devType: mode === '2vBot' ? 'ai_bot' : p2Device, team: 'away', x: 50, y: 48 },
+      { id: 'p2_sub', name: mode === '2vBot' ? 'AI BOT 2' : 'User 4 (AWAY)', devType: mode === '2vBot' ? 'ai_bot' : 'gamepad1', team: 'away', x: 70, y: 68 }
     ]);
   };
 
-  // Keyboard navigation support for P1 (WASD) and P2 (Arrows) node movement
+  // Keyboard navigation support for P1 (WASD) and P2 (Arrows) node movement (Own Half constrained)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const step = 5; // move step percentage
@@ -147,8 +147,8 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
             let newY = node.y;
             if (e.key === 'a' || e.key === 'A') newX = Math.max(10, node.x - step);
             if (e.key === 'd' || e.key === 'D') newX = Math.min(90, node.x + step);
-            if (e.key === 'w' || e.key === 'W') newY = Math.max(10, node.y - step);
-            if (e.key === 's' || e.key === 'S') newY = Math.min(90, node.y + step);
+            if (e.key === 'w' || e.key === 'W') newY = Math.max(42, node.y - step);
+            if (e.key === 's' || e.key === 'S') newY = Math.min(92, node.y + step);
             return { ...node, x: newX, y: newY };
           }
 
@@ -157,8 +157,8 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
             let newY = node.y;
             if (e.key === 'ArrowLeft') newX = Math.max(10, node.x - step);
             if (e.key === 'ArrowRight') newX = Math.min(90, node.x + step);
-            if (e.key === 'ArrowUp') newY = Math.max(10, node.y - step);
-            if (e.key === 'ArrowDown') newY = Math.min(90, node.y + step);
+            if (e.key === 'ArrowUp') newY = Math.max(42, node.y - step);
+            if (e.key === 'ArrowDown') newY = Math.min(92, node.y + step);
             return { ...node, x: newX, y: newY };
           }
 
@@ -192,7 +192,7 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
     if (!pitchRef.current) return;
     const rect = pitchRef.current.getBoundingClientRect();
     const relX = Math.max(10, Math.min(90, ((info.point.x - rect.left) / rect.width) * 100));
-    const relY = Math.max(10, Math.min(90, ((info.point.y - rect.top) / rect.height) * 100));
+    const relY = Math.max(42, Math.min(92, ((info.point.y - rect.top) / rect.height) * 100));
 
     setNodes((prev) =>
       prev.map((n) => (n.id === id ? { ...n, x: relX, y: relY } : n))
