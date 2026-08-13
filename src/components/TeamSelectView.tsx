@@ -344,7 +344,7 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
                       Geser ikon di lapangan untuk ubah posisi
                     </p>
                   </div>
-                  <span className="text-sky-400 text-xs font-bold bg-sky-950/80 px-2.5 py-0.5 rounded-full border border-sky-500/30">
+                  <span className="text-sky-400 text-xs font-bold bg-sky-950/80 px-3 py-1 rounded-full border border-sky-500/30 whitespace-nowrap shrink-0">
                     {nodes.filter((n) => n.team === 'home').length} Pemain
                   </span>
                 </div>
@@ -541,7 +541,7 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
                       {mode === '2vBot' ? 'Posisi spawn otomatis diatur' : 'Geser ikon di lapangan untuk ubah posisi'}
                     </p>
                   </div>
-                  <span className="text-amber-400 text-xs font-bold bg-amber-950/80 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                  <span className="text-amber-400 text-xs font-bold bg-amber-950/80 px-3 py-1 rounded-full border border-amber-500/30 whitespace-nowrap shrink-0">
                     {nodes.filter((n) => n.team === 'away').length} Pemain
                   </span>
                 </div>
