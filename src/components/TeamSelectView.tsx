@@ -225,36 +225,18 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
   };
 
   return (
-    <div className="relative w-screen h-screen bg-[#070b0e] text-[#E2F1F8] flex flex-col justify-between p-4 sm:p-6 select-none overflow-hidden font-['Inter',sans-serif]">
+    <div className="relative w-screen h-screen bg-[#070b0e] text-[#E2F1F8] flex flex-col justify-between p-3 sm:p-5 select-none overflow-hidden font-['Inter',sans-serif]">
       {/* FLOATING TOP-LEFT BACK BUTTON */}
       <button
         onClick={onBackToControllers}
-        className="fixed top-4 left-6 z-30 bg-[#151917]/90 backdrop-blur border border-white/10 hover:border-white/30 text-slate-300 hover:text-white px-4 py-2 font-mono text-xs font-bold cursor-pointer transition flex items-center gap-2 shadow-2xl"
+        className="fixed top-3 left-5 z-30 bg-[#151917]/90 backdrop-blur border border-white/10 hover:border-white/30 text-slate-300 hover:text-white px-4 py-2 font-mono text-xs font-bold cursor-pointer transition flex items-center gap-2 shadow-2xl"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>BACK TO CONTROLLERS</span>
       </button>
 
-      {/* FLOATING TOP-CENTER INSTRUCTION BADGE */}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-30 bg-[#111513]/90 backdrop-blur border border-white/10 px-5 py-2 shadow-2xl flex items-center gap-3 text-xs font-mono">
-        <span className="font-black italic text-white uppercase font-['Outfit',sans-serif] text-sm tracking-tight">
-          SPAWN SETUP ({mode.toUpperCase()})
-        </span>
-        <span className="text-[#3B82F6] font-bold tracking-wider uppercase border-l border-white/10 pl-3">
-          DRAG PLAYER NODE TO SET SPAWN POSITION
-        </span>
-        <button
-          onClick={handleResetPositions}
-          className="ml-2 flex items-center gap-1 text-[10px] text-slate-400 hover:text-white underline cursor-pointer"
-          title="Reset Posisi Default"
-        >
-          <RotateCcw className="w-3 h-3" />
-          <span>Reset</span>
-        </button>
-      </div>
-
-      {/* eFOOTBALL / PES TEAM SHEET CARDS (HOME LEFT vs AWAY RIGHT) */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto my-auto pt-14 pb-14 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+      {/* FULLSCREEN eFOOTBALL / PES TEAM SHEET CARDS (HOME LEFT vs AWAY RIGHT) */}
+      <div className="relative z-10 w-full h-[calc(100vh-90px)] my-auto mt-10 mb-10 px-2 sm:px-4 grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
         {/* HOME TEAM CARD (FRANCE) */}
         <div className="bg-[#111513] border border-white/10 p-5 rounded-2xl shadow-2xl flex flex-col justify-between">
           {/* HEADER: FLAG + TEAM NAME + SUBHEADER */}
@@ -279,12 +261,12 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
           </div>
 
           {/* MAIN CARD BODY: PITCH (LEFT 7 COLS) + ROSTER LIST (RIGHT 5 COLS) */}
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch my-1">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch my-1 flex-1">
             {/* LEFT 7 COLS: FIELD PITCH WITH DRAGGABLE NODES */}
-            <div className="sm:col-span-7 flex flex-col">
+            <div className="sm:col-span-7 flex flex-col h-full">
               <div
                 ref={homePitchRef}
-                className="relative w-full h-[340px] sm:h-[380px] bg-gradient-to-b from-[#15803d] via-[#16a34a] to-[#15803d] p-3 flex flex-col justify-between overflow-hidden shadow-xl rounded-2xl border-2 border-emerald-400/40"
+                className="relative w-full h-[450px] sm:h-[490px] lg:h-[calc(100vh-230px)] bg-gradient-to-b from-[#15803d] via-[#16a34a] to-[#15803d] p-3 flex flex-col justify-between overflow-hidden shadow-xl rounded-2xl border-2 border-emerald-400/40"
               >
                 {/* PITCH FIELD LINES SVG OVERLAY */}
                 <svg className="absolute inset-0 w-full h-full stroke-white/30 stroke-[2] fill-none pointer-events-none">
@@ -349,13 +331,13 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
             </div>
 
             {/* RIGHT 5 COLS: STARTING SQUAD ROSTER LIST */}
-            <div className="sm:col-span-5 bg-[#0c100e] p-3 rounded-xl border border-white/10 flex flex-col justify-between font-mono">
+            <div className="sm:col-span-5 bg-[#0c100e] p-3 rounded-xl border border-white/10 flex flex-col justify-between font-mono h-full">
               <div className="text-xs font-bold text-slate-200 border-b border-white/10 pb-2 mb-2 flex justify-between items-center">
                 <span>STARTING SQUAD</span>
                 <span className="text-[#3B82F6] font-mono font-bold text-[11px]">{p1Char.formation}</span>
               </div>
 
-              <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[300px] sm:max-h-[330px] pr-1 custom-scrollbar text-xs">
+              <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[420px] sm:max-h-[460px] lg:max-h-[calc(100vh-260px)] pr-1 custom-scrollbar text-xs">
                 {p1Char.roster.map((player, idx) => (
                   <div key={idx} className="flex items-center justify-between py-1 px-2 bg-white/5 rounded border border-white/5 hover:bg-white/10 transition">
                     <div className="flex items-center gap-2 truncate">
@@ -396,12 +378,12 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
           </div>
 
           {/* MAIN CARD BODY: PITCH (LEFT 7 COLS) + ROSTER LIST (RIGHT 5 COLS) */}
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch my-1">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch my-1 flex-1">
             {/* LEFT 7 COLS: FIELD PITCH WITH DRAGGABLE NODES */}
-            <div className="sm:col-span-7 flex flex-col">
+            <div className="sm:col-span-7 flex flex-col h-full">
               <div
                 ref={awayPitchRef}
-                className="relative w-full h-[340px] sm:h-[380px] bg-gradient-to-b from-[#15803d] via-[#16a34a] to-[#15803d] p-3 flex flex-col justify-between overflow-hidden shadow-xl rounded-2xl border-2 border-emerald-400/40"
+                className="relative w-full h-[450px] sm:h-[490px] lg:h-[calc(100vh-230px)] bg-gradient-to-b from-[#15803d] via-[#16a34a] to-[#15803d] p-3 flex flex-col justify-between overflow-hidden shadow-xl rounded-2xl border-2 border-emerald-400/40"
               >
                 {/* PITCH FIELD LINES SVG OVERLAY */}
                 <svg className="absolute inset-0 w-full h-full stroke-white/30 stroke-[2] fill-none pointer-events-none">
@@ -468,13 +450,13 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
             </div>
 
             {/* RIGHT 5 COLS: STARTING SQUAD ROSTER LIST */}
-            <div className="sm:col-span-5 bg-[#0c100e] p-3 rounded-xl border border-white/10 flex flex-col justify-between font-mono">
+            <div className="sm:col-span-5 bg-[#0c100e] p-3 rounded-xl border border-white/10 flex flex-col justify-between font-mono h-full">
               <div className="text-xs font-bold text-slate-200 border-b border-white/10 pb-2 mb-2 flex justify-between items-center">
                 <span>STARTING SQUAD</span>
                 <span className="text-amber-400 font-mono font-bold text-[11px]">{p2Char.formation}</span>
               </div>
 
-              <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[300px] sm:max-h-[330px] pr-1 custom-scrollbar text-xs">
+              <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[420px] sm:max-h-[460px] lg:max-h-[calc(100vh-260px)] pr-1 custom-scrollbar text-xs">
                 {p2Char.roster.map((player, idx) => (
                   <div key={idx} className="flex items-center justify-between py-1 px-2 bg-white/5 rounded border border-white/5 hover:bg-white/10 transition">
                     <div className="flex items-center gap-2 truncate">
