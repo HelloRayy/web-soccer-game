@@ -186,7 +186,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                                 <ChevronLeft className="w-5 h-5" />
                               </button>
 
-                              <div className="text-[#00C896] p-1">
+                              <div className="text-[#2563EB] p-1">
                                 {dev.type === 'keyboard' && <Keyboard className="w-14 h-14" />}
                                 {dev.type === 'gamepad' && <Gamepad className="w-14 h-14" />}
                                 {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-[#00C896]" />}
@@ -286,7 +286,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                                     <ChevronLeft className="w-5 h-5" />
                                   </button>
 
-                                  <div className="text-[#00C896] p-1">
+                                  <div className="text-[#2563EB] p-1">
                                     {dev.type === 'keyboard' && <Keyboard className="w-14 h-14" />}
                                     {dev.type === 'gamepad' && <Gamepad className="w-14 h-14" />}
                                     {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-[#00C896]" />}
@@ -348,16 +348,16 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
             <div className="bg-[#0C1026] px-6 py-4 border-t border-slate-700 flex items-center justify-between font-mono">
               <div className="flex items-center gap-4 text-xs">
                 <span className="text-slate-300 flex items-center gap-1.5">
-                  <kbd className="px-2 py-1 bg-white/10 rounded text-[#00F5B4] font-bold">W/A/S/D</kbd> P1 Keyboard
+                  <kbd className="px-2 py-1 bg-white/10 rounded text-[#3B82F6] font-bold">W/A/S/D</kbd> P1 Keyboard
                 </span>
                 <span className="text-slate-300 flex items-center gap-1.5">
-                  <kbd className="px-2 py-1 bg-white/10 rounded text-[#00F5B4] font-bold">ARROWS</kbd> P2 Keyboard
+                  <kbd className="px-2 py-1 bg-white/10 rounded text-[#3B82F6] font-bold">ARROWS</kbd> P2 Keyboard
                 </span>
               </div>
 
               <button
                 onClick={() => onConfirmStart(p1Device, p2Device)}
-                className="py-2.5 px-6 clip-parallelogram bg-[#00F5B4] hover:bg-[#34FFC8] text-[#081020] font-mono font-black text-xs tracking-wider transition cursor-pointer flex items-center gap-2"
+                className="py-2.5 px-6 clip-parallelogram bg-[#2563EB] hover:bg-[#3B82F6] text-white font-mono font-black text-xs tracking-wider transition cursor-pointer flex items-center gap-2"
               >
                 <Play className="w-4 h-4 fill-current" />
                 <span>CONFIRM SIDES ➔</span>
@@ -368,7 +368,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
           {/* AUTHENTIC PES CONSOLE INFO CONTROL BAR (OUTSIDE DIV CONTAINER - FIXED AT BOTTOM LEFT SCREEN) */}
           <div className="fixed bottom-6 left-8 z-50 flex items-center gap-6 text-xs font-sans text-slate-200 select-none pointer-events-auto">
             <div className="flex items-center gap-1.5">
-              <span className="w-5 h-5 rounded-full bg-[#17FFBF] text-[#05090C] font-black flex items-center justify-center text-[10px] shadow">
+              <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white font-black flex items-center justify-center text-[10px] shadow">
                 A
               </span>
               <span className="font-semibold text-white">Confirm</span>
@@ -404,7 +404,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
             </div>
           </div>
 
-          {/* SLEEK FLOATING QR CODE POPOVER OVERLAY (NO AI-SLOP, CLEAN SENTENCE CASE) */}
+          {/* SLEEK FLOATING QR CODE POPOVER OVERLAY */}
           <AnimatePresence>
             {showQRPopover && (
               <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
@@ -413,7 +413,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.15, ease: 'easeOut' }}
-                  className="bg-[#151917] border border-[#17FFBF]/40 max-w-md w-full p-6 shadow-2xl flex flex-col items-center gap-4 text-[#E2F1F8] relative"
+                  className="bg-[#151917] border border-blue-500/40 max-w-md w-full p-6 shadow-2xl flex flex-col items-center gap-4 text-[#E2F1F8] relative"
                 >
                   <button
                     onClick={() => setShowQRPopover(false)}
@@ -423,7 +423,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                     <X className="w-5 h-5" />
                   </button>
 
-                  <div className="flex items-center gap-2 text-[#17FFBF] font-bold text-base tracking-wide">
+                  <div className="flex items-center gap-2 text-[#3B82F6] font-bold text-base tracking-wide">
                     <Smartphone className="w-5 h-5" />
                     <span>Sambungkan HP Remote</span>
                   </div>
@@ -438,7 +438,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
                   <div className="flex items-center gap-2 w-full justify-center">
                     <span className={`px-3 py-1 text-xs font-semibold font-mono rounded ${
-                      isPeerConnected ? 'bg-[#17FFBF]/20 text-[#17FFBF] border border-[#17FFBF]/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                      isPeerConnected ? 'bg-blue-600/20 text-[#3B82F6] border border-blue-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                     }`}>
                       {isPeerConnected ? `📱 ${connectedPeerCount || 1} HP terhubung` : '⏳ Menunggu koneksi HP...'}
                     </span>
@@ -446,7 +446,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
                   <div className="bg-[#0c100e] p-2 border border-white/10 text-[11px] font-mono text-cyan-300 w-full flex justify-between items-center rounded">
                     <span className="truncate pr-2">{controllerUrl}</span>
-                    <span className="text-[#17FFBF] font-bold shrink-0">ROOM: {peerRoomId}</span>
+                    <span className="text-[#3B82F6] font-bold shrink-0">ROOM: {peerRoomId}</span>
                   </div>
                 </motion.div>
               </div>

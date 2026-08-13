@@ -75,7 +75,7 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
                 onClick={() => onSelectMode('1v1')}
                 className={`cursor-pointer transition-all duration-150 p-6 flex flex-col items-center text-center gap-4 relative group rounded-none border ${
                   selectedCard === '1v1'
-                    ? 'bg-[#18231e] text-white border-2 border-[#17FFBF] shadow-lg shadow-[#17FFBF]/10'
+                    ? 'bg-[#141e2e] text-white border-2 border-[#3B82F6] shadow-lg shadow-blue-500/10'
                     : 'bg-[#171d1a] text-white border-white/10 hover:border-white/30 opacity-75 hover:opacity-100'
                 }`}
               >
@@ -83,17 +83,17 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
                 <div
                   className={`w-full h-44 rounded-2xl flex flex-col items-center justify-center p-4 border transition-colors ${
                     selectedCard === '1v1'
-                      ? 'bg-gradient-to-br from-[#0c1511] via-[#12201a] to-[#09100d] border-[#17FFBF]/80 text-white'
+                      ? 'bg-gradient-to-br from-[#0c1426] via-[#121c33] to-[#0a1020] border-[#3B82F6]/80 text-white'
                       : 'bg-[#0e1311] border-white/10 text-slate-300'
                   }`}
                 >
                   <div className="w-12 h-12 rounded-full border-2 border-current flex items-center justify-center mb-2">
-                    <Swords className="w-6 h-6 text-[#17FFBF]" />
+                    <Swords className="w-6 h-6 text-[#3B82F6]" />
                   </div>
                   <span className="text-xl font-black italic tracking-tighter font-['Outfit',sans-serif] uppercase">
                     KICK OFF
                   </span>
-                  <span className="text-xs font-mono font-bold tracking-widest text-[#17FFBF] mt-0.5">
+                  <span className="text-xs font-mono font-bold tracking-widest text-[#3B82F6] mt-0.5">
                     PLAYER VS PLAYER
                   </span>
                 </div>
@@ -115,7 +115,7 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
                 onClick={() => onSelectMode('2vBot')}
                 className={`cursor-pointer transition-all duration-150 p-6 flex flex-col items-center text-center gap-4 relative group rounded-none border ${
                   selectedCard === '2vBot'
-                    ? 'bg-[#18231e] text-white border-2 border-[#17FFBF] shadow-lg shadow-[#17FFBF]/10'
+                    ? 'bg-[#141e2e] text-white border-2 border-[#3B82F6] shadow-lg shadow-blue-500/10'
                     : 'bg-[#171d1a] text-white border-white/10 hover:border-white/30 opacity-75 hover:opacity-100'
                 }`}
               >
@@ -123,7 +123,7 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
                 <div
                   className={`w-full h-44 rounded-2xl flex flex-col items-center justify-center p-4 border transition-colors ${
                     selectedCard === '2vBot'
-                      ? 'bg-gradient-to-br from-[#0c1511] via-[#12201a] to-[#09100d] border-[#17FFBF]/80 text-white'
+                      ? 'bg-gradient-to-br from-[#0c1426] via-[#121c33] to-[#0a1020] border-[#3B82F6]/80 text-white'
                       : 'bg-[#0e1311] border-white/10 text-slate-300'
                   }`}
                 >
@@ -155,7 +155,7 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
             <div className="bg-[#1b201d] px-8 py-4 border-t border-white/10 flex justify-end items-center text-xs font-mono">
               <button
                 onClick={() => onSelectMode(selectedCard)}
-                className="py-2.5 px-6 clip-parallelogram bg-[#17FFBF] hover:bg-[#4BFFCE] text-[#05090C] font-mono font-black text-xs tracking-wider transition cursor-pointer"
+                className="py-2.5 px-6 clip-parallelogram bg-[#2563EB] hover:bg-[#3B82F6] text-white font-mono font-black text-xs tracking-wider transition cursor-pointer"
               >
                 SELECT MODE ➔
               </button>

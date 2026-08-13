@@ -158,20 +158,20 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
       {/* Controls Spec Modal */}
       {showControlsModal && (
         <div className="fixed inset-0 z-50 bg-[#05090C]/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-[#0A1526] border-2 border-[#17FFBF]/40 max-w-md w-full p-6 flex flex-col gap-4 text-[#E2F1F8] relative rounded-2xl font-mono shadow-2xl">
+          <div className="bg-[#0A1526] border-2 border-blue-500/40 max-w-md w-full p-6 flex flex-col gap-4 text-[#E2F1F8] relative rounded-2xl font-mono shadow-2xl">
             <button
               onClick={() => setShowControlsModal(false)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#0F1E36] border border-[#17FFBF]/60 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#0F1E36] border border-blue-500/60 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
             >
               ✕
             </button>
             <h3 className="text-xl font-black text-white flex items-center gap-2 font-['Plus_Jakarta_Sans',sans-serif] uppercase tracking-wider">
-              <Shield className="w-5 h-5 text-[#17FFBF]" /> PETUNJUK KONTROL GAME
+              <Shield className="w-5 h-5 text-[#3B82F6]" /> PETUNJUK KONTROL GAME
             </h3>
             <div className="flex flex-col gap-2.5 text-xs text-slate-300">
               <div className="bg-[#05090C] p-3 rounded-xl border border-[#142840] flex justify-between items-center">
                 <span className="text-slate-400">P1 Move / Action:</span>
-                <span className="text-[#17FFBF] font-bold">WASD + J/K/L + Space</span>
+                <span className="text-[#3B82F6] font-bold">WASD + J/K/L + Space</span>
               </div>
               <div className="bg-[#05090C] p-3 rounded-xl border border-[#142840] flex justify-between items-center">
                 <span className="text-slate-400">P2 Move / Action:</span>
@@ -179,7 +179,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
               </div>
               <div className="bg-[#05090C] p-3 rounded-xl border border-[#142840] flex justify-between items-center">
                 <span className="text-slate-400">Joystick / Gamepad:</span>
-                <span className="text-[#17FFBF] font-bold">Plug & Play Controller</span>
+                <span className="text-[#3B82F6] font-bold">Plug & Play Controller</span>
               </div>
               <div className="bg-[#05090C] p-3 rounded-xl border border-[#142840] flex justify-between items-center">
                 <span className="text-slate-400">HP Remote Controller:</span>
@@ -213,21 +213,21 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
 
           {/* FL 25 Metallic Logo */}
           <h1 className="text-3xl sm:text-5xl font-black italic tracking-tighter text-white font-['Plus_Jakarta_Sans',sans-serif] leading-none uppercase drop-shadow-lg flex items-center gap-1">
-            FL <span className="text-[#17FFBF]">25</span>
+            FL <span className="text-[#3B82F6]">25</span>
           </h1>
         </div>
 
         {/* TOP-RIGHT USER PROFILE BADGE (Presisi FL 25 Design System) */}
         <div className="flex items-center gap-3 font-mono text-xs text-slate-300">
-          <div className="flex items-center gap-2 bg-[#0c1613] border border-[#17FFBF]/30 px-3 py-1.5 rounded-full backdrop-blur-md">
-            <div className="w-5 h-5 rounded-full bg-[#17FFBF] text-[#05090C] font-black text-[10px] flex items-center justify-center">
+          <div className="flex items-center gap-2 bg-[#0d172a] border border-blue-500/30 px-3 py-1.5 rounded-full backdrop-blur-md">
+            <div className="w-5 h-5 rounded-full bg-[#2563EB] text-white font-black text-[10px] flex items-center justify-center">
               E
             </div>
             <span className="font-bold text-white text-xs tracking-wide">EferQ</span>
           </div>
 
-          <div className="bg-[#0c1613] border border-[#17FFBF]/30 px-3 py-1.5 rounded-full text-[#17FFBF] font-bold text-xs backdrop-blur-md flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#17FFBF] animate-pulse" />
+          <div className="bg-[#0d172a] border border-blue-500/30 px-3 py-1.5 rounded-full text-[#3B82F6] font-bold text-xs backdrop-blur-md flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6] animate-pulse" />
             <span>Level 0</span>
           </div>
 

@@ -21,12 +21,12 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onStartGame }) => {
       onClick={onStartGame}
       className="relative w-screen h-screen bg-[#070b0e] text-[#E2F1F8] flex flex-col justify-between p-6 sm:p-10 select-none overflow-hidden font-['Poppins',sans-serif] cursor-pointer"
     >
-      {/* VIBRANT MESH BACKGROUND GRADIENT BLOBS */}
-      <div className="absolute top-1/4 -left-24 w-[650px] h-[650px] bg-gradient-to-br from-[#10E894]/35 via-[#00E676]/20 to-transparent rounded-full blur-[140px] pointer-events-none z-0" />
-      <div className="absolute bottom-1/4 -right-24 w-[650px] h-[650px] bg-gradient-to-tl from-[#00E676]/30 via-[#17FFBF]/20 to-transparent rounded-full blur-[140px] pointer-events-none z-0" />
+      {/* VIBRANT ROYAL BLUE MESH BACKGROUND GRADIENT BLOBS */}
+      <div className="absolute top-1/4 -left-24 w-[650px] h-[650px] bg-gradient-to-br from-[#2563EB]/35 via-[#3B82F6]/20 to-transparent rounded-full blur-[140px] pointer-events-none z-0" />
+      <div className="absolute bottom-1/4 -right-24 w-[650px] h-[650px] bg-gradient-to-tl from-[#1D4ED8]/30 via-[#3B82F6]/20 to-transparent rounded-full blur-[140px] pointer-events-none z-0" />
 
       {/* WAVE LINE OVERLAY TEXTURE */}
-      <div className="absolute inset-0 bg-[radial-gradient(#17FFBF_1px,transparent_1px)] [background-size:36px_36px] opacity-10 pointer-events-none z-0" />
+      <div className="absolute inset-0 bg-[radial-gradient(#3B82F6_1px,transparent_1px)] [background-size:36px_36px] opacity-10 pointer-events-none z-0" />
 
       {/* CENTER EYE UNIFIED CLUSTER */}
       <motion.div
@@ -37,16 +37,16 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onStartGame }) => {
       >
         {/* 1. Logo Branding: PES 26 */}
         <h1 className="text-3xl sm:text-4xl font-black italic tracking-tighter text-white font-['Outfit',sans-serif] uppercase drop-shadow-md">
-          PES<span className="text-[#17FFBF]">26</span>
+          PES<span className="text-[#3B82F6]">26</span>
         </h1>
 
         {/* 2. Main Headline: THE CLUB IS YOURS */}
         <h2 className="text-5xl sm:text-7xl lg:text-[84px] font-black tracking-tight text-white font-['Outfit',sans-serif] uppercase leading-[0.95] drop-shadow-2xl">
           THE CLUB <br />
-          <span className="text-[#17FFBF]">IS YOURS</span>
+          <span className="text-[#3B82F6]">IS YOURS</span>
         </h2>
 
-        {/* 3. Sleek Button: Let's Play! */}
+        {/* 3. Royal Blue Pill Button: Let's Play! */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -54,7 +54,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onStartGame }) => {
             e.stopPropagation();
             onStartGame();
           }}
-          className="mt-2 px-9 py-2.5 bg-[#17FFBF] hover:bg-[#4BFFCE] text-[#05090C] font-bold text-sm sm:text-base tracking-wide rounded-full shadow-xl shadow-[#17FFBF]/20 transition cursor-pointer flex items-center justify-center"
+          className="mt-2 px-9 py-2.5 bg-[#2563EB] hover:bg-[#3B82F6] text-white font-bold text-sm sm:text-base tracking-wide rounded-full shadow-xl shadow-blue-600/30 transition cursor-pointer flex items-center justify-center"
         >
           Let's Play!
         </motion.button>
