@@ -44,6 +44,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
   const [awaySeats, setAwaySeats] = useState<number[]>([1]); // Device indices for Away players
 
   const [ipAddress, setIpAddress] = useState<string>(() => window.location.hostname || '192.168.1.100');
+  const [showQRPopover, setShowQRPopover] = useState<boolean>(false);
 
   // Keyboard navigation for Primary Players (Home P1 & Away P2)
   useEffect(() => {
@@ -110,7 +111,6 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
   };
 
   const controllerUrl = `http://${ipAddress}:5173/controller`;
-  const isHpSelected = homeSeats.some((idx) => DEVICE_OPTIONS[idx]?.id === 'hp_remote') || awaySeats.some((idx) => DEVICE_OPTIONS[idx]?.id === 'hp_remote');
 
   // Exactly 5 Rows of Controller Slots per side
   const ALL_5_SLOTS = [0, 1, 2, 3, 4];
@@ -175,30 +175,43 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                             )}
                           </div>
 
-                          {/* LARGE CONTROLLER ICON (BESAR, CRISP WHITE, TANPA BORDER/BOX & TANPA GLOW) */}
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={() => cycleHomeDevice(slotIndex, -1)}
-                              className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
-                              title="Peranti Sebelumnya"
-                            >
-                              <ChevronLeft className="w-5 h-5" />
-                            </button>
+                          {/* LARGE CONTROLLER ICON WITH INTERACTIVE QR CODE BADGE */}
+                          <div className="flex flex-col items-center gap-1.5">
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => cycleHomeDevice(slotIndex, -1)}
+                                className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
+                                title="Peranti Sebelumnya"
+                              >
+                                <ChevronLeft className="w-5 h-5" />
+                              </button>
 
-                            <div className="text-white p-1">
-                              {dev.type === 'keyboard' && <Keyboard className="w-14 h-14" />}
-                              {dev.type === 'gamepad' && <Gamepad className="w-14 h-14" />}
-                              {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-[#17FFBF]" />}
-                              {dev.type === 'bot' && <Bot className="w-14 h-14 text-[#FFD13B]" />}
+                              <div className="text-white p-1">
+                                {dev.type === 'keyboard' && <Keyboard className="w-14 h-14" />}
+                                {dev.type === 'gamepad' && <Gamepad className="w-14 h-14" />}
+                                {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-[#17FFBF]" />}
+                                {dev.type === 'bot' && <Bot className="w-14 h-14 text-[#FFD13B]" />}
+                              </div>
+
+                              <button
+                                onClick={() => cycleHomeDevice(slotIndex, 1)}
+                                className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
+                                title="Peranti Selanjutnya"
+                              >
+                                <ChevronRight className="w-5 h-5" />
+                              </button>
                             </div>
 
-                            <button
-                              onClick={() => cycleHomeDevice(slotIndex, 1)}
-                              className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
-                              title="Peranti Selanjutnya"
-                            >
-                              <ChevronRight className="w-5 h-5" />
-                            </button>
+                            {/* HP REMOTE INTERACTIVE QR BADGE BUTTON */}
+                            {dev.type === 'smartphone' && (
+                              <button
+                                onClick={() => setShowQRPopover(true)}
+                                className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#18211d] border border-[#17FFBF]/40 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer text-[11px] font-medium shadow rounded-sm"
+                              >
+                                <Smartphone className="w-3.5 h-3.5" />
+                                <span>Scan QR Code HP</span>
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
@@ -256,37 +269,50 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                             )}
                           </div>
 
-                          {/* LARGE CONTROLLER ICON (BESAR, CRISP WHITE, TANPA BORDER/BOX & TANPA GLOW) */}
-                          <div className="flex items-center gap-3">
-                            {selectedMode === '2vBot' && slotIndex === 0 ? (
-                              <div className="text-[#FFD13B] p-1">
-                                <Bot className="w-14 h-14" />
-                              </div>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => cycleAwayDevice(slotIndex, -1)}
-                                  className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
-                                  title="Peranti Sebelumnya"
-                                >
-                                  <ChevronLeft className="w-5 h-5" />
-                                </button>
-
-                                <div className="text-white p-1">
-                                  {dev.type === 'keyboard' && <Keyboard className="w-14 h-14" />}
-                                  {dev.type === 'gamepad' && <Gamepad className="w-14 h-14" />}
-                                  {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-[#17FFBF]" />}
-                                  {dev.type === 'bot' && <Bot className="w-14 h-14 text-[#FFD13B]" />}
+                          {/* LARGE CONTROLLER ICON WITH INTERACTIVE QR CODE BADGE */}
+                          <div className="flex flex-col items-center gap-1.5">
+                            <div className="flex items-center gap-3">
+                              {selectedMode === '2vBot' && slotIndex === 0 ? (
+                                <div className="text-[#FFD13B] p-1">
+                                  <Bot className="w-14 h-14" />
                                 </div>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => cycleAwayDevice(slotIndex, -1)}
+                                    className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
+                                    title="Peranti Sebelumnya"
+                                  >
+                                    <ChevronLeft className="w-5 h-5" />
+                                  </button>
 
-                                <button
-                                  onClick={() => cycleAwayDevice(slotIndex, 1)}
-                                  className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
-                                  title="Peranti Selanjutnya"
-                                >
-                                  <ChevronRight className="w-5 h-5" />
-                                </button>
-                              </>
+                                  <div className="text-white p-1">
+                                    {dev.type === 'keyboard' && <Keyboard className="w-14 h-14" />}
+                                    {dev.type === 'gamepad' && <Gamepad className="w-14 h-14" />}
+                                    {dev.type === 'smartphone' && <Smartphone className="w-14 h-14 text-[#17FFBF]" />}
+                                    {dev.type === 'bot' && <Bot className="w-14 h-14 text-[#FFD13B]" />}
+                                  </div>
+
+                                  <button
+                                    onClick={() => cycleAwayDevice(slotIndex, 1)}
+                                    className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
+                                    title="Peranti Selanjutnya"
+                                  >
+                                    <ChevronRight className="w-5 h-5" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+
+                            {/* HP REMOTE INTERACTIVE QR BADGE BUTTON */}
+                            {dev.type === 'smartphone' && (
+                              <button
+                                onClick={() => setShowQRPopover(true)}
+                                className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#18211d] border border-[#17FFBF]/40 hover:border-[#17FFBF] hover:bg-[#17FFBF]/10 text-[#17FFBF] transition cursor-pointer text-[11px] font-medium shadow rounded-sm"
+                              >
+                                <Smartphone className="w-3.5 h-3.5" />
+                                <span>Scan QR Code HP</span>
+                              </button>
                             )}
                           </div>
                         </div>
@@ -317,37 +343,6 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                 </div>
               </div>
             </div>
-
-            {/* HP REMOTE WIRELESS MULTI-DEVICE INTEGRATION WIDGET */}
-            {isHpSelected && (
-              <div className="bg-[#111614] border border-[#17FFBF]/30 p-4 rounded-none flex flex-col sm:flex-row items-center gap-4 text-xs font-mono">
-                <div className="bg-white p-2 rounded shrink-0 flex flex-col items-center">
-                  <QRCodeSVG value={controllerUrl} size={90} />
-                  <span className="text-[9px] font-bold text-slate-800 mt-1 uppercase tracking-tighter">1 QR UNTUK SEMUA HP</span>
-                </div>
-                <div className="flex flex-col gap-1.5 w-full">
-                  <div className="flex justify-between items-center flex-wrap gap-2">
-                    <span className="font-bold text-[#17FFBF] flex items-center gap-1">
-                      <Smartphone className="w-4 h-4" /> KONEKSI HP REMOTE WIRELESS (MULTI-DEVICE SUPPORT)
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <span className={`px-2.5 py-0.5 text-[10px] font-bold ${
-                        isPeerConnected ? 'bg-[#17FFBF]/20 text-[#17FFBF] border border-[#17FFBF]/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                      }`}>
-                        {isPeerConnected ? `📱 ${connectedPeerCount || 1} HP TERHUBUNG` : '⏳ SCAN QR HP...'}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-slate-300 leading-relaxed">
-                    <strong className="text-white">1 QR Code ini dapat di-scan oleh banyak HP sekaligus!</strong> Setiap HP yang terhubung otomatis menjadi Joystick independen untuk Player 1, Player 2, Player 3, dsb.
-                  </p>
-                  <div className="bg-[#05090C] p-2 border border-white/10 font-mono text-[11px] text-cyan-300 flex justify-between items-center">
-                    <span>{controllerUrl}</span>
-                    <span className="bg-[#17FFBF]/10 px-2 py-0.5 text-[#17FFBF] font-bold">ROOM: {peerRoomId}</span>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* BOTTOM ACTION BAR (INSIDE MODAL - 100% MATCHMODE MODAL STYLE) */}
             <div className="bg-[#1b201d] px-6 py-4 border-t border-white/10 flex items-center justify-between font-mono">
@@ -408,6 +403,55 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
               <span className="font-semibold text-slate-300">Select Personal Preset</span>
             </div>
           </div>
+
+          {/* SLEEK FLOATING QR CODE POPOVER OVERLAY (NO AI-SLOP, CLEAN SENTENCE CASE) */}
+          <AnimatePresence>
+            {showQRPopover && (
+              <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                  className="bg-[#151917] border border-[#17FFBF]/40 max-w-md w-full p-6 shadow-2xl flex flex-col items-center gap-4 text-[#E2F1F8] relative"
+                >
+                  <button
+                    onClick={() => setShowQRPopover(false)}
+                    className="absolute top-4 right-4 p-1.5 bg-[#0c100e] border border-white/10 text-slate-400 hover:text-white transition cursor-pointer"
+                    title="Tutup"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+
+                  <div className="flex items-center gap-2 text-[#17FFBF] font-bold text-base tracking-wide">
+                    <Smartphone className="w-5 h-5" />
+                    <span>Sambungkan HP Remote</span>
+                  </div>
+
+                  <div className="bg-white p-3 rounded-lg shadow-inner flex flex-col items-center">
+                    <QRCodeSVG value={controllerUrl} size={160} />
+                  </div>
+
+                  <p className="text-xs text-slate-300 text-center leading-relaxed font-sans px-2">
+                    Scan QR Code ini menggunakan kamera ponsel Anda untuk menjadikan HP sebagai joystick nirkabel. 1 QR dapat di-scan oleh beberapa HP sekaligus.
+                  </p>
+
+                  <div className="flex items-center gap-2 w-full justify-center">
+                    <span className={`px-3 py-1 text-xs font-semibold font-mono rounded ${
+                      isPeerConnected ? 'bg-[#17FFBF]/20 text-[#17FFBF] border border-[#17FFBF]/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                    }`}>
+                      {isPeerConnected ? `📱 ${connectedPeerCount || 1} HP terhubung` : '⏳ Menunggu koneksi HP...'}
+                    </span>
+                  </div>
+
+                  <div className="bg-[#0c100e] p-2 border border-white/10 text-[11px] font-mono text-cyan-300 w-full flex justify-between items-center rounded">
+                    <span className="truncate pr-2">{controllerUrl}</span>
+                    <span className="text-[#17FFBF] font-bold shrink-0">ROOM: {peerRoomId}</span>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
         </div>
       )}
     </AnimatePresence>
