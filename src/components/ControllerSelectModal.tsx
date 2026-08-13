@@ -128,12 +128,10 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
             exit={{ opacity: 0, x: 80 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
             style={{ willChange: 'transform, opacity' }}
-            className="bg-[#151917] border border-white/10 max-w-4xl w-full p-4 sm:p-5 shadow-2xl flex flex-col gap-4 text-[#E2F1F8] relative max-h-[95vh] overflow-y-auto rounded-none will-change-transform transform-gpu"
+            className="w-full max-w-4xl bg-[#111513] border border-white/10 shadow-2xl overflow-hidden relative text-slate-100 will-change-transform transform-gpu"
           >
-            {/* DARK OBSIDIAN GRAPHITE CONSOLE BOARD */}
-            <div className="w-full bg-[#111513] border border-white/10 shadow-2xl overflow-hidden relative text-slate-100">
-              {/* HEADER BAR: Home (Left) | Away (Right) - DARK SLATE GRAPHITE BANNER */}
-              <div className="relative grid grid-cols-2 text-white font-bold text-2xl py-3 bg-[#1b201d] border-b border-white/10">
+            {/* HEADER BAR: Home (Left) | Away (Right) - DARK SLATE GRAPHITE BANNER */}
+            <div className="relative grid grid-cols-2 text-white font-bold text-2xl py-3 bg-[#1b201d] border-b border-white/10">
                 <div className="text-center font-['Outfit',sans-serif] tracking-tight">Home</div>
                 <div className="text-center font-['Outfit',sans-serif] tracking-tight">Away</div>
 
@@ -352,7 +350,6 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                   })}
                 </div>
               </div>
-            </div>
 
             {/* BOTTOM ACTION BAR (INSIDE MODAL - 100% MATCHMODE MODAL STYLE) */}
             <div className="bg-[#1b201d] px-6 py-4 border-t border-white/10 flex items-center justify-between font-mono">
