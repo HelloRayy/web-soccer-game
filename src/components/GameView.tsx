@@ -176,7 +176,11 @@ export const GameView: React.FC<GameViewProps> = ({
   // Re-instantiate players whenever selectedMode or customSpawns changes
   useEffect(() => {
     if (customSpawns && customSpawns.length > 0) {
-      playersRef.current = customSpawns.map((node, i) => {
+      const homeCount = customSpawns.filter((n) => n.team === 'home').length;
+      let currentHomeIdx = 0;
+      let currentAwayIdx = 0;
+
+      playersRef.current = customSpawns.map((node) => {
         const coords = mapSpawnCoords(node, WORLD_WIDTH, WORLD_HEIGHT);
         let controllerIdx: number | null = null;
         if (node.devType === 'gamepad0') controllerIdx = 0;
@@ -186,31 +190,52 @@ export const GameView: React.FC<GameViewProps> = ({
         else if (node.devType === 'hp_remote') controllerIdx = 99;
 
         const isBot = node.devType === 'ai_bot';
-        const color = node.team === 'home'
-          ? (i === 0 ? '#06b6d4' : '#34d399')
-          : (i === 0 ? '#f59e0b' : '#ef4444');
+        
+        let playerId = node.id;
+        let displayName = node.name;
 
-        const p = new Player(node.id, `${node.name} (${node.team === 'home' ? 'Home' : 'Away'})`, node.team, isBot ? null : controllerIdx, color, coords.x, coords.y);
+        if (node.team === 'home') {
+          currentHomeIdx++;
+          playerId = currentHomeIdx === 1 ? 'p1' : `p1_${currentHomeIdx}`;
+          displayName = `Player ${currentHomeIdx} (Home)`;
+        } else {
+          currentAwayIdx++;
+          playerId = currentAwayIdx === 1 ? 'p2' : `p2_${currentAwayIdx}`;
+          displayName = isBot ? `Bot AI ${currentAwayIdx} (Away)` : `Player ${currentAwayIdx} (Away)`;
+        }
+
+        const color = node.team === 'home'
+          ? (currentHomeIdx === 1 ? '#06b6d4' : '#34d399')
+          : (currentAwayIdx === 1 ? '#f59e0b' : '#ef4444');
+
+        const p = new Player(playerId, displayName, node.team, isBot ? null : controllerIdx, color, coords.x, coords.y);
+        p.devType = node.devType;
         if (isBot) p.isAI = true;
         return p;
       });
     } else if (selectedMode === '1v1') {
-      playersRef.current = [
-        new Player('p1', 'Player 1 (Home)', 'home', 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5),
-        new Player('p2', 'Player 2 (Away)', 'away', 1, '#f59e0b', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.5)
-      ];
+      const p1 = new Player('p1', 'Player 1 (Home)', 'home', 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5);
+      p1.devType = p1Device;
+      const p2 = new Player('p2', 'Player 2 (Away)', 'away', 1, '#f59e0b', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.5);
+      p2.devType = p2Device;
+      playersRef.current = [p1, p2];
     } else {
-      // 2 vs BOT
-      playersRef.current = [
-        new Player('p1', 'Player 1 (Home)', 'home', 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.42),
-        new Player('p2', 'Player 2 (Home)', 'home', 1, '#34d399', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.58),
-        new Player('p3', 'Bot AI 1 (Away)', 'away', null, '#f59e0b', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.42),
-        new Player('p4', 'Bot AI 2 (Away)', 'away', null, '#ef4444', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.58)
-      ];
+      // 2 vs BOT Mode
+      const p1 = new Player('p1', 'Player 1 (Home)', 'home', 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.42);
+      p1.devType = p1Device;
+      const p2 = new Player('p2', 'Player 2 (Home)', 'home', 1, '#34d399', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.58);
+      p2.devType = p2Device;
+      const p3 = new Player('p3', 'Bot AI 1 (Away)', 'away', null, '#f59e0b', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.42);
+      p3.devType = 'ai_bot';
+      p3.isAI = true;
+      const p4 = new Player('p4', 'Bot AI 2 (Away)', 'away', null, '#ef4444', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.58);
+      p4.devType = 'ai_bot';
+      p4.isAI = true;
+      playersRef.current = [p1, p2, p3, p4];
     }
     matchRulesRef.current.resetMatch();
     resetMatchPositions();
-  }, [selectedMode, customSpawns, resetMatchPositions]);
+  }, [selectedMode, customSpawns, p1Device, p2Device, resetMatchPositions]);
 
   // Window Resize & Keyboard Ctrl Listener
   useEffect(() => {
@@ -283,41 +308,41 @@ export const GameView: React.FC<GameViewProps> = ({
     }
 
     if (rules.state.state !== 'GAME_OVER') {
-      // 2. Update Players (P1, P2, AI Bots) with HP Remote & Controller Assignments
+      // 2. Update Players (P1, P2, AI Bots) with Configured Controllers & Devices
       players.forEach((player) => {
         const teammates = players.filter((p) => p.team === player.team && p.id !== player.id);
         const opponents = players.filter((p) => p.team !== player.team);
 
         let activeGp: GamepadState | null = null;
-        if (player.id === 'p1') {
-          if (p1Device === 'hp_remote') {
-            activeGp = remoteGamepadStateRef.current || p1Input;
-          } else if (p1Device === 'keyboard1') {
-            activeGp = p1Input;
-          } else if (p1Device === 'gamepad0') {
-            activeGp = gamepads[0] || p1Input;
-          } else {
-            activeGp = p1Input;
-          }
-        } else if (player.id === 'p2') {
-          if (p2Device === 'hp_remote') {
-            // Priority for Player 2 HP Remote Wireless Controller!
-            activeGp = remoteGamepadStateRef.current || p2Input;
-          } else if (p2Device === 'keyboard2') {
-            activeGp = p2Input;
-          } else if (p2Device === 'gamepad1') {
-            activeGp = gamepads[1] || gamepads[0] || p2Input;
-          } else {
-            activeGp = p2Input;
-          }
+        const devType = player.devType || (player.team === 'home' ? p1Device : p2Device);
+
+        // Multi-Controller Device Input Resolver (Keyboard WASD, Arrows, USB Gamepads, HP Remote)
+        if (devType === 'hp_remote' || player.controllerIndex === 99) {
+          activeGp = remoteGamepadStateRef.current || (player.team === 'home' ? p1Input : p2Input);
+        } else if (devType === 'keyboard1') {
+          activeGp = p1Input;
+        } else if (devType === 'keyboard2') {
+          activeGp = p2Input;
+        } else if (devType === 'gamepad0') {
+          activeGp = gamepads[0] || (player.team === 'home' ? p1Input : p2Input);
+        } else if (devType === 'gamepad1') {
+          activeGp = gamepads[1] || gamepads[0] || (player.team === 'away' ? p2Input : p1Input);
+        } else if (player.id.startsWith('p1')) {
+          if (p1Device === 'hp_remote') activeGp = remoteGamepadStateRef.current || p1Input;
+          else if (p1Device === 'gamepad0') activeGp = gamepads[0] || p1Input;
+          else activeGp = p1Input;
+        } else if (player.id.startsWith('p2')) {
+          if (p2Device === 'hp_remote') activeGp = remoteGamepadStateRef.current || p2Input;
+          else if (p2Device === 'gamepad1') activeGp = gamepads[1] || gamepads[0] || p2Input;
+          else activeGp = p2Input;
         }
 
-        if (activeGp) {
+        if (activeGp && !player.isAI && devType !== 'ai_bot') {
           const { toggleHUDRequested } = player.updateFromGamepad(activeGp, ball, field, teammates, opponents);
           if (toggleHUDRequested) {
             setShowHUD((prev) => !prev);
           }
-        } else if (player.id === 'p3' || player.id === 'p4') {
+        } else if (player.isAI || devType === 'ai_bot') {
           // AI Enemy Bot Intelligence Loop
           player.updateEnemyBotAI(ball, field, opponents, teammates);
         } else {
@@ -471,7 +496,7 @@ export const GameView: React.FC<GameViewProps> = ({
       zoomRef.current = zoomRef.current * 0.92 + targetZoom * 0.08;
     }
 
-    setMatchState({ ...rules.state });
+    setMatchState({ ...matchRulesRef.current.state });
 
     const viewW = dimensions.width;
     const viewH = dimensions.height;

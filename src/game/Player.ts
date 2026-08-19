@@ -24,6 +24,7 @@ export class Player implements PlayerEntity {
   name: string;
   team: TeamType;
   controllerIndex: number | null;
+  devType?: string;
   isAI: boolean;
   pos: Vector2D;
   vel: Vector2D;
