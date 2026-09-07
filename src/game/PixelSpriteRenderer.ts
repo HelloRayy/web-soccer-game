@@ -506,12 +506,15 @@ export class PixelSpriteRenderer {
     });
     ctx.globalAlpha = 1.0;
 
-    // 3. SEPARATE TURF DROP SHADOW (Always anchored directly on the turf plane!)
+    // 3. SEPARATE TURF DROP SHADOW (Tucked neatly under ball contact base on turf)
     const shadowScale = Math.max(0.35, 1 - z * 0.015);
-    const shadowAlpha = Math.max(0.12, 0.52 - z * 0.007);
+    const shadowAlpha = Math.max(0.12, 0.45 - z * 0.007);
     ctx.fillStyle = `rgba(2, 18, 10, ${shadowAlpha})`;
     ctx.beginPath();
-    ctx.ellipse(x, y + 2, radius * 1.35 * shadowScale, radius * 0.70 * shadowScale, 0, 0, Math.PI * 2);
+    // In 2.5D, contact shadow is placed at base of sphere (y + radius * 0.52) with width 0.85 * radius.
+    // This ensures it NEVER sticks out horizontally past the 1.0 * radius sphere edge!
+    const shadowY = y + (z === 0 ? radius * 0.52 : 2);
+    ctx.ellipse(x, shadowY, radius * 0.85 * shadowScale, radius * 0.38 * shadowScale, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // 4. DIRECTIONAL SPEED STREAKS (Tapered capsules trailing along travelAngle)
@@ -539,17 +542,17 @@ export class PixelSpriteRenderer {
     ctx.translate(x, ballY);
     ctx.scale(1, invTilt); // Counter-scale to restore 1:1 circular geometry
 
-    // Rotate canvas strictly to the direction of ball flight!
-    ctx.rotate(travelAngle);
-
-    // Dynamic Squash & Stretch for Rocket Power Shots
-    if (shotType === 'rocket' && speed > 15) {
-      const stretch = Math.min(1.22, 1.0 + (speed - 15) * 0.015);
+    // Dynamic Squash & Stretch only during high-speed rocket flights
+    const isSquashing = shotType === 'rocket' && speed > 16;
+    if (isSquashing) {
+      ctx.rotate(travelAngle);
+      const stretch = Math.min(1.20, 1.0 + (speed - 16) * 0.012);
       const squash = 1 / stretch;
-      ctx.scale(stretch, squash); // Elongates forward along local X (flight vector)
+      ctx.scale(stretch, squash);
+      ctx.rotate(-travelAngle);
     }
 
-    // Base White Sphere Body
+    // Base White Sphere Body (100% Perfectly Circular)
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(0, 0, radius, 0, Math.PI * 2);
@@ -557,63 +560,71 @@ export class PixelSpriteRenderer {
 
     // Dark Pixel Contour Outline
     ctx.strokeStyle = '#0f172a';
-    ctx.lineWidth = 1.8;
+    ctx.lineWidth = 1.6;
     ctx.stroke();
 
-    // 6. TRUE 3D DIRECTIONAL ROLLING PENTAGON PATCHES
-    // Along local X (which is aligned with travel direction), the patches roll forward!
+    // 6. AUTHENTIC RETRO SOCCER BALL (TELSTAR PENTAGON + RADIAL SEAMS)
     ctx.save();
-    // Clip inside ball circle so rolling patches wrap cleanly
+    // Clip inside ball circle so rotating patches wrap cleanly inside sphere
     ctx.beginPath();
-    ctx.arc(0, 0, radius - 0.5, 0, Math.PI * 2);
+    ctx.arc(0, 0, radius - 0.6, 0, Math.PI * 2);
     ctx.clip();
 
-    ctx.fillStyle = '#1e293b';
-    const s = radius * 0.36;
+    // Rotate ball texture according to travel direction + rolling progress
+    const totalRotation = travelAngle + spinProgress;
+    ctx.rotate(totalRotation);
 
-    // Roll phase: progresses from -PI to PI
-    const rollPhase = (spinProgress * Math.PI * 2) % (Math.PI * 2);
+    ctx.fillStyle = '#0f172a';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 1.1;
 
-    // 3 Columns of rolling pentagon patches wrapping around the sphere
-    const patchOffsets = [0, (Math.PI * 2) / 3, (Math.PI * 4) / 3];
-    patchOffsets.forEach((off, idx) => {
-      const angle = rollPhase + off;
-      const cosA = Math.cos(angle);
-      const sinA = Math.sin(angle);
-
-      // Only draw patches on the visible front hemisphere (sinA > -0.3)
-      if (sinA > -0.3) {
-        // Spherical foreshortening: patches compress horizontally near sphere edge
-        const px = cosA * radius * 0.72;
-        const foreshortenW = Math.max(0.2, Math.abs(sinA));
-        const patchW = s * 1.5 * foreshortenW;
-        const patchH = s * 1.4;
-
-        // Alternate vertical stagger between patch rows
-        const py = idx % 2 === 0 ? -s * 0.4 : s * 0.4;
-
-        // Center patch
-        ctx.fillRect(px - patchW * 0.5, py - patchH * 0.5, patchW, patchH);
-
-        // Secondary satellite patch
-        const satY = -py;
-        const satX = px * 0.6;
-        ctx.fillRect(satX - patchW * 0.35, satY - patchH * 0.35, patchW * 0.7, patchH * 0.7);
-      }
-    });
-
-    // 7. FIXED DIRECTIONAL 3D SPHERE SPECULAR SHADING & STADIUM LIGHT GLINT
-    // Counter-rotate back so stadium lighting glint remains fixed relative to stadium lights
-    ctx.rotate(-travelAngle);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.48)';
+    // A. Central Classic Pentagon
     ctx.beginPath();
-    ctx.arc(-radius * 0.35, -radius * 0.35, radius * 0.38, 0, Math.PI * 2);
+    for (let k = 0; k < 5; k++) {
+      const ang = (k * Math.PI * 2) / 5 - Math.PI / 2;
+      const px = Math.cos(ang) * (radius * 0.38);
+      const py = Math.sin(ang) * (radius * 0.38);
+      if (k === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
     ctx.fill();
 
-    // Sphere ambient bottom shadow (giving true 3D spherical depth)
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.20)';
+    // B. 5 Radial Seam Lines & Outer Perimeter Patches
+    for (let k = 0; k < 5; k++) {
+      const ang = (k * Math.PI * 2) / 5 - Math.PI / 2;
+      const p1x = Math.cos(ang) * (radius * 0.38);
+      const p1y = Math.sin(ang) * (radius * 0.38);
+
+      // Seam line outward
+      const p2x = Math.cos(ang) * (radius * 0.72);
+      const p2y = Math.sin(ang) * (radius * 0.72);
+      ctx.beginPath();
+      ctx.moveTo(p1x, p1y);
+      ctx.lineTo(p2x, p2y);
+      ctx.stroke();
+
+      // Outer curved patch wrapping the perimeter
+      const ox = Math.cos(ang) * (radius * 1.05);
+      const oy = Math.sin(ang) * (radius * 1.05);
+      ctx.beginPath();
+      ctx.arc(ox, oy, radius * 0.40, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Counter-rotate back so stadium lighting glint remains fixed at top-left
+    ctx.rotate(-totalRotation);
+
+    // C. FIXED DIRECTIONAL 3D SPHERE SPECULAR SHADING & STADIUM LIGHT GLINT
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
     ctx.beginPath();
-    ctx.arc(radius * 0.25, radius * 0.25, radius * 0.55, 0, Math.PI * 2);
+    ctx.arc(-radius * 0.32, -radius * 0.32, radius * 0.36, 0, Math.PI * 2);
+    ctx.fill();
+
+    // D. Sphere ambient bottom depth shadow
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.18)';
+    ctx.beginPath();
+    ctx.arc(radius * 0.22, radius * 0.22, radius * 0.52, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore(); // Undo clip
