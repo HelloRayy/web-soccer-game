@@ -786,18 +786,29 @@ export class Player implements PlayerEntity {
         const dirY = Math.sin(this.shotAimAngle);
         const finalShotPower = 10.5 + this.smoothShotPower * 15.5; // Range 10.5 to 26.0 Rocket Shot!
 
-        this.hasPossession = false;
-        ball.kick({ x: dirX, y: dirY }, finalShotPower, this.id, null, null);
+        let shotType: 'ground' | 'rocket' | 'finesse' | 'chip' | 'normal' = 'normal';
+        if (this.smoothShotPower >= 0.70) {
+          shotType = 'rocket';
+        } else if (Math.abs(Math.sin(this.shotAimAngle)) > 0.28 && this.smoothShotPower >= 0.35) {
+          shotType = 'finesse';
+        } else if (this.smoothShotPower < 0.25) {
+          shotType = 'ground';
+        }
 
-        if (this.smoothShotPower >= 0.82) {
+        this.hasPossession = false;
+        ball.kick({ x: dirX, y: dirY }, finalShotPower, this.id, null, null, shotType);
+
+        if (shotType === 'rocket') {
           this.triggerFeedback('💥 PERFECT ROCKET SHOT!');
-        } else if (this.smoothShotPower >= 0.45) {
-          this.triggerFeedback('🚀 POWER SHOT!');
+        } else if (shotType === 'finesse') {
+          this.triggerFeedback('🍌 CURLED FINESSE SHOT!');
+        } else if (shotType === 'ground') {
+          this.triggerFeedback('⚡ LOW-DRIVEN LASER!');
         } else {
           this.triggerFeedback('⚽ SHOOT!');
         }
 
-        this.debugInputString = `🚀 SHOT RELEASED! Power: ${(this.smoothShotPower * 100).toFixed(0)}% (${finalShotPower.toFixed(1)} Speed)`;
+        this.debugInputString = `🚀 ${shotType.toUpperCase()} SHOT! Power: ${(this.smoothShotPower * 100).toFixed(0)}% (${finalShotPower.toFixed(1)} Spd)`;
         this.isChargingShot = false;
         this.shotPower = 0;
         this.smoothShotPower = 0;

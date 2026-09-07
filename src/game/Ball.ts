@@ -17,6 +17,14 @@ export class Ball {
   vz: number = 0;
   trailHistory: Array<{ x: number; y: number; z: number }> = [];
 
+  // Directional 3D Rolling & Trajectory Physics
+  travelAngle: number = 0;
+  spinProgress: number = 0;
+  shotType: 'ground' | 'rocket' | 'finesse' | 'chip' | 'normal' = 'normal';
+  curlIntensity: number = 0;
+  burstShockwaves: Array<{ x: number; y: number; z: number; angle: number; radius: number; maxRadius: number; life: number; color: string }> = [];
+  turfGrassParticles: Array<{ x: number; y: number; vx: number; vy: number; life: number; color: string }> = [];
+
   // Passing Assist Homing Logic
   homingTargetPlayer: Player | null;
   throughPassTargetPos: Vector2D | null;
@@ -43,6 +51,12 @@ export class Ball {
     this.throughPassTargetPos = null;
     this.rotationAngle = 0;
     this.rollDirAngle = 0;
+    this.travelAngle = 0;
+    this.spinProgress = 0;
+    this.shotType = 'normal';
+    this.curlIntensity = 0;
+    this.burstShockwaves = [];
+    this.turfGrassParticles = [];
     this.dribblePhase = 0;
 
     // Preload ion_football.svg Image
@@ -68,6 +82,12 @@ export class Ball {
     this.throughPassTargetPos = null;
     this.rotationAngle = 0;
     this.rollDirAngle = 0;
+    this.travelAngle = 0;
+    this.spinProgress = 0;
+    this.shotType = 'normal';
+    this.curlIntensity = 0;
+    this.burstShockwaves = [];
+    this.turfGrassParticles = [];
     this.dribblePhase = 0;
   }
 
@@ -79,13 +99,17 @@ export class Ball {
     this.attachedPlayerId = playerId;
     this.z = 0;
     this.vz = 0;
+    this.shotType = 'normal';
+    this.burstShockwaves = [];
     const playerSpeed = Math.hypot(playerVel.x, playerVel.y);
 
     if (playerSpeed > 0.15) {
       const phaseInc = playerSpeed > 3.8 ? 0.35 : 0.22;
       this.dribblePhase += phaseInc;
 
+      this.travelAngle = facingAngle;
       this.rollDirAngle = Math.atan2(playerVel.y, playerVel.x);
+      this.spinProgress += (playerSpeed / this.radius) * 0.08;
       this.rotationAngle += Math.min(0.12, playerSpeed * 0.035);
 
       const isSprinting = playerSpeed > 4.0;
@@ -105,6 +129,7 @@ export class Ball {
     } else {
       // Player is standing completely still -> Ball rests stationary in front of feet
       this.dribblePhase = 0;
+      this.travelAngle = facingAngle;
       const restGap = playerRadius + this.radius + 7;
       this.pos.x = playerPos.x + Math.cos(facingAngle) * restGap;
       this.pos.y = playerPos.y + Math.sin(facingAngle) * restGap;
@@ -114,9 +139,16 @@ export class Ball {
   }
 
   /**
-   * Kick / Pass Ball
+   * Kick / Pass Ball with Directional 3D Spin, Muzzle Bursts & Shot Archetypes
    */
-  kick(dir: Vector2D, power: number, kickerId: string, homingTarget: Player | null = null, throughPos: Vector2D | null = null) {
+  kick(
+    dir: Vector2D,
+    power: number,
+    kickerId: string,
+    homingTarget: Player | null = null,
+    throughPos: Vector2D | null = null,
+    shotKind?: 'ground' | 'rocket' | 'finesse' | 'chip' | 'normal'
+  ) {
     this.attachedPlayerId = null;
     this.releaseTimer = 0.35;
     this.homingTargetPlayer = homingTarget;
@@ -124,13 +156,74 @@ export class Ball {
 
     this.vel.x = dir.x * power;
     this.vel.y = dir.y * power;
-    this.rollDirAngle = Math.atan2(dir.y, dir.x);
+    this.travelAngle = Math.atan2(dir.y, dir.x);
+    this.rollDirAngle = this.travelAngle;
 
-    // 3D Altitude launch on powerful kicks (Rocket shots arc up in 3D!)
-    if (power > 11.5) {
-      this.vz = Math.min(8.5, power * 0.38);
+    if (shotKind) {
+      this.shotType = shotKind;
+    } else if (power >= 20.0) {
+      this.shotType = 'rocket';
+    } else if (power < 11.5) {
+      this.shotType = 'ground';
     } else {
+      this.shotType = 'normal';
+    }
+
+    // Shot Archetype Altitude & Aerodynamics
+    if (this.shotType === 'ground') {
       this.vz = 0;
+      this.curlIntensity = 0;
+    } else if (this.shotType === 'rocket') {
+      this.vz = Math.min(6.5, power * 0.28);
+      this.curlIntensity = 0;
+      this.burstShockwaves.push({
+        x: this.pos.x,
+        y: this.pos.y,
+        z: 0,
+        angle: this.travelAngle,
+        radius: 8,
+        maxRadius: 38,
+        life: 1.0,
+        color: 'rgba(255, 40, 90, 0.95)',
+      });
+    } else if (this.shotType === 'finesse') {
+      this.vz = Math.min(5.2, power * 0.24);
+      // Curl direction curves inwards toward goal corners
+      const curlSign = dir.y > 0.05 ? -1 : (dir.y < -0.05 ? 1 : 1);
+      this.curlIntensity = curlSign * 0.42;
+      this.burstShockwaves.push({
+        x: this.pos.x,
+        y: this.pos.y,
+        z: 0,
+        angle: this.travelAngle,
+        radius: 6,
+        maxRadius: 28,
+        life: 0.9,
+        color: 'rgba(56, 189, 248, 0.9)',
+      });
+    } else if (this.shotType === 'chip') {
+      this.vz = Math.min(9.5, power * 0.46);
+      this.curlIntensity = 0;
+    } else {
+      // Normal
+      if (power > 11.5) {
+        this.vz = Math.min(8.0, power * 0.35);
+      } else {
+        this.vz = 0;
+      }
+      this.curlIntensity = 0;
+      if (power > 14) {
+        this.burstShockwaves.push({
+          x: this.pos.x,
+          y: this.pos.y,
+          z: 0,
+          angle: this.travelAngle,
+          radius: 6,
+          maxRadius: 26,
+          life: 0.8,
+          color: 'rgba(255, 255, 255, 0.8)',
+        });
+      }
     }
   }
 
@@ -169,11 +262,55 @@ export class Ball {
       this.releaseTimer -= dt;
     }
 
-    // Update natural subtle rolling rotation angle based on ball movement speed
+    // Update natural directional spin & roll progress based on ball velocity
     const currentSpeed = Math.hypot(this.vel.x, this.vel.y);
     if (currentSpeed > 0.1) {
-      this.rollDirAngle = Math.atan2(this.vel.y, this.vel.x);
+      this.travelAngle = Math.atan2(this.vel.y, this.vel.x);
+      this.rollDirAngle = this.travelAngle;
+      this.spinProgress += (currentSpeed / this.radius) * 0.09;
       this.rotationAngle += Math.min(0.08, (currentSpeed / this.radius) * 0.06);
+    }
+
+    // Aerodynamic Magnus Effect for Curled / Finesse Shots
+    if (this.shotType === 'finesse' && this.z > 1.0 && Math.abs(this.curlIntensity) > 0.01 && currentSpeed > 2.0) {
+      const perpX = -this.vel.y / currentSpeed;
+      const perpY = this.vel.x / currentSpeed;
+      this.vel.x += perpX * this.curlIntensity * 0.55;
+      this.vel.y += perpY * this.curlIntensity * 0.55;
+      this.curlIntensity *= 0.982;
+    }
+
+    // Update Kick Shockwave Bursts
+    for (let i = this.burstShockwaves.length - 1; i >= 0; i--) {
+      const b = this.burstShockwaves[i];
+      b.radius += (b.maxRadius - b.radius) * 0.22 + 1.2;
+      b.life -= 0.048;
+      if (b.life <= 0 || b.radius >= b.maxRadius) {
+        this.burstShockwaves.splice(i, 1);
+      }
+    }
+
+    // Spawn & Update Turf Grass Particles for Fast Ground Shots
+    if (currentSpeed > 7.5 && this.z < 2.5 && Math.random() < 0.65) {
+      const pAngle = this.travelAngle + Math.PI + (Math.random() - 0.5) * 1.2;
+      const pSpeed = Math.random() * 2.8 + 1.2;
+      this.turfGrassParticles.push({
+        x: this.pos.x + (Math.random() - 0.5) * 4,
+        y: this.pos.y + (Math.random() - 0.5) * 4,
+        vx: Math.cos(pAngle) * pSpeed,
+        vy: Math.sin(pAngle) * pSpeed,
+        life: 1.0,
+        color: Math.random() > 0.35 ? '#16a34a' : '#22c55e',
+      });
+    }
+    for (let i = this.turfGrassParticles.length - 1; i >= 0; i--) {
+      const p = this.turfGrassParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= 0.055;
+      if (p.life <= 0) {
+        this.turfGrassParticles.splice(i, 1);
+      }
     }
 
     // 3D Ball Altitude & Gravity Bounce Physics
@@ -361,9 +498,13 @@ export class Ball {
       this.pos.y,
       this.z,
       this.radius,
-      this.rotationAngle,
       currentSpeed,
-      this.trailHistory
+      this.travelAngle,
+      this.spinProgress,
+      this.shotType,
+      this.trailHistory,
+      this.burstShockwaves,
+      this.turfGrassParticles
     );
   }
 }

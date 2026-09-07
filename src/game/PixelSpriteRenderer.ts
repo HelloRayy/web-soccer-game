@@ -457,7 +457,8 @@ export class PixelSpriteRenderer {
   }
 
   /**
-   * Render 16-Bit Soccer Ball with 3D Altitude, Spin, Shadow, and Motion Speed Trail
+   * Render 16-Bit Directional Soccer Ball with 3D Altitude, Flight-Aligned Spin Vector,
+   * Directional Speed Streaks, Kick Shockwave Bursts, and Turf Grass Particles.
    */
   static drawBall(
     ctx: CanvasRenderingContext2D,
@@ -465,65 +466,158 @@ export class PixelSpriteRenderer {
     y: number,
     z: number,
     radius: number,
-    rotation: number,
     speed: number,
-    trailHistory: Array<{ x: number; y: number; z: number }>
+    travelAngle: number,
+    spinProgress: number,
+    shotType: 'ground' | 'rocket' | 'finesse' | 'chip' | 'normal' = 'normal',
+    trailHistory: Array<{ x: number; y: number; z: number }> = [],
+    burstShockwaves: Array<{ x: number; y: number; z: number; angle: number; radius: number; maxRadius: number; life: number; color: string }> = [],
+    turfGrassParticles: Array<{ x: number; y: number; vx: number; vy: number; life: number; color: string }> = []
   ) {
     const invTilt = PixelSpriteRenderer.INV_TILT_Y;
 
     ctx.save();
     ctx.imageSmoothingEnabled = false;
 
-    // 1. MOTION SPEED TRAIL PARTICLES (Trailing behind fast shot)
-    if (speed > 5.0 && trailHistory.length > 0) {
-      trailHistory.forEach((pt, idx) => {
-        const alpha = ((idx + 1) / trailHistory.length) * 0.45;
-        const trailRadius = radius * (0.35 + (idx / trailHistory.length) * 0.45);
-        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-        ctx.beginPath();
-        // Counter-scale Y for trail altitude
-        ctx.arc(pt.x, pt.y - pt.z * invTilt, trailRadius, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    }
+    // 1. KICK IMPACT BURST SHOCKWAVE RINGS (Muzzle flash burst on powerful shot)
+    burstShockwaves.forEach((b) => {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, b.life);
+      ctx.strokeStyle = b.color;
+      ctx.lineWidth = 2.5 * b.life;
+      ctx.beginPath();
+      // Foreshortened shockwave ring on turf
+      ctx.ellipse(b.x, b.y, b.radius, b.radius * 0.55, b.angle, 0, Math.PI * 2);
+      ctx.stroke();
 
-    // 2. SEPARATE TURF DROP SHADOW (Foreshortened on ground plane, scales with altitude z)
+      // Inner energetic core
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.beginPath();
+      ctx.ellipse(b.x, b.y, b.radius * 0.4, b.radius * 0.22, b.angle, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    // 2. TURF GRASS KICK-UP PARTICLES (Low-driven shots on grass)
+    turfGrassParticles.forEach((p) => {
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillRect(p.x, p.y, 2.5, 2.5);
+    });
+    ctx.globalAlpha = 1.0;
+
+    // 3. SEPARATE TURF DROP SHADOW (Always anchored directly on the turf plane!)
     const shadowScale = Math.max(0.35, 1 - z * 0.015);
-    const shadowAlpha = Math.max(0.15, 0.55 - z * 0.008);
+    const shadowAlpha = Math.max(0.12, 0.52 - z * 0.007);
     ctx.fillStyle = `rgba(2, 18, 10, ${shadowAlpha})`;
     ctx.beginPath();
     ctx.ellipse(x, y + 2, radius * 1.35 * shadowScale, radius * 0.70 * shadowScale, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 3. ELEVATED BALL RENDER (Counter-scaled to keep perfect circle in 2.5D)
+    // 4. DIRECTIONAL SPEED STREAKS (Tapered capsules trailing along travelAngle)
+    if (speed > 4.5 && trailHistory.length > 0) {
+      trailHistory.forEach((pt, idx) => {
+        const frac = (idx + 1) / trailHistory.length;
+        const alpha = frac * (shotType === 'rocket' ? 0.65 : 0.40);
+        const trailR = radius * (0.35 + frac * 0.45);
+        const trailColor = shotType === 'rocket'
+          ? (idx % 2 === 0 ? `rgba(255, 0, 85, ${alpha})` : `rgba(255, 215, 0, ${alpha})`)
+          : shotType === 'finesse'
+          ? `rgba(56, 189, 248, ${alpha})`
+          : `rgba(255, 255, 255, ${alpha})`;
+
+        ctx.fillStyle = trailColor;
+        ctx.beginPath();
+        // Air altitude Y coordinate
+        ctx.arc(pt.x, pt.y - pt.z * invTilt, trailR, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // 5. ELEVATED BALL SPHERE RENDER (Counter-scaled & Flight-Vector Oriented!)
     const ballY = y - z * invTilt;
     ctx.translate(x, ballY);
-    ctx.scale(1, invTilt); // Keep ball perfectly spherical!
-    ctx.rotate(rotation);
+    ctx.scale(1, invTilt); // Counter-scale to restore 1:1 circular geometry
 
-    // Ball Base White Body
+    // Rotate canvas strictly to the direction of ball flight!
+    ctx.rotate(travelAngle);
+
+    // Dynamic Squash & Stretch for Rocket Power Shots
+    if (shotType === 'rocket' && speed > 15) {
+      const stretch = Math.min(1.22, 1.0 + (speed - 15) * 0.015);
+      const squash = 1 / stretch;
+      ctx.scale(stretch, squash); // Elongates forward along local X (flight vector)
+    }
+
+    // Base White Sphere Body
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(0, 0, radius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Dark Pixel Outline
+    // Dark Pixel Contour Outline
     ctx.strokeStyle = '#0f172a';
     ctx.lineWidth = 1.8;
     ctx.stroke();
 
-    // 16-Bit Pentagonal Leather Patches
-    ctx.fillStyle = '#1e293b';
-    const s = radius * 0.35;
-    // Center patch
-    ctx.fillRect(-s * 0.8, -s * 0.8, s * 1.6, s * 1.6);
-    // Surrounding mini patches
-    ctx.fillRect(-radius * 0.7, -radius * 0.2, s, s);
-    ctx.fillRect(radius * 0.3, -radius * 0.7, s, s);
-    ctx.fillRect(radius * 0.2, radius * 0.3, s, s);
-    ctx.fillRect(-radius * 0.6, radius * 0.3, s, s);
+    // 6. TRUE 3D DIRECTIONAL ROLLING PENTAGON PATCHES
+    // Along local X (which is aligned with travel direction), the patches roll forward!
+    ctx.save();
+    // Clip inside ball circle so rolling patches wrap cleanly
+    ctx.beginPath();
+    ctx.arc(0, 0, radius - 0.5, 0, Math.PI * 2);
+    ctx.clip();
 
-    ctx.restore();
+    ctx.fillStyle = '#1e293b';
+    const s = radius * 0.36;
+
+    // Roll phase: progresses from -PI to PI
+    const rollPhase = (spinProgress * Math.PI * 2) % (Math.PI * 2);
+
+    // 3 Columns of rolling pentagon patches wrapping around the sphere
+    const patchOffsets = [0, (Math.PI * 2) / 3, (Math.PI * 4) / 3];
+    patchOffsets.forEach((off, idx) => {
+      const angle = rollPhase + off;
+      const cosA = Math.cos(angle);
+      const sinA = Math.sin(angle);
+
+      // Only draw patches on the visible front hemisphere (sinA > -0.3)
+      if (sinA > -0.3) {
+        // Spherical foreshortening: patches compress horizontally near sphere edge
+        const px = cosA * radius * 0.72;
+        const foreshortenW = Math.max(0.2, Math.abs(sinA));
+        const patchW = s * 1.5 * foreshortenW;
+        const patchH = s * 1.4;
+
+        // Alternate vertical stagger between patch rows
+        const py = idx % 2 === 0 ? -s * 0.4 : s * 0.4;
+
+        // Center patch
+        ctx.fillRect(px - patchW * 0.5, py - patchH * 0.5, patchW, patchH);
+
+        // Secondary satellite patch
+        const satY = -py;
+        const satX = px * 0.6;
+        ctx.fillRect(satX - patchW * 0.35, satY - patchH * 0.35, patchW * 0.7, patchH * 0.7);
+      }
+    });
+
+    // 7. FIXED DIRECTIONAL 3D SPHERE SPECULAR SHADING & STADIUM LIGHT GLINT
+    // Counter-rotate back so stadium lighting glint remains fixed relative to stadium lights
+    ctx.rotate(-travelAngle);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.48)';
+    ctx.beginPath();
+    ctx.arc(-radius * 0.35, -radius * 0.35, radius * 0.38, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sphere ambient bottom shadow (giving true 3D spherical depth)
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.20)';
+    ctx.beginPath();
+    ctx.arc(radius * 0.25, radius * 0.25, radius * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore(); // Undo clip
+    ctx.restore(); // Undo ball transform
   }
 
   /**
