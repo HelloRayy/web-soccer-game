@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MatchRulesState } from '../types/game';
+import { MatchRulesState, RadarData, OffScreenBallData } from '../types/game';
 import { Maximize, Minimize, RotateCcw, Eye, EyeOff, Smartphone, Home } from 'lucide-react';
 import { QRCodeModal } from './QRCodeModal';
 
@@ -13,6 +13,9 @@ interface HUDOverlayProps {
   peerRoomId?: string;
   isPeerConnected?: boolean;
   goalBannerText?: string | null;
+  radarData?: RadarData | null;
+  offScreenBall?: OffScreenBallData | null;
+  isGoalShaking?: boolean;
 }
 
 export const HUDOverlay: React.FC<HUDOverlayProps> = ({
@@ -24,6 +27,9 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
   peerRoomId = '8492',
   isPeerConnected = false,
   goalBannerText = null,
+  radarData = null,
+  offScreenBall = null,
+  isGoalShaking = false,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
@@ -267,6 +273,129 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
           </div>
         )}
       </div>
+
+      {/* Goal Camera Shake & Screen Flash Edge Vignette */}
+      {(isGoalShaking || goalBannerText) && (
+        <div className="fixed inset-0 z-40 pointer-events-none border-[10px] border-emerald-400/50 shadow-[inset_0_0_80px_rgba(16,185,129,0.5)] animate-pulse transition-all duration-150" />
+      )}
+
+      {/* Off-Screen Ball Directional Indicator Arrow Badge */}
+      {offScreenBall && offScreenBall.isOffScreen && (
+        <div
+          className="fixed z-50 pointer-events-none transition-all duration-75"
+          style={{
+            left: `${offScreenBall.edgeX}px`,
+            top: `${offScreenBall.edgeY}px`,
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <div className="flex items-center gap-1.5 bg-[#050b14]/95 border-2 border-cyan-400/90 text-cyan-300 px-3 py-1 rounded-full shadow-2xl backdrop-blur-xl animate-pulse">
+            <span
+              className="inline-block text-xs font-black text-cyan-400 transition-transform"
+              style={{ transform: `rotate(${offScreenBall.angle}rad)` }}
+            >
+              ➔
+            </span>
+            <span className="text-xs">⚽</span>
+            <span className="font-mono text-[11px] font-extrabold text-white tracking-wide">
+              {offScreenBall.distanceMeters}m
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Real-time Field Mini-Map Radar HUD (Bottom Center) */}
+      {showHUD && radarData && (
+        <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center">
+          <div className="bg-[#050b14]/85 border border-emerald-500/40 rounded-2xl p-1.5 shadow-2xl backdrop-blur-md w-[220px] h-[135px] sm:w-[250px] sm:h-[154px] flex flex-col pointer-events-auto">
+            <div className="flex items-center justify-between px-1.5 py-0.5 text-[9px] font-mono font-bold text-emerald-400/80 leading-none">
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                RADAR PITCH
+              </span>
+              <span className="text-slate-400 text-[8px]">2200x1350</span>
+            </div>
+
+            <div className="relative w-full flex-1 rounded-xl overflow-hidden border border-emerald-500/20 bg-[#041f18]/90">
+              <svg viewBox="0 0 2200 1350" className="w-full h-full block">
+                {/* Playable Outer Boundary */}
+                <rect
+                  x="154"
+                  y="108"
+                  width="1892"
+                  height="1134"
+                  fill="#062920"
+                  stroke="rgba(52, 211, 153, 0.45)"
+                  strokeWidth="14"
+                  rx="20"
+                />
+
+                {/* Center Line & Center Circle */}
+                <line x1="1100" y1="108" x2="1100" y2="1242" stroke="rgba(52, 211, 153, 0.35)" strokeWidth="12" />
+                <circle cx="1100" cy="675" r="230" fill="none" stroke="rgba(52, 211, 153, 0.35)" strokeWidth="12" />
+                <circle cx="1100" cy="675" r="28" fill="rgba(52, 211, 153, 0.6)" />
+
+                {/* Penalty Boxes */}
+                <rect x="154" y="378" width="374" height="594" fill="none" stroke="rgba(52, 211, 153, 0.35)" strokeWidth="12" />
+                <rect x="1672" y="378" width="374" height="594" fill="none" stroke="rgba(52, 211, 153, 0.35)" strokeWidth="12" />
+
+                {/* Goal Post Mouths */}
+                <rect x="90" y="460" width="64" height="430" fill="rgba(6, 182, 212, 0.35)" stroke="#06b6d4" strokeWidth="10" />
+                <rect x="2046" y="460" width="64" height="430" fill="rgba(245, 158, 11, 0.35)" stroke="#f59e0b" strokeWidth="10" />
+
+                {/* Camera Viewport Frustum Box */}
+                {(() => {
+                  const camW = radarData.camera.viewWidth / radarData.camera.zoom;
+                  const camH = radarData.camera.viewHeight / radarData.camera.zoom;
+                  const camX = radarData.camera.x - camW / 2;
+                  const camY = radarData.camera.y - camH / 2;
+                  return (
+                    <rect
+                      x={camX}
+                      y={camY}
+                      width={camW}
+                      height={camH}
+                      fill="rgba(255, 255, 255, 0.08)"
+                      stroke="#ffffff"
+                      strokeWidth="14"
+                      strokeDasharray="36 24"
+                      rx="35"
+                    />
+                  );
+                })()}
+
+                {/* Players */}
+                {radarData.players.map((p) => {
+                  const isHome = p.team === 'home';
+                  const dotColor = p.color || (isHome ? '#00f2fe' : '#fbbf24');
+                  return (
+                    <g key={p.id}>
+                      {p.hasPossession && (
+                        <circle cx={p.x} cy={p.y} r="85" fill="none" stroke="#10b981" strokeWidth="16" opacity="0.8" />
+                      )}
+                      {p.isActiveUser && (
+                        <polygon
+                          points={`${p.x},${p.y - 75} ${p.x - 35},${p.y - 125} ${p.x + 35},${p.y - 125}`}
+                          fill={dotColor}
+                          stroke="#000000"
+                          strokeWidth="10"
+                        />
+                      )}
+                      <circle cx={p.x} cy={p.y} r="50" fill={dotColor} stroke="#000000" strokeWidth="12" />
+                    </g>
+                  );
+                })}
+
+                {/* Ball */}
+                <g>
+                  <circle cx={radarData.ball.x} cy={radarData.ball.y} r="75" fill="rgba(255, 255, 255, 0.45)" />
+                  <circle cx={radarData.ball.x} cy={radarData.ball.y} r="42" fill="#ffffff" stroke="#000000" strokeWidth="10" />
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

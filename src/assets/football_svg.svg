@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="ballShade" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </radialGradient>
+  </defs>
+  <circle cx="256" cy="256" r="240" fill="url(#ballShade)" stroke="#0f172a" stroke-width="16"/>
+  <polygon points="256,136 196,180 219,251 293,251 316,180" fill="#0f172a"/>
+  <polygon points="256,136 196,180 120,155 133,76 216,65" fill="none" stroke="#0f172a" stroke-width="12"/>
+  <polygon points="256,136 316,180 392,155 379,76 296,65" fill="none" stroke="#0f172a" stroke-width="12"/>
+  <polygon points="219,251 293,251 316,336 256,380 196,336" fill="#0f172a"/>
+  <polygon points="196,180 219,251 150,300 84,260 120,155" fill="none" stroke="#0f172a" stroke-width="12"/>
+  <polygon points="316,180 293,251 362,300 428,260 392,155" fill="none" stroke="#0f172a" stroke-width="12"/>
+  <polygon points="196,336 256,380 256,460 160,430 150,300" fill="none" stroke="#0f172a" stroke-width="12"/>
+  <polygon points="316,336 256,380 256,460 352,430 362,300" fill="none" stroke="#0f172a" stroke-width="12"/>
+</svg>

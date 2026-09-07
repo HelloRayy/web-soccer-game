@@ -7,7 +7,7 @@ import { Ball } from '../game/Ball';
 import { Player } from '../game/Player';
 import { MatchRules } from '../game/MatchRules';
 import { HUDOverlay } from './HUDOverlay';
-import { MatchMode, MatchRulesState, GamepadState } from '../types/game';
+import { MatchMode, MatchRulesState, GamepadState, RadarData, OffScreenBallData } from '../types/game';
 import { HostPeerService } from '../services/peerService';
 import { DeviceType } from './ControllerSelectModal';
 import { PlayerNode } from './TeamSelectView';
@@ -72,6 +72,10 @@ export const GameView: React.FC<GameViewProps> = ({
   const prevBackBtnRef = useRef(false);
 
   const [goalBannerText, setGoalBannerText] = useState<string | null>(null);
+  const [radarData, setRadarData] = useState<RadarData | null>(null);
+  const [offScreenBall, setOffScreenBall] = useState<OffScreenBallData | null>(null);
+  const [isGoalShaking, setIsGoalShaking] = useState(false);
+  const cameraShakeRef = useRef(0);
   const remoteGamepadStateRef = useRef<GamepadState | null>(null);
 
   // Register WebRTC HP Remote Connection Callbacks
@@ -300,10 +304,13 @@ export const GameView: React.FC<GameViewProps> = ({
     // 1. Update Match Rules & Timer
     const goalScored = rules.update(dt, ball, field);
     if (goalScored) {
+      cameraShakeRef.current = 28;
+      setIsGoalShaking(true);
       setGoalBannerText('⚽ GOAL SCORED!');
       setTimeout(() => {
         resetMatchPositions();
         setGoalBannerText(null);
+        setIsGoalShaking(false);
       }, 1500);
     }
 
@@ -507,13 +514,72 @@ export const GameView: React.FC<GameViewProps> = ({
     const clampedCamX = Math.max(halfVisibleW, Math.min(WORLD_WIDTH - halfVisibleW, cameraRef.current.x));
     const clampedCamY = Math.max(halfVisibleH, Math.min(WORLD_HEIGHT - halfVisibleH, cameraRef.current.y));
 
+    // Camera Shake Decay
+    if (cameraShakeRef.current > 0.4) {
+      cameraShakeRef.current *= 0.88;
+    } else {
+      cameraShakeRef.current = 0;
+    }
+    const shakeX = cameraShakeRef.current > 0 ? (Math.random() - 0.5) * cameraShakeRef.current : 0;
+    const shakeY = cameraShakeRef.current > 0 ? (Math.random() - 0.5) * cameraShakeRef.current : 0;
+
+    // Real-time Off-Screen Ball Tracking
+    const screenBallX = viewW / 2 + (ball.pos.x - clampedCamX) * currentZoom;
+    const screenBallY = viewH / 2 + (ball.pos.y - clampedCamY) * currentZoom;
+    const margin = 42;
+    const isBallOffScreen = screenBallX < margin || screenBallX > viewW - margin || screenBallY < margin || screenBallY > viewH - margin;
+
+    if (isBallOffScreen) {
+      const dx = screenBallX - viewW / 2;
+      const dy = screenBallY - viewH / 2;
+      const angle = Math.atan2(dy, dx);
+      const edgeX = Math.max(margin, Math.min(viewW - margin, screenBallX));
+      const edgeY = Math.max(margin, Math.min(viewH - margin, screenBallY));
+      const distPx = Math.hypot(ball.pos.x - clampedCamX, ball.pos.y - clampedCamY);
+      const distanceMeters = Math.max(1, Math.round(distPx / 22));
+
+      setOffScreenBall({
+        isOffScreen: true,
+        edgeX,
+        edgeY,
+        angle,
+        distanceMeters
+      });
+    } else {
+      setOffScreenBall(null);
+    }
+
+    // Real-time Radar Mini-Map State Telemetry
+    setRadarData({
+      fieldWidth: WORLD_WIDTH,
+      fieldHeight: WORLD_HEIGHT,
+      ball: { x: ball.pos.x, y: ball.pos.y },
+      players: players.map((p) => ({
+        id: p.id,
+        name: p.name,
+        team: p.team,
+        x: p.pos.x,
+        y: p.pos.y,
+        color: p.color,
+        hasPossession: p.hasPossession,
+        isActiveUser: !p.isAI && (p.controllerIndex !== null || p.devType !== 'ai_bot')
+      })),
+      camera: {
+        x: clampedCamX,
+        y: clampedCamY,
+        zoom: currentZoom,
+        viewWidth: viewW,
+        viewHeight: viewH
+      }
+    });
+
     // Render Canvas
     ctx.clearRect(0, 0, viewW, viewH);
 
     ctx.save();
     ctx.translate(viewW / 2, viewH / 2);
     ctx.scale(currentZoom, currentZoom);
-    ctx.translate(-clampedCamX, -clampedCamY);
+    ctx.translate(-clampedCamX + shakeX, -clampedCamY + shakeY);
 
     field.draw(ctx);
 
@@ -539,6 +605,9 @@ export const GameView: React.FC<GameViewProps> = ({
         peerRoomId={peerRoomId}
         isPeerConnected={isPeerConnected}
         goalBannerText={goalBannerText}
+        radarData={radarData}
+        offScreenBall={offScreenBall}
+        isGoalShaking={isGoalShaking}
       />
 
       <canvas

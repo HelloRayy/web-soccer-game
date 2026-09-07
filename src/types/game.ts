@@ -75,3 +75,31 @@ export interface MatchRulesState {
   logMessage: string;
   debugInputText: string;
 }
+
+export interface RadarPlayerData {
+  id: string;
+  name: string;
+  team: TeamType;
+  x: number;
+  y: number;
+  color: string;
+  hasPossession: boolean;
+  isActiveUser: boolean;
+}
+
+export interface RadarData {
+  fieldWidth: number;
+  fieldHeight: number;
+  ball: { x: number; y: number };
+  players: RadarPlayerData[];
+  camera: { x: number; y: number; zoom: number; viewWidth: number; viewHeight: number };
+}
+
+export interface OffScreenBallData {
+  isOffScreen: boolean;
+  edgeX: number;
+  edgeY: number;
+  angle: number;
+  distanceMeters: number;
+}
+

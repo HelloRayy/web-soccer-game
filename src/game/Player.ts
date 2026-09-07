@@ -861,9 +861,10 @@ export class Player implements PlayerEntity {
     const isP1 = this.id === 'p1';
     const isP2 = this.id === 'p2';
 
-    const playerColor = isP1 ? '#f87171' : isP2 ? '#60a5fa' : '#f59e0b';
-    const topLabel = isP1 ? 'Kamu' : isP2 ? 'Rekan' : 'Musuh (P3)';
-    const innerInitial = isP1 ? 'QI' : isP2 ? 'P2' : 'P3';
+    const playerColor = this.color || (isP1 ? '#f87171' : isP2 ? '#60a5fa' : '#f59e0b');
+    const topLabel = this.name || (isP1 ? 'Kamu' : isP2 ? 'Rekan' : 'Musuh');
+    const innerInitial = isP1 ? 'P1' : isP2 ? 'P2' : this.isAI ? 'AI' : 'P';
+    const isActiveUser = !this.isAI && (this.controllerIndex !== null || this.devType !== 'ai_bot');
 
     this.turfParticles.forEach((p) => {
       ctx.fillStyle = p.color;
@@ -874,24 +875,61 @@ export class Player implements PlayerEntity {
     });
     ctx.globalAlpha = 1.0;
 
-    const staminaRadius = this.radius + 14;
-    const staminaColor = this.isExhausted ? '#ef4444' : this.stamina > 0.5 ? '#10b981' : this.stamina > 0.2 ? '#f59e0b' : '#ef4444';
+    // 1. EA FC STYLE FLOATING INVERTED NEON TRIANGLE CURSOR (Active Human Controller)
+    if (isActiveUser) {
+      ctx.save();
+      const bounce = Math.sin(Date.now() * 0.008) * 3;
+      const cursorY = this.pos.y - this.radius - 32 + bounce;
+      const cursorColor = this.team === 'home' ? '#00f2fe' : '#fbbf24';
 
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-    ctx.lineWidth = 3.5;
-    ctx.beginPath();
-    ctx.arc(this.pos.x, this.pos.y, staminaRadius, 0, Math.PI * 2);
-    ctx.stroke();
+      ctx.shadowColor = cursorColor;
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = cursorColor;
+      ctx.strokeStyle = '#050b14';
+      ctx.lineWidth = 2;
 
-    if (this.stamina > 0) {
-      const startAngle = -Math.PI / 2;
-      const endAngle = startAngle + this.stamina * Math.PI * 2;
-
-      ctx.strokeStyle = staminaColor;
-      ctx.lineWidth = 3.5;
       ctx.beginPath();
-      ctx.arc(this.pos.x, this.pos.y, staminaRadius, startAngle, endAngle);
+      ctx.moveTo(this.pos.x - 8, cursorY - 10);
+      ctx.lineTo(this.pos.x + 8, cursorY - 10);
+      ctx.lineTo(this.pos.x, cursorY);
+      ctx.closePath();
+      ctx.fill();
       ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // 2. DYNAMIC CAPSULE STAMINA BAR (Only visible when sprinting or stamina < 98%)
+    if (this.stamina < 0.98 || this.isSprinting || this.isExhausted) {
+      const barW = 34;
+      const barH = 5;
+      const barX = this.pos.x - barW / 2;
+      const barY = this.pos.y + this.radius + 10;
+
+      ctx.fillStyle = 'rgba(7, 11, 15, 0.85)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(barX, barY, barW, barH, 2.5);
+      ctx.fill();
+      ctx.stroke();
+
+      const fillW = Math.max(2, (barW - 2) * this.stamina);
+      const isBlinkingExhausted = this.isExhausted && Math.floor(Date.now() / 160) % 2 === 0;
+      const staminaColor = isBlinkingExhausted
+        ? '#ffffff'
+        : this.isExhausted
+        ? '#ef4444'
+        : this.stamina > 0.5
+        ? '#10b981'
+        : this.stamina > 0.25
+        ? '#f59e0b'
+        : '#ef4444';
+
+      ctx.fillStyle = staminaColor;
+      ctx.beginPath();
+      ctx.roundRect(barX + 1, barY + 1, fillW, barH - 2, 2);
+      ctx.fill();
     }
 
     if (this.isChargingSlide) {
