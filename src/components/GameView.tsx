@@ -121,6 +121,17 @@ export const GameView: React.FC<GameViewProps> = ({
 
   const [matchState, setMatchState] = useState<MatchRulesState>(matchRulesRef.current.state);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__SOCCER_GAME__ = {
+        ball: ballRef.current,
+        players: playersRef.current,
+        field: fieldRef.current,
+        camera: cameraRef.current,
+      };
+    }
+  }, []);
+
   const resetMatchPositions = useCallback(() => {
     ballRef.current.reset(WORLD_WIDTH * 0.5, WORLD_HEIGHT * 0.5);
 
@@ -498,7 +509,7 @@ export const GameView: React.FC<GameViewProps> = ({
       const reqZoomY = viewH / (spanY * tiltY);
 
       const targetZoomRaw = Math.min(reqZoomX, reqZoomY);
-      const targetZoom = Math.max(0.52, Math.min(0.92, targetZoomRaw));
+      const targetZoom = Math.max(0.48, Math.min(0.86, targetZoomRaw));
 
       cameraRef.current.x = cameraRef.current.x * 0.90 + targetCamX * 0.10;
       cameraRef.current.y = cameraRef.current.y * 0.90 + targetCamY * 0.10;
@@ -515,8 +526,9 @@ export const GameView: React.FC<GameViewProps> = ({
     const halfVisibleH = viewH / (2 * currentZoom * tiltY);
 
     const camMarginX = 140;
+    const camMarginY = 180;
     const clampedCamX = Math.max(halfVisibleW - camMarginX, Math.min(WORLD_WIDTH - halfVisibleW + camMarginX, cameraRef.current.x));
-    const clampedCamY = Math.max(halfVisibleH, Math.min(WORLD_HEIGHT - halfVisibleH, cameraRef.current.y));
+    const clampedCamY = Math.max(halfVisibleH - camMarginY, Math.min(WORLD_HEIGHT - halfVisibleH + camMarginY, cameraRef.current.y));
 
     // Camera Shake Decay
     if (cameraShakeRef.current > 0.4) {

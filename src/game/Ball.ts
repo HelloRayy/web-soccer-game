@@ -248,22 +248,101 @@ export class Ball {
       if (Math.abs(this.vel.y) < 0.05) this.vel.y = 0;
     }
 
-    // 3. Pitch & Goal Bounds Bounce
+    // 3. Pitch & Goal Bounds Bounce + Complete Net Containment Physics
     const bounds = field.pitchBounds;
     const goals = field.goals;
+    const GOAL_DEPTH = 100;
+    const postRadius = 6.5;
+
+    // Check Post Collisions (The 4 White Metallic Goal Posts)
+    const posts = [
+      { x: bounds.left, y: goals.homeGoal.top },
+      { x: bounds.left, y: goals.homeGoal.bottom },
+      { x: bounds.right, y: goals.awayGoal.top },
+      { x: bounds.right, y: goals.awayGoal.bottom },
+    ];
+
+    posts.forEach((post) => {
+      const dx = this.pos.x - post.x;
+      const dy = this.pos.y - post.y;
+      const dist = Math.hypot(dx, dy);
+      const minDist = this.radius + postRadius;
+      if (dist < minDist && dist > 0.001) {
+        // Elastic Rebound off Goal Post (PING!)
+        const nx = dx / dist;
+        const ny = dy / dist;
+        this.pos.x = post.x + nx * minDist;
+        this.pos.y = post.y + ny * minDist;
+
+        const dot = this.vel.x * nx + this.vel.y * ny;
+        if (dot < 0) {
+          this.vel.x = (this.vel.x - 2 * dot * nx) * 0.75;
+          this.vel.y = (this.vel.y - 2 * dot * ny) * 0.75;
+          if (this.vz !== 0) this.vz = -this.vz * 0.5;
+        }
+      }
+    });
 
     const isInHomeGoalY = this.pos.y >= goals.homeGoal.top && this.pos.y <= goals.homeGoal.bottom;
     const isInAwayGoalY = this.pos.y >= goals.awayGoal.top && this.pos.y <= goals.awayGoal.bottom;
 
-    if (!isInHomeGoalY && this.pos.x - this.radius < bounds.left) {
-      this.pos.x = bounds.left + this.radius;
-      this.vel.x = -this.vel.x * 0.65;
-    }
-    if (!isInAwayGoalY && this.pos.x + this.radius > bounds.right) {
-      this.pos.x = bounds.right - this.radius;
-      this.vel.x = -this.vel.x * 0.65;
+    // LEFT HOME GOAL (Ball Enters Net Behind bounds.left)
+    if (this.pos.x < bounds.left) {
+      if (isInHomeGoalY) {
+        // Trapped inside home net!
+        // 1. Back net wall (bounds.left - GOAL_DEPTH)
+        if (this.pos.x - this.radius < bounds.left - GOAL_DEPTH) {
+          this.pos.x = bounds.left - GOAL_DEPTH + this.radius;
+          this.vel.x = -this.vel.x * 0.15; // Net absorbs 85% forward momentum!
+          this.vel.y *= 0.35;
+          this.vz *= 0.25;
+        }
+        // 2. Top net side wall
+        if (this.pos.y - this.radius < goals.homeGoal.top) {
+          this.pos.y = goals.homeGoal.top + this.radius;
+          this.vel.y = -this.vel.y * 0.20;
+        }
+        // 3. Bottom net side wall
+        if (this.pos.y + this.radius > goals.homeGoal.bottom) {
+          this.pos.y = goals.homeGoal.bottom - this.radius;
+          this.vel.y = -this.vel.y * 0.20;
+        }
+      } else {
+        // Outside the goal mouth -> Standard goal line bounce
+        this.pos.x = bounds.left + this.radius;
+        this.vel.x = -this.vel.x * 0.65;
+      }
     }
 
+    // RIGHT AWAY GOAL (Ball Enters Net Behind bounds.right)
+    if (this.pos.x > bounds.right) {
+      if (isInAwayGoalY) {
+        // Trapped inside away net!
+        // 1. Back net wall (bounds.right + GOAL_DEPTH)
+        if (this.pos.x + this.radius > bounds.right + GOAL_DEPTH) {
+          this.pos.x = bounds.right + GOAL_DEPTH - this.radius;
+          this.vel.x = -this.vel.x * 0.15; // Net absorbs 85% forward momentum!
+          this.vel.y *= 0.35;
+          this.vz *= 0.25;
+        }
+        // 2. Top net side wall
+        if (this.pos.y - this.radius < goals.awayGoal.top) {
+          this.pos.y = goals.awayGoal.top + this.radius;
+          this.vel.y = -this.vel.y * 0.20;
+        }
+        // 3. Bottom net side wall
+        if (this.pos.y + this.radius > goals.awayGoal.bottom) {
+          this.pos.y = goals.awayGoal.bottom - this.radius;
+          this.vel.y = -this.vel.y * 0.20;
+        }
+      } else {
+        // Outside the goal mouth -> Standard goal line bounce
+        this.pos.x = bounds.right - this.radius;
+        this.vel.x = -this.vel.x * 0.65;
+      }
+    }
+
+    // Pitch Top & Bottom Touchline Bounds
     if (this.pos.y - this.radius < bounds.top) {
       this.pos.y = bounds.top + this.radius;
       this.vel.y = -this.vel.y * 0.65;
