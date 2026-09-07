@@ -48,7 +48,7 @@ export class Field {
     };
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
+  draw(ctx: CanvasRenderingContext2D, isGoalShaking = false) {
     const w = this.width;
     const h = this.height;
     const bounds = this.pitchBounds;
@@ -60,15 +60,15 @@ export class Field {
 
     // 1. OUTER STADIUM APRON & STANDS
     ctx.fillStyle = '#143d22'; // Dark stadium apron
-    ctx.fillRect(0, 0, w, h);
+    ctx.fillRect(-500, -400, w + 1000, h + 800);
 
     // Top & Bottom Yellow/Red Retro Stadium Advertising Boards
     const adHeight = bounds.top * 0.45;
     ctx.fillStyle = '#eab308'; // Retro yellow board
-    ctx.fillRect(bounds.left - 40, bounds.top - adHeight - 8, pitchWidth + 80, adHeight);
+    ctx.fillRect(bounds.left - 120, bounds.top - adHeight - 8, pitchWidth + 240, adHeight);
     ctx.strokeStyle = '#ca8a04';
     ctx.lineWidth = 3;
-    ctx.strokeRect(bounds.left - 40, bounds.top - adHeight - 8, pitchWidth + 80, adHeight);
+    ctx.strokeRect(bounds.left - 120, bounds.top - adHeight - 8, pitchWidth + 240, adHeight);
 
     // 2. 45° DIAGONAL LAWN STRIPES (Exact Match with Reference Image)
     ctx.save();
@@ -96,14 +96,7 @@ export class Field {
     }
     ctx.restore();
 
-    // 3. 2.5D ISOMETRIC GOALS & NETTING (Left Home & Right Away)
-    const goalTop = this.goals.homeGoal.top;
-    const goalBottom = this.goals.homeGoal.bottom;
-
-    PixelSpriteRenderer.drawIsometricGoal(ctx, 'home', bounds.left, goalTop, goalBottom, pitchHeight);
-    PixelSpriteRenderer.drawIsometricGoal(ctx, 'away', bounds.right, goalTop, goalBottom, pitchHeight);
-
-    // 4. RETRO PIXEL-CRISP WHITE PITCH MARKINGS
+    // 3. RETRO PIXEL-CRISP WHITE PITCH MARKINGS
     ctx.strokeStyle = '#f8fafc';
     ctx.lineWidth = 5;
     ctx.lineCap = 'square';
@@ -130,7 +123,7 @@ export class Field {
     ctx.arc(centerX, bounds.top + pitchHeight * 0.5, 7, 0, Math.PI * 2);
     ctx.fill();
 
-    // 5. 18-YARD PENALTY BOXES
+    // 4. 18-YARD PENALTY BOXES
     const penaltyW = pitchWidth * 0.17;
     const penaltyH = pitchHeight * 0.54;
     const penaltyY = bounds.top + (pitchHeight - penaltyH) / 2;
@@ -140,7 +133,7 @@ export class Field {
     // Away 18-Yard Box
     ctx.strokeRect(bounds.right - penaltyW, penaltyY, penaltyW, penaltyH);
 
-    // 6. 6-YARD GOAL MOUTH BOXES
+    // 5. 6-YARD GOAL MOUTH BOXES
     const sixYardW = pitchWidth * 0.06;
     const sixYardH = pitchHeight * 0.32;
     const sixYardY = bounds.top + (pitchHeight - sixYardH) / 2;
@@ -148,7 +141,7 @@ export class Field {
     ctx.strokeRect(bounds.left, sixYardY, sixYardW, sixYardH);
     ctx.strokeRect(bounds.right - sixYardW, sixYardY, sixYardW, sixYardH);
 
-    // 7. PENALTY SPOTS & PENALTY ARCS (D-Box)
+    // 6. PENALTY SPOTS & PENALTY ARCS (D-Box)
     const penSpotDist = pitchWidth * 0.12;
     const penSpotY = bounds.top + pitchHeight * 0.5;
 
@@ -170,24 +163,27 @@ export class Field {
     ctx.arc(bounds.right - penSpotDist, penSpotY, centerRadius * 0.75, Math.PI * 0.70, Math.PI * 1.30);
     ctx.stroke();
 
-    // 8. 4-CORNER ARCS
+    // 7. 4-CORNER ARCS
     const cornerR = 24;
-    // Top-Left
     ctx.beginPath();
     ctx.arc(bounds.left, bounds.top, cornerR, 0, Math.PI * 0.5);
     ctx.stroke();
-    // Bottom-Left
     ctx.beginPath();
     ctx.arc(bounds.left, bounds.bottom, cornerR, -Math.PI * 0.5, 0);
     ctx.stroke();
-    // Top-Right
     ctx.beginPath();
     ctx.arc(bounds.right, bounds.top, cornerR, Math.PI * 0.5, Math.PI);
     ctx.stroke();
-    // Bottom-Right
     ctx.beginPath();
     ctx.arc(bounds.right, bounds.bottom, cornerR, Math.PI, Math.PI * 1.5);
     ctx.stroke();
+
+    // 8. 2.5D ISOMETRIC GOALS & 3D NETTING (Left Home & Right Away) - Drawn over turf & boundary!
+    const goalTop = this.goals.homeGoal.top;
+    const goalBottom = this.goals.homeGoal.bottom;
+
+    PixelSpriteRenderer.drawIsometricGoal(ctx, 'home', bounds.left, goalTop, goalBottom, pitchHeight, isGoalShaking);
+    PixelSpriteRenderer.drawIsometricGoal(ctx, 'away', bounds.right, goalTop, goalBottom, pitchHeight, isGoalShaking);
 
     ctx.restore();
   }

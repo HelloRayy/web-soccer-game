@@ -9,6 +9,7 @@ import { MatchRules } from '../game/MatchRules';
 import { HUDOverlay } from './HUDOverlay';
 import { MatchMode, MatchRulesState, GamepadState, RadarData, OffScreenBallData } from '../types/game';
 import { HostPeerService } from '../services/peerService';
+import { PixelSpriteRenderer } from '../game/PixelSpriteRenderer';
 import { DeviceType } from './ControllerSelectModal';
 import { PlayerNode } from './TeamSelectView';
 
@@ -485,6 +486,7 @@ export const GameView: React.FC<GameViewProps> = ({
       const targetCamX = (minX + maxX) * 0.5;
       const targetCamY = (minY + maxY) * 0.5;
 
+      const tiltY = PixelSpriteRenderer.PITCH_TILT_Y;
       const padding = 280;
       const spanX = Math.max(500, (maxX - minX) + padding);
       const spanY = Math.max(350, (maxY - minY) + padding);
@@ -493,7 +495,7 @@ export const GameView: React.FC<GameViewProps> = ({
       const viewH = dimensions.height;
 
       const reqZoomX = viewW / spanX;
-      const reqZoomY = viewH / spanY;
+      const reqZoomY = viewH / (spanY * tiltY);
 
       const targetZoomRaw = Math.min(reqZoomX, reqZoomY);
       const targetZoom = Math.max(0.52, Math.min(0.92, targetZoomRaw));
@@ -505,13 +507,15 @@ export const GameView: React.FC<GameViewProps> = ({
 
     setMatchState({ ...matchRulesRef.current.state });
 
+    const tiltY = PixelSpriteRenderer.PITCH_TILT_Y;
     const viewW = dimensions.width;
     const viewH = dimensions.height;
     const currentZoom = zoomRef.current;
     const halfVisibleW = viewW / (2 * currentZoom);
-    const halfVisibleH = viewH / (2 * currentZoom);
+    const halfVisibleH = viewH / (2 * currentZoom * tiltY);
 
-    const clampedCamX = Math.max(halfVisibleW, Math.min(WORLD_WIDTH - halfVisibleW, cameraRef.current.x));
+    const camMarginX = 140;
+    const clampedCamX = Math.max(halfVisibleW - camMarginX, Math.min(WORLD_WIDTH - halfVisibleW + camMarginX, cameraRef.current.x));
     const clampedCamY = Math.max(halfVisibleH, Math.min(WORLD_HEIGHT - halfVisibleH, cameraRef.current.y));
 
     // Camera Shake Decay
@@ -525,7 +529,7 @@ export const GameView: React.FC<GameViewProps> = ({
 
     // Real-time Off-Screen Ball Tracking
     const screenBallX = viewW / 2 + (ball.pos.x - clampedCamX) * currentZoom;
-    const screenBallY = viewH / 2 + (ball.pos.y - clampedCamY) * currentZoom;
+    const screenBallY = viewH / 2 + (ball.pos.y - clampedCamY) * currentZoom * tiltY;
     const margin = 42;
     const isBallOffScreen = screenBallX < margin || screenBallX > viewW - margin || screenBallY < margin || screenBallY > viewH - margin;
 
@@ -573,15 +577,15 @@ export const GameView: React.FC<GameViewProps> = ({
       }
     });
 
-    // Render Canvas
+    // Render Canvas in Authentic 2.5D Isometric Pitch Projection
     ctx.clearRect(0, 0, viewW, viewH);
 
     ctx.save();
     ctx.translate(viewW / 2, viewH / 2);
-    ctx.scale(currentZoom, currentZoom);
+    ctx.scale(currentZoom, currentZoom * tiltY);
     ctx.translate(-clampedCamX + shakeX, -clampedCamY + shakeY);
 
-    field.draw(ctx);
+    field.draw(ctx, isGoalShaking);
 
     players.forEach((p) => p.draw(ctx));
     ball.draw(ctx);

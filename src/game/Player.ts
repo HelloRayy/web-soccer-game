@@ -893,23 +893,45 @@ export class Player implements PlayerEntity {
     });
     ctx.globalAlpha = 1.0;
 
-    // 1. EA FC STYLE FLOATING INVERTED NEON TRIANGLE CURSOR (Active Human Controller)
+    // 1. SLEEK RETRO OVERHEAD DIAMOND & P1/P2 INDICATOR BADGE (Active Human Controller Only)
     if (isActiveUser) {
       ctx.save();
       const bounce = Math.sin(Date.now() * 0.008) * 3;
-      const cursorY = this.pos.y - this.radius - 32 + bounce;
+      const cursorY = this.pos.y - 46 + bounce;
       const cursorColor = this.team === 'home' ? '#00f2fe' : '#fbbf24';
+      const badgeText = isP1 ? 'P1' : isP2 ? 'P2' : 'P';
 
+      // Miniature Retro Tag above chevron
+      const tagW = 20;
+      const tagH = 11;
+      const tagX = this.pos.x - tagW / 2;
+      const tagY = cursorY - 14;
+
+      ctx.fillStyle = 'rgba(7, 11, 15, 0.90)';
+      ctx.strokeStyle = cursorColor;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(tagX, tagY, tagW, tagH, 3);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = cursorColor;
+      ctx.font = 'bold 8.5px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(badgeText, this.pos.x, tagY + tagH / 2);
+
+      // Floating Inverted Chevron/Triangle Cursor pointing to player's head
       ctx.shadowColor = cursorColor;
-      ctx.shadowBlur = 10;
+      ctx.shadowBlur = 8;
       ctx.fillStyle = cursorColor;
       ctx.strokeStyle = '#050b14';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1.8;
 
       ctx.beginPath();
-      ctx.moveTo(this.pos.x - 8, cursorY - 10);
-      ctx.lineTo(this.pos.x + 8, cursorY - 10);
-      ctx.lineTo(this.pos.x, cursorY);
+      ctx.moveTo(this.pos.x - 6.5, cursorY - 3);
+      ctx.lineTo(this.pos.x + 6.5, cursorY - 3);
+      ctx.lineTo(this.pos.x, cursorY + 4);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
@@ -1193,14 +1215,7 @@ export class Player implements PlayerEntity {
       hasPossession: this.hasPossession
     });
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 15px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.lineWidth = 2.5;
-    ctx.strokeText(topLabel, this.pos.x, this.pos.y - 12 - this.radius);
-    ctx.fillText(topLabel, this.pos.x, this.pos.y - 12 - this.radius);
+    // Sleek retro player rendering - no giant text overlays cluttering screen
 
     if (this.duelFeedbackTimer > 0) {
       ctx.save();
@@ -1248,15 +1263,28 @@ export class Player implements PlayerEntity {
         ctx.textBaseline = 'middle';
         ctx.fillText(text, this.pos.x, bubbleY + bubbleH / 2);
       } else {
-        ctx.fillStyle = this.duelFeedbackText.includes('EXHAUSTED') ? '#ef4444' : this.duelFeedbackText.includes('GOCEK') ? '#fbbf24' : '#06b6d4';
-        ctx.font = '900 16px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 3.5;
+        const badgeCol = this.duelFeedbackText.includes('EXHAUSTED') ? '#ef4444' : this.duelFeedbackText.includes('GOCEK') ? '#fbbf24' : '#06b6d4';
+        const animY = this.pos.y - 52 - this.radius - this.duelFeedbackYOffset;
 
-        const animY = this.pos.y - 32 - this.radius - this.duelFeedbackYOffset;
-        ctx.strokeText(this.duelFeedbackText, this.pos.x, animY);
-        ctx.fillText(this.duelFeedbackText, this.pos.x, animY);
+        ctx.font = 'bold 11px monospace';
+        const textW = ctx.measureText(this.duelFeedbackText).width;
+        const badgeW = textW + 16;
+        const badgeH = 18;
+        const badgeX = this.pos.x - badgeW / 2;
+        const badgeY = animY - 14;
+
+        ctx.fillStyle = 'rgba(7, 11, 15, 0.88)';
+        ctx.strokeStyle = badgeCol;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = badgeCol;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.duelFeedbackText, this.pos.x, badgeY + badgeH / 2);
       }
 
       ctx.restore();
