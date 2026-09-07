@@ -1,6 +1,7 @@
 import { Vector2D } from '../types/game';
 import { Field } from './Field';
 import { Player } from './Player';
+import { PixelSpriteRenderer } from './PixelSpriteRenderer';
 import footballSvgUrl from '../assets/ion_football.svg';
 
 export class Ball {
@@ -10,6 +11,11 @@ export class Ball {
   friction: number;
   attachedPlayerId: string | null;
   releaseTimer: number;
+
+  // 3D Ball Altitude & Trail Particles
+  z: number = 0;
+  vz: number = 0;
+  trailHistory: Array<{ x: number; y: number; z: number }> = [];
 
   // Passing Assist Homing Logic
   homingTargetPlayer: Player | null;
@@ -53,6 +59,9 @@ export class Ball {
   reset(x: number, y: number) {
     this.pos = { x, y };
     this.vel = { x: 0, y: 0 };
+    this.z = 0;
+    this.vz = 0;
+    this.trailHistory = [];
     this.attachedPlayerId = null;
     this.releaseTimer = 0;
     this.homingTargetPlayer = null;
@@ -68,6 +77,8 @@ export class Ball {
    */
   attachToPlayer(playerPos: Vector2D, facingAngle: number, playerRadius: number, playerVel: Vector2D, playerId: string) {
     this.attachedPlayerId = playerId;
+    this.z = 0;
+    this.vz = 0;
     const playerSpeed = Math.hypot(playerVel.x, playerVel.y);
 
     if (playerSpeed > 0.15) {
@@ -114,6 +125,13 @@ export class Ball {
     this.vel.x = dir.x * power;
     this.vel.y = dir.y * power;
     this.rollDirAngle = Math.atan2(dir.y, dir.x);
+
+    // 3D Altitude launch on powerful kicks (Rocket shots arc up in 3D!)
+    if (power > 11.5) {
+      this.vz = Math.min(8.5, power * 0.38);
+    } else {
+      this.vz = 0;
+    }
   }
 
   /**
@@ -156,6 +174,30 @@ export class Ball {
     if (currentSpeed > 0.1) {
       this.rollDirAngle = Math.atan2(this.vel.y, this.vel.x);
       this.rotationAngle += Math.min(0.08, (currentSpeed / this.radius) * 0.06);
+    }
+
+    // 3D Ball Altitude & Gravity Bounce Physics
+    if (this.z > 0 || this.vz !== 0) {
+      this.z += this.vz;
+      this.vz -= 0.36; // Gravity
+      if (this.z <= 0) {
+        this.z = 0;
+        if (Math.abs(this.vz) > 1.2) {
+          this.vz = -this.vz * 0.45; // Turf rebound
+        } else {
+          this.vz = 0;
+        }
+      }
+    }
+
+    // Update Motion Speed Trail Particles
+    if (currentSpeed > 5.5) {
+      this.trailHistory.push({ x: this.pos.x, y: this.pos.y, z: this.z });
+      if (this.trailHistory.length > 7) {
+        this.trailHistory.shift();
+      }
+    } else if (this.trailHistory.length > 0) {
+      this.trailHistory.shift();
     }
 
     // 1. Natural Grounded Pass Flight Acceleration
@@ -233,43 +275,16 @@ export class Ball {
   }
 
   draw(ctx: CanvasRenderingContext2D) {
-    ctx.save();
-
-    // 1. Soft Dynamic Shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
-    ctx.beginPath();
-    ctx.ellipse(this.pos.x + 3, this.pos.y + 4, this.radius, this.radius * 0.6, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 2. Render Naturally Aligned Rolling SVG Ball Image (src/assets/ion_football.svg)
-    ctx.save();
-    ctx.translate(this.pos.x, this.pos.y);
-
-    // Align roll rotation with actual movement direction angle for 100% natural 2D rolling!
-    ctx.rotate(this.rollDirAngle);
-    ctx.rotate(this.rotationAngle);
-
-    if (Ball.ballImage && Ball.isImageLoaded) {
-      const size = this.radius * 2.2;
-      ctx.drawImage(Ball.ballImage, -size / 2, -size / 2, size, size);
-    } else {
-      // White Football Fallback
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = '#0f172a';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      ctx.fillStyle = '#0f172a';
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius * 0.38, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.restore();
-    ctx.restore();
+    const currentSpeed = Math.hypot(this.vel.x, this.vel.y);
+    PixelSpriteRenderer.drawBall(
+      ctx,
+      this.pos.x,
+      this.pos.y,
+      this.z,
+      this.radius,
+      this.rotationAngle,
+      currentSpeed,
+      this.trailHistory
+    );
   }
 }

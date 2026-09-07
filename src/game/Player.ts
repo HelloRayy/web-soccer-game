@@ -1,6 +1,7 @@
 import { GamepadState, PlayerEntity, TeamType, Vector2D } from '../types/game';
 import { Ball } from './Ball';
 import { Field } from './Field';
+import { PixelSpriteRenderer } from './PixelSpriteRenderer';
 
 interface TurfParticle {
   x: number;
@@ -68,6 +69,15 @@ export class Player implements PlayerEntity {
   duelFeedbackYOffset: number = 0;
   dribbleSpinAngle: number = 0;
 
+  // 16-Bit Retro Pixel Sprite Animation Properties
+  stepPhase: number = 0;
+  isGoalkeeper: boolean = false;
+  isDiving: boolean = false;
+  diveTimer: number = 0;
+  isKickingTimer: number = 0;
+  skinColor: string = '#f59e0b';
+  hairColor: string = '#fbbf24';
+
   // Debug State Tracker
   debugInputString: string = '';
 
@@ -99,6 +109,14 @@ export class Player implements PlayerEntity {
     this.facingAngle = team === 'home' ? 0 : Math.PI;
     this.isSprinting = false;
     this.hasPossession = false;
+
+    // Distinct retro hairstyles and skin palettes based on player id hash
+    const idHash = (id.charCodeAt(id.length - 1) || 0) + (id.charCodeAt(0) || 0);
+    const hairPalettes = ['#fbbf24', '#7c2d12', '#1e293b', '#d97706'];
+    const skinPalettes = ['#fcd34d', '#f59e0b', '#b45309', '#fed7aa'];
+    this.hairColor = hairPalettes[idHash % hairPalettes.length];
+    this.skinColor = skinPalettes[idHash % skinPalettes.length];
+    this.isGoalkeeper = id.includes('gk') || id.includes('bot_1') || name.toLowerCase().includes('kiper') || name.toLowerCase().includes('gk');
 
     // Stamina Defaults
     this.stamina = 1.0;
@@ -1133,46 +1151,47 @@ export class Player implements PlayerEntity {
       ctx.setLineDash([]);
     }
 
-    ctx.save();
-    ctx.translate(this.pos.x, this.pos.y);
-    ctx.rotate(this.bodyTiltAngle + this.dribbleSpinAngle);
+    // Render 16-Bit Retro Pixel Art Character Sprite (Retro Goal Style)
+    const spd = Math.hypot(this.vel.x, this.vel.y);
+    if (spd > 0.15) {
+      this.stepPhase = (this.stepPhase + spd * 0.04) % 1;
+    }
+    if (this.diveTimer > 0) {
+      this.diveTimer -= 0.016;
+      if (this.diveTimer <= 0) this.isDiving = false;
+    }
+    if (this.isKickingTimer > 0) {
+      this.isKickingTimer -= 0.016;
+    }
 
-    const outerRingRadius = this.radius + 8;
-    ctx.strokeStyle = this.hasPossession ? '#10b981' : 'rgba(187, 247, 208, 0.85)';
-    ctx.lineWidth = this.hasPossession ? 4.5 : 3.5;
-    ctx.beginPath();
-    ctx.arc(0, 0, outerRingRadius, 0, Math.PI * 2);
-    ctx.stroke();
+    // Possession Ring Indicator on Turf
+    if (this.hasPossession) {
+      ctx.save();
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(this.pos.x, this.pos.y + 4, this.radius + 6, (this.radius + 6) * 0.5, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
 
-    const arcSpan = Math.PI / 3;
-    const arcStart = (this.facingAngle - this.bodyTiltAngle) - arcSpan / 2;
-    const arcEnd = (this.facingAngle - this.bodyTiltAngle) + arcSpan / 2;
-
-    ctx.strokeStyle = this.hasPossession ? '#047857' : '#0a2d12';
-    ctx.lineWidth = this.hasPossession ? 6.5 : 6;
-    ctx.beginPath();
-    ctx.arc(0, 0, outerRingRadius, arcStart, arcEnd);
-    ctx.stroke();
-
-    ctx.fillStyle = playerColor;
-    ctx.beginPath();
-    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 3.5;
-    ctx.stroke();
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '900 14px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 3;
-    ctx.strokeText(innerInitial, 0, 1);
-    ctx.fillText(innerInitial, 0, 1);
-
-    ctx.restore();
+    PixelSpriteRenderer.drawCharacter(ctx, {
+      x: this.pos.x,
+      y: this.pos.y,
+      z: this.isDiving ? 14 : 0,
+      facingAngle: this.facingAngle,
+      stepPhase: this.stepPhase,
+      isMoving: spd > 0.15,
+      isKicking: this.isKickingTimer > 0,
+      isTackling: this.isTackling,
+      isGoalkeeper: this.isGoalkeeper,
+      isDiving: this.isDiving,
+      team: this.team,
+      primaryColor: playerColor,
+      skinColor: this.skinColor,
+      hairColor: this.hairColor,
+      hasPossession: this.hasPossession
+    });
 
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 15px sans-serif';

@@ -11,7 +11,12 @@ import { HostPeerService } from './services/peerService';
 import { Agentation } from 'agentation';
 
 const MainGameContainer: React.FC = () => {
-  const [currentView, setCurrentView] = useState<'splash' | 'lobby' | 'team-select' | 'game'>('splash');
+  const [currentView, setCurrentView] = useState<'splash' | 'lobby' | 'team-select' | 'game'>(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('view=game')) {
+      return 'game';
+    }
+    return 'splash';
+  });
   const [selectedMode, setSelectedMode] = useState<'1v1' | '2vBot'>('1v1');
   const [p1Device, setP1Device] = useState<DeviceType>('keyboard1');
   const [p2Device, setP2Device] = useState<DeviceType>('keyboard2');
