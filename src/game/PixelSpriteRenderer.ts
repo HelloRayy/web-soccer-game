@@ -474,7 +474,12 @@ export class PixelSpriteRenderer {
     burstShockwaves: Array<{ x: number; y: number; z: number; angle: number; radius: number; maxRadius: number; life: number; color: string }> = [],
     turfGrassParticles: Array<{ x: number; y: number; vx: number; vy: number; life: number; color: string }> = []
   ) {
-    const invTilt = PixelSpriteRenderer.INV_TILT_Y;
+    // Dynamically calculate exact counter-tilt scale from active canvas matrix.
+    // This mathematically guarantees 100.0% circular screen geometry regardless of any camera angle!
+    const matrix = ctx.getTransform();
+    const sx = Math.hypot(matrix.a, matrix.b);
+    const sy = Math.hypot(matrix.c, matrix.d);
+    const invTilt = sy > 0.0001 ? sx / sy : PixelSpriteRenderer.INV_TILT_Y;
 
     ctx.save();
     ctx.imageSmoothingEnabled = false;

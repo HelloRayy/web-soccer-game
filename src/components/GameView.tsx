@@ -519,8 +519,12 @@ export const GameView: React.FC<GameViewProps> = ({
     setMatchState({ ...matchRulesRef.current.state });
 
     const tiltY = PixelSpriteRenderer.PITCH_TILT_Y;
-    const viewW = dimensions.width;
-    const viewH = dimensions.height;
+    const viewW = canvas.clientWidth || dimensions.width;
+    const viewH = canvas.clientHeight || dimensions.height;
+    if (canvas.width !== viewW || canvas.height !== viewH) {
+      canvas.width = viewW;
+      canvas.height = viewH;
+    }
     const currentZoom = zoomRef.current;
     const halfVisibleW = viewW / (2 * currentZoom);
     const halfVisibleH = viewH / (2 * currentZoom * tiltY);
