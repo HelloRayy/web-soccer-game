@@ -897,7 +897,7 @@ export class Player implements PlayerEntity {
     if (isActiveUser) {
       ctx.save();
       const bounce = Math.sin(Date.now() * 0.008) * 3;
-      const cursorY = this.pos.y - 70 + bounce;
+      const cursorY = this.pos.y - 46 + bounce;
       const cursorColor = this.team === 'home' ? '#00f2fe' : '#fbbf24';
       const badgeText = isP1 ? 'P1' : isP2 ? 'P2' : 'P';
 

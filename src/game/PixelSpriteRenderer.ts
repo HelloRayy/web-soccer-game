@@ -28,9 +28,9 @@ export class PixelSpriteRenderer {
   // Pre-calculated pixel sizes for crisp 16-bit retro scaling
   static readonly PIXEL_SCALE = 2.4;
 
-  // 2.5D Camera low-angle pitch tilt foreshortening factor (~20°-30° broadcast view)
-  static readonly PITCH_TILT_Y = 0.58;
-  static readonly INV_TILT_Y = 1 / 0.58; // ~1.7241 to restore 1:1 upright proportions
+  // 2.5D Camera pitch tilt foreshortening factor (Y compression on turf)
+  static readonly PITCH_TILT_Y = 0.82;
+  static readonly INV_TILT_Y = 1 / 0.82; // ~1.2195 to restore 1:1 upright proportions
 
   /**
    * Render a complete 16-bit retro character sprite with drop shadow,
@@ -548,7 +548,7 @@ export class PixelSpriteRenderer {
 
     // 3D Geometry Dimensions
     // Vertical post height in 2.5D world units (rises straight up in screen -Y)
-    const POST_HEIGHT_3D = 90;
+    const POST_HEIGHT_3D = 65;
     // Depth of netting going behind the goal line
     const GOAL_DEPTH = 105;
 
