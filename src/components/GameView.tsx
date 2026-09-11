@@ -294,7 +294,9 @@ export const GameView: React.FC<GameViewProps> = ({
   }, []);
 
   // Main 60 FPS Game Loop
-  useGameLoop((dt) => {
+  useGameLoop((rawDt) => {
+    // Keep simulation stable after tab switches or temporary frame drops.
+    const dt = Math.min(0.05, Math.max(0, rawDt));
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');

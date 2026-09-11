@@ -375,11 +375,13 @@ export class Ball {
     }
     // 2. Free Motion & Grass Friction
     else if (!this.attachedPlayerId) {
-      this.pos.x += this.vel.x;
-      this.pos.y += this.vel.y;
+      const frameScale = Math.min(2, Math.max(0.25, dt * 60));
+      this.pos.x += this.vel.x * frameScale;
+      this.pos.y += this.vel.y * frameScale;
 
-      this.vel.x *= this.friction;
-      this.vel.y *= this.friction;
+      const friction = Math.pow(this.friction, frameScale);
+      this.vel.x *= friction;
+      this.vel.y *= friction;
 
       if (Math.abs(this.vel.x) < 0.05) this.vel.x = 0;
       if (Math.abs(this.vel.y) < 0.05) this.vel.y = 0;
