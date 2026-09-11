@@ -470,37 +470,35 @@ export class Player implements PlayerEntity {
     this.updateParticles();
 
     if (!this.isSprinting) {
-      this.stamina = Math.min(1.0, this.stamina + 0.0025);
+      this.stamina = Math.min(1.0, this.stamina + 0.0025 * frameScale);
       if (this.isExhausted && this.stamina >= 0.20) {
         this.isExhausted = false;
       }
     }
 
     if (this.tackleTimer > 0) {
-      this.tackleTimer -= 0.016;
-      this.vel.x *= 0.94;
-      this.vel.y *= 0.94;
+      this.tackleTimer -= dt;
+      this.vel.x *= Math.pow(0.94, frameScale);
+      this.vel.y *= Math.pow(0.94, frameScale);
       this.spawnTurfParticle(2.5, true);
     } else {
       this.isTackling = false;
     }
 
     if (this.skillDodgeInvincibleTimer > 0) {
-      this.skillDodgeInvincibleTimer -= 0.016;
-      this.dribbleSpinAngle += 0.35;
+      this.skillDodgeInvincibleTimer -= dt;
+      this.dribbleSpinAngle += 0.35 * frameScale;
     } else {
       this.isDribbleSkillActive = false;
       this.dribbleSpinAngle = 0;
     }
 
-    if (this.stumbleTimer > 0) this.stumbleTimer -= 0.016;
+    if (this.stumbleTimer > 0) this.stumbleTimer -= dt;
     if (this.duelFeedbackTimer > 0) {
-      this.duelFeedbackTimer -= 0.016;
-      this.duelFeedbackYOffset += 0.4;
+      this.duelFeedbackTimer -= dt;
+      this.duelFeedbackYOffset += 0.4 * frameScale;
     }
-
     const distToBall = Math.hypot(this.pos.x - ball.pos.x, this.pos.y - ball.pos.y);
-
     if (ball.homingTargetPlayer && ball.homingTargetPlayer.id === this.id) {
       this.hasPossession = false;
 
@@ -513,7 +511,7 @@ export class Player implements PlayerEntity {
 
         if (!this.isExhausted && this.stamina > 0) {
           this.isSprinting = true;
-          this.stamina = Math.max(0, this.stamina - 0.004);
+          this.stamina = Math.max(0, this.stamina - 0.004 * frameScale);
           if (this.stamina === 0) {
             this.isExhausted = true;
             this.isSprinting = false;
@@ -585,30 +583,31 @@ export class Player implements PlayerEntity {
   }
 
   updateFromGamepad(gp: GamepadState, ball: Ball, field: Field, teammates: Player[], opponents: Player[], dt = 1 / 60): { toggleHUDRequested: boolean } {
+    const frameScale = Math.min(2, Math.max(0.25, dt * 60));
     let toggleHUDRequested = false;
     this.updateParticles();
 
     if (this.tackleTimer > 0) {
-      this.tackleTimer -= 0.016;
-      this.vel.x *= 0.94;
-      this.vel.y *= 0.94;
+      this.tackleTimer -= dt;
+      this.vel.x *= Math.pow(0.94, frameScale);
+      this.vel.y *= Math.pow(0.94, frameScale);
       this.spawnTurfParticle(2.8, true);
     } else {
       this.isTackling = false;
     }
 
     if (this.skillDodgeInvincibleTimer > 0) {
-      this.skillDodgeInvincibleTimer -= 0.016;
-      this.dribbleSpinAngle += 0.35;
+      this.skillDodgeInvincibleTimer -= dt;
+      this.dribbleSpinAngle += 0.35 * frameScale;
     } else {
       this.isDribbleSkillActive = false;
       this.dribbleSpinAngle = 0;
     }
 
-    if (this.stumbleTimer > 0) this.stumbleTimer -= 0.016;
+    if (this.stumbleTimer > 0) this.stumbleTimer -= dt;
     if (this.duelFeedbackTimer > 0) {
-      this.duelFeedbackTimer -= 0.016;
-      this.duelFeedbackYOffset += 0.4;
+      this.duelFeedbackTimer -= dt;
+      this.duelFeedbackYOffset += 0.4 * frameScale;
     }
 
     const moveMultiplier = this.stumbleTimer > 0 ? 0.3 : 1.0;
@@ -624,7 +623,7 @@ export class Player implements PlayerEntity {
         this.isSprinting = false;
       } else {
         this.isSprinting = true;
-        this.stamina = Math.max(0, this.stamina - 0.004);
+        this.stamina = Math.max(0, this.stamina - 0.004 * frameScale);
 
         if (this.stamina === 0) {
           this.isExhausted = true;
@@ -634,7 +633,7 @@ export class Player implements PlayerEntity {
       }
     } else {
       this.isSprinting = false;
-      this.stamina = Math.min(1.0, this.stamina + 0.0025);
+      this.stamina = Math.min(1.0, this.stamina + 0.0025 * frameScale);
 
       if (this.isExhausted && this.stamina >= 0.20) {
         this.isExhausted = false;
@@ -679,7 +678,6 @@ export class Player implements PlayerEntity {
       this.bodyTiltAngle = 0;
     }
 
-    const frameScale = Math.min(2, Math.max(0.25, dt * 60));
     this.pos.x += this.vel.x * frameScale;
     this.pos.y += this.vel.y * frameScale;
 
