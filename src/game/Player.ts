@@ -209,7 +209,8 @@ export class Player implements PlayerEntity {
 
     let bestTarget: Player | null = null;
     let bestScore = Infinity;
-    const maxVisionAngleThreshold = Math.PI / 5;
+    // Generous vision threshold: 90 degrees if multiple teammates, 135 degrees if single teammate
+    const maxVisionAngleThreshold = candidates.length === 1 ? Math.PI * 0.75 : Math.PI * 0.50;
 
     candidates.forEach((candidate) => {
       const dx = candidate.pos.x - this.pos.x;
@@ -221,7 +222,8 @@ export class Player implements PlayerEntity {
       while (angleDiff > Math.PI) angleDiff = Math.abs(angleDiff - Math.PI * 2);
 
       if (angleDiff <= maxVisionAngleThreshold) {
-        const score = angleDiff * 200 + dist;
+        // Distance + angle weighted score
+        const score = angleDiff * 140 + dist * 0.8;
         if (score < bestScore) {
           bestScore = score;
           bestTarget = candidate;
@@ -230,6 +232,35 @@ export class Player implements PlayerEntity {
     });
 
     return bestTarget;
+  }
+
+  findBestThroughPassTarget(teammates: Player[], aimAngle: number): { target: Player; throughPos: Vector2D } | null {
+    const target = this.findBestPassTarget(teammates, aimAngle);
+    if (!target) return null;
+
+    // Direct lead towards opponent goal or runner velocity
+    const targetGoalX = this.team === 'home' ? 2000 : 200;
+    const dxGoal = targetGoalX - target.pos.x;
+    const runnerSpeed = Math.hypot(target.vel.x, target.vel.y);
+
+    let leadDirX = dxGoal > 0 ? 1 : -1;
+    let leadDirY = 0;
+
+    if (runnerSpeed > 0.4) {
+      leadDirX = target.vel.x / runnerSpeed;
+      leadDirY = target.vel.y / runnerSpeed;
+    }
+
+    const distToTarget = Math.hypot(target.pos.x - this.pos.x, target.pos.y - this.pos.y);
+    const leadDist = Math.min(190, Math.max(75, distToTarget * 0.42));
+
+    return {
+      target,
+      throughPos: {
+        x: target.pos.x + leadDirX * leadDist,
+        y: target.pos.y + leadDirY * leadDist,
+      }
+    };
   }
 
   private updateParticles() {
@@ -640,8 +671,8 @@ export class Player implements PlayerEntity {
       }
     }
 
-    const dribbleMultiplier = this.hasPossession ? 0.88 : 1.0;
-    const currentSpeed = (this.isSprinting ? this.speed * 1.45 : this.speed) * moveMultiplier * dribbleMultiplier;
+    const dribbleMultiplier = this.hasPossession ? 0.90 : 1.0;
+    const currentSpeed = (this.isSprinting ? this.speed * 1.62 : this.speed) * moveMultiplier * dribbleMultiplier;
     const stickMagnitude = Math.hypot(moveX, moveY);
 
     let aimAngle = this.facingAngle;
@@ -670,7 +701,7 @@ export class Player implements PlayerEntity {
       this.bodyTiltAngle = Math.max(-0.28, Math.min(0.28, angleDiff * 0.40));
 
       if (this.isSprinting) {
-        this.spawnTurfParticle(currentSpeed / this.speed);
+        this.spawnTurfParticle(currentSpeed / this.speed * 1.5);
       }
     } else {
       this.vel.x = 0;
@@ -719,9 +750,10 @@ export class Player implements PlayerEntity {
 
     const activeBtns: string[] = [];
     if (this.hasPossession) {
-      if (isPressingA) activeBtns.push('A (Passing)');
+      if (isPressingA) activeBtns.push('A (Ground Pass)');
+      if (isPressingY) activeBtns.push('Y (Through Pass)');
+      if (isPressingB) activeBtns.push('B (Lofted Chip)');
       if (isPressingX) activeBtns.push('X (Shoot Goal)');
-      if (isPressingY) activeBtns.push('Y (Through / Gocek)');
       if (isPressingRB) activeBtns.push('R1 (Gocek Skill)');
     } else {
       if (this.isChargingSlide) activeBtns.push(`B (SLIDE CHARGE: ${(this.slidePower * 100).toFixed(0)}%)`);
@@ -816,7 +848,7 @@ export class Player implements PlayerEntity {
         this.shotPowerDirection = 1;
       }
 
-      // A Button = Pass (Passing)
+      // A Button = Ground Pass (Umpan Pendek Presisi)
       if (isPressingA && !this.prevA) {
         this.hasPossession = false;
 
@@ -828,23 +860,61 @@ export class Player implements PlayerEntity {
           const dy = targetTeammate.pos.y - this.pos.y;
           const dist = Math.hypot(dx, dy) || 1;
 
-          const passPower = Math.min(Math.max(dist * 0.042 + 4.5, 6.5), 11.5);
+          const passPower = Math.min(Math.max(dist * 0.042 + 5.0, 7.0), 12.5);
           ball.kick({ x: dx / dist, y: dy / dist }, passPower, this.id, targetTeammate, null);
+          this.triggerFeedback('⚽ PASS!');
           this.debugInputString = `⚽ SMART ASSIST PASS TO ${targetTeammate.name} (Tombol A)!`;
         } else {
           const passDir = { x: Math.cos(aimAngle), y: Math.sin(aimAngle) };
-          ball.kick(passDir, 8.5, this.id, null, null);
+          ball.kick(passDir, 9.0, this.id, null, null);
           this.debugInputString = `⚽ MANUAL DIRECTION PASS (No Teammate Aimed)!`;
         }
       }
 
-      // Y Button = Through Pass / Gocek
-      const isTriggeringGocek = (isPressingY && !this.prevY);
-      if (isTriggeringGocek) {
-        this.isDribbleSkillActive = true;
-        this.skillDodgeInvincibleTimer = 0.45;
-        this.triggerFeedback('🔥 GOCEK!');
-        this.debugInputString = `🔥 THROUGH / DRIBBLE GOCEK TRIGGERED (Tombol Y)!`;
+      // Y Button = Through Pass (Umpan Terobosan ke Ruang Kosong di Depan Rekan)
+      if (isPressingY && !this.prevY) {
+        const throughData = this.findBestThroughPassTarget(teammates, aimAngle);
+        if (throughData) {
+          this.hasPossession = false;
+          const { target: targetTeammate, throughPos } = throughData;
+          targetTeammate.hasPossession = false;
+
+          const dx = throughPos.x - this.pos.x;
+          const dy = throughPos.y - this.pos.y;
+          const dist = Math.hypot(dx, dy) || 1;
+
+          const passPower = Math.min(Math.max(dist * 0.048 + 6.5, 9.0), 14.0);
+          ball.kick({ x: dx / dist, y: dy / dist }, passPower, this.id, targetTeammate, throughPos);
+          this.triggerFeedback('🚀 THROUGH PASS!');
+          this.debugInputString = `🚀 THROUGH PASS TO ${targetTeammate.name}!`;
+        } else {
+          this.isDribbleSkillActive = true;
+          this.skillDodgeInvincibleTimer = 0.45;
+          this.triggerFeedback('🔥 GOCEK!');
+          this.debugInputString = `🔥 THROUGH / DRIBBLE GOCEK TRIGGERED (Tombol Y)!`;
+        }
+      }
+
+      // B Button (When Possessing Ball) = Lofted Pass / Chip Cross Melayang di Atas Lawan
+      if (isPressingB && !this.prevB) {
+        this.hasPossession = false;
+        const targetTeammate = this.findBestPassTarget(teammates, aimAngle);
+
+        let targetX = this.pos.x + Math.cos(aimAngle) * 320;
+        let targetY = this.pos.y + Math.sin(aimAngle) * 320;
+        if (targetTeammate) {
+          targetX = targetTeammate.pos.x;
+          targetY = targetTeammate.pos.y;
+        }
+
+        const dx = targetX - this.pos.x;
+        const dy = targetY - this.pos.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const passPower = Math.min(Math.max(dist * 0.045 + 6.0, 8.5), 13.5);
+
+        ball.kick({ x: dx / dist, y: dy / dist }, passPower, this.id, targetTeammate, null, 'chip');
+        this.triggerFeedback('🌈 LOFTED CHIP!');
+        this.debugInputString = `🌈 LOFTED CHIP / CROSS PASS (Tombol B)!`;
       }
     }
     // 2. DEFENDING ACTIONS: Cancel any pending shot charging if ball is stolen by opponent!
@@ -1158,18 +1228,17 @@ export class Player implements PlayerEntity {
       ctx.translate(this.pos.x, this.pos.y);
       ctx.rotate(this.tackleSlideAngle);
 
-      ctx.fillStyle = '#f87171';
-      ctx.strokeStyle = '#06b6d4';
-      ctx.lineWidth = 3.5;
+      // Dark realistic turf skid groove on turf
+      ctx.fillStyle = 'rgba(12, 55, 25, 0.45)';
       ctx.beginPath();
-      ctx.roundRect(0, -7, this.radius + 38, 14, 7);
+      ctx.ellipse(-18, 0, 26, 6.5, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.stroke();
 
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 4.5;
+      // White/ice motion dust arc
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.arc(this.radius + 38, 0, 20, -Math.PI / 2, Math.PI / 2);
+      ctx.arc(this.radius + 12, 0, 16, -Math.PI / 2.2, Math.PI / 2.2);
       ctx.stroke();
 
       ctx.restore();
