@@ -35,10 +35,21 @@ export interface GamepadState {
 
 export type TeamType = 'home' | 'away';
 
+export type TacticalRole = 'GK' | 'DF' | 'MF' | 'ST';
+
+export type AIState =
+  | 'STATE_ZONE_COVER'
+  | 'STATE_PRESS_BALL'
+  | 'STATE_SUPPORT_RUN'
+  | 'STATE_ATTACK_FINISH'
+  | 'STATE_SWEEPER_CLEAR';
+
 export interface PlayerEntity {
   id: string;
   name: string;
   team: TeamType;
+  role?: TacticalRole;
+  aiState?: AIState;
   controllerIndex: number | null;
   isAI: boolean;
   pos: Vector2D;
@@ -65,12 +76,34 @@ export interface BallState {
 export type MatchMode = '1v1_local' | '2v2_coop';
 export type MatchState = 'PLAYING' | 'GOLDEN_GOAL' | 'GAME_OVER';
 
+export type MatchPhase =
+  | 'PHASE_KICKOFF'
+  | 'PHASE_PLAYING'
+  | 'PHASE_GOAL_CELEBRATION'
+  | 'PHASE_HALF_TIME'
+  | 'PHASE_FULL_TIME';
+
+export interface MatchStats {
+  possessionHome: number;
+  possessionAway: number;
+  shotsHome: number;
+  shotsAway: number;
+  shotsOnTargetHome: number;
+  shotsOnTargetAway: number;
+  passesHome: number;
+  passesAway: number;
+  tacklesHome: number;
+  tacklesAway: number;
+}
+
 export interface MatchRulesState {
   mode: MatchMode;
   timerSeconds: number;
   scoreHome: number;
   scoreAway: number;
   state: MatchState;
+  phase: MatchPhase;
+  stats: MatchStats;
   winnerTitle: string;
   logMessage: string;
   debugInputText: string;
@@ -80,6 +113,7 @@ export interface RadarPlayerData {
   id: string;
   name: string;
   team: TeamType;
+  role?: TacticalRole;
   x: number;
   y: number;
   color: string;
@@ -103,3 +137,28 @@ export interface OffScreenBallData {
   distanceMeters: number;
 }
 
+export interface ActivePlayerData {
+  id: string;
+  name: string;
+  squadNumber: number;
+  team: TeamType;
+  role: TacticalRole;
+  stamina: number;
+  isSprinting: boolean;
+  isExhausted: boolean;
+  isTackling: boolean;
+  isChargingShot: boolean;
+  shotPower: number;
+  hasPossession: boolean;
+  skinColor: string;
+  hairColor: string;
+  jerseyColor: string;
+}
+
+export interface ArcadeCallout {
+  id: string;
+  text: string;
+  subtext?: string;
+  type: 'goal' | 'save' | 'woodwork' | 'chance' | 'tackle' | 'skill';
+  timestamp: number;
+}

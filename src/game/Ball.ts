@@ -33,6 +33,14 @@ export class Ball {
   rotationAngle: number;
   rollDirAngle: number;
 
+  // First-Touch Cushioning & Dynamic Trap State
+  isCushioning: boolean = false;
+  cushionTimer: number = 0;
+  cushionPlayer: Player | null = null;
+
+  // Woodwork Impact Callback Listener
+  woodworkHitListener?: (type: 'post' | 'crossbar', x: number, y: number) => void;
+  kickListener?: (kickerId: string, power: number, shotType: string) => void;
   // Micro-Touch Dribble Animation Timer
   private dribblePhase: number;
 
@@ -89,13 +97,50 @@ export class Ball {
     this.burstShockwaves = [];
     this.turfGrassParticles = [];
     this.dribblePhase = 0;
+    this.isCushioning = false;
+    this.cushionTimer = 0;
+    this.cushionPlayer = null;
+  }
+
+  /**
+   * First-Touch Trap & Cushioning Physics (Retro Goal / Open Soccer):
+   * Absorbs high-speed pass momentum over 0.12s before locking ball to feet.
+   */
+  triggerCushion(player: Player) {
+    const ballSpeed = Math.hypot(this.vel.x, this.vel.y);
+    if (ballSpeed > 4.0) {
+      this.isCushioning = true;
+      this.cushionTimer = 0.12;
+      this.cushionPlayer = player;
+      this.attachedPlayerId = null;
+
+      // Dampen velocity exponentially on initial impact
+      this.vel.x *= 0.38;
+      this.vel.y *= 0.38;
+      this.vz *= 0.25;
+
+      // Spawn turf reception dust
+      for (let i = 0; i < 3; i++) {
+        this.turfGrassParticles.push({
+          x: this.pos.x + (Math.random() - 0.5) * 6,
+          y: this.pos.y + (Math.random() - 0.5) * 6,
+          vx: (Math.random() - 0.5) * 2.2,
+          vy: (Math.random() - 0.5) * 2.2,
+          life: 0.6,
+          color: '#4ade80',
+        });
+      }
+    } else {
+      player.hasPossession = true;
+      this.attachToPlayer(player.pos, player.facingAngle, player.radius, player.vel, player.id);
+    }
   }
 
   /**
    * FIFA/PES Style Micro-Touch Dribble Attachment:
    * Keeps a natural 14px micro-gap in front of player's feet with subtle natural rolling
    */
-  attachToPlayer(playerPos: Vector2D, facingAngle: number, playerRadius: number, playerVel: Vector2D, playerId: string) {
+  attachToPlayer(playerPos: Vector2D, facingAngle: number, playerRadius: number, playerVel: Vector2D, playerId: string, isCloseControl: boolean = false) {
     this.attachedPlayerId = playerId;
     this.z = 0;
     this.vz = 0;
@@ -113,14 +158,17 @@ export class Ball {
       this.rotationAngle += Math.min(0.12, playerSpeed * 0.035);
 
       const isSprinting = playerSpeed > 4.0;
-      const baseGap = isSprinting ? playerRadius + this.radius + 18 : playerRadius + this.radius + 7;
-      const microTouchPush = Math.sin(this.dribblePhase) * (isSprinting ? 8 : 3);
+      let baseGap = isSprinting ? playerRadius + this.radius + 18 : playerRadius + this.radius + 7;
+      if (isCloseControl) {
+        baseGap = playerRadius + this.radius + 3;
+      }
+      const microTouchPush = isCloseControl ? 0 : Math.sin(this.dribblePhase) * (isSprinting ? 8 : 3);
       const microGap = baseGap + microTouchPush;
 
       const targetX = playerPos.x + Math.cos(facingAngle) * microGap;
       const targetY = playerPos.y + Math.sin(facingAngle) * microGap;
 
-      const lerpRate = isSprinting ? 0.35 : 0.50;
+      const lerpRate = isCloseControl ? 0.75 : isSprinting ? 0.35 : 0.50;
       this.pos.x = this.pos.x * (1 - lerpRate) + targetX * lerpRate;
       this.pos.y = this.pos.y * (1 - lerpRate) + targetY * lerpRate;
 
@@ -225,6 +273,9 @@ export class Ball {
         });
       }
     }
+    if (this.kickListener) {
+      this.kickListener(kickerId, power, this.shotType);
+    }
   }
 
   /**
@@ -260,6 +311,29 @@ export class Ball {
   update(dt: number, field: Field) {
     if (this.releaseTimer > 0) {
       this.releaseTimer -= dt;
+    }
+
+    // Process First-Touch Cushioning trap
+    if (this.isCushioning && this.cushionPlayer) {
+      this.cushionTimer -= dt;
+      const player = this.cushionPlayer;
+      const targetGap = player.radius + this.radius + 6;
+      const targetX = player.pos.x + Math.cos(player.facingAngle) * targetGap;
+      const targetY = player.pos.y + Math.sin(player.facingAngle) * targetGap;
+
+      // Interpolate towards player's feet with high damping
+      this.pos.x = this.pos.x * 0.72 + targetX * 0.28;
+      this.pos.y = this.pos.y * 0.72 + targetY * 0.28;
+      this.vel.x *= 0.82;
+      this.vel.y *= 0.82;
+
+      if (this.cushionTimer <= 0) {
+        this.isCushioning = false;
+        this.cushionPlayer = null;
+        player.hasPossession = true;
+        this.attachToPlayer(player.pos, player.facingAngle, player.radius, player.vel, player.id);
+      }
+      return;
     }
 
     // Update natural directional spin & roll progress based on ball velocity
@@ -366,11 +440,16 @@ export class Ball {
       this.pos.y += this.vel.y;
 
       if (distToPlayer < this.radius + targetPlayer.radius + 20 || distToPredicted < 22) {
-        targetPlayer.hasPossession = true;
-        this.attachToPlayer(targetPlayer.pos, targetPlayer.facingAngle, targetPlayer.radius, targetPlayer.vel, targetPlayer.id);
-
+        const passSpeed = Math.hypot(this.vel.x, this.vel.y);
         this.homingTargetPlayer = null;
         this.throughPassTargetPos = null;
+
+        if (passSpeed > 4.0) {
+          this.triggerCushion(targetPlayer);
+        } else {
+          targetPlayer.hasPossession = true;
+          this.attachToPlayer(targetPlayer.pos, targetPlayer.facingAngle, targetPlayer.radius, targetPlayer.vel, targetPlayer.id);
+        }
       }
     }
     // 2. Free Motion & Grass Friction
@@ -379,21 +458,33 @@ export class Ball {
       this.pos.x += this.vel.x * frameScale;
       this.pos.y += this.vel.y * frameScale;
 
-      const friction = Math.pow(this.friction, frameScale);
-      this.vel.x *= friction;
-      this.vel.y *= friction;
+      const currentSpeed = Math.hypot(this.vel.x, this.vel.y);
+      if (this.z <= 0.1) {
+        // Turf rolling resistance: natural exponential deceleration
+        const rollingFriction = currentSpeed < 3.2 ? 0.942 : (currentSpeed < 8.0 ? 0.965 : 0.978);
+        const friction = Math.pow(rollingFriction, frameScale);
+        this.vel.x *= friction;
+        this.vel.y *= friction;
 
-      if (Math.abs(this.vel.x) < 0.05) this.vel.x = 0;
-      if (Math.abs(this.vel.y) < 0.05) this.vel.y = 0;
+        if (currentSpeed < 0.08) {
+          this.vel.x = 0;
+          this.vel.y = 0;
+        }
+      } else {
+        // Aerial ball flight - light air drag
+        const airDrag = Math.pow(0.995, frameScale);
+        this.vel.x *= airDrag;
+        this.vel.y *= airDrag;
+      }
     }
-
     // 3. Pitch & Goal Bounds Bounce + Complete Net Containment Physics
     const bounds = field.pitchBounds;
     const goals = field.goals;
     const GOAL_DEPTH = 100;
     const postRadius = 6.5;
 
-    // Check Post Collisions (The 4 White Metallic Goal Posts)
+    // Check Post & Crossbar Collisions (3D Woodwork Collision Engine)
+    const CROSSBAR_HEIGHT = 65;
     const posts = [
       { x: bounds.left, y: goals.homeGoal.top },
       { x: bounds.left, y: goals.homeGoal.bottom },
@@ -401,27 +492,97 @@ export class Ball {
       { x: bounds.right, y: goals.awayGoal.bottom },
     ];
 
-    posts.forEach((post) => {
-      const dx = this.pos.x - post.x;
-      const dy = this.pos.y - post.y;
-      const dist = Math.hypot(dx, dy);
-      const minDist = this.radius + postRadius;
-      if (dist < minDist && dist > 0.001) {
-        // Elastic Rebound off Goal Post (PING!)
-        const nx = dx / dist;
-        const ny = dy / dist;
-        this.pos.x = post.x + nx * minDist;
-        this.pos.y = post.y + ny * minDist;
+    // 1. Vertical Posts (Only collide if ball altitude is below crossbar)
+    if (this.z <= CROSSBAR_HEIGHT + this.radius) {
+      posts.forEach((post) => {
+        const dx = this.pos.x - post.x;
+        const dy = this.pos.y - post.y;
+        const dist = Math.hypot(dx, dy);
+        const minDist = this.radius + postRadius;
+        if (dist < minDist && dist > 0.001) {
+          // Elastic Rebound off Goal Post (PING!)
+          const nx = dx / dist;
+          const ny = dy / dist;
+          this.pos.x = post.x + nx * minDist;
+          this.pos.y = post.y + ny * minDist;
 
-        const dot = this.vel.x * nx + this.vel.y * ny;
-        if (dot < 0) {
-          this.vel.x = (this.vel.x - 2 * dot * nx) * 0.75;
-          this.vel.y = (this.vel.y - 2 * dot * ny) * 0.75;
-          if (this.vz !== 0) this.vz = -this.vz * 0.5;
+          const dot = this.vel.x * nx + this.vel.y * ny;
+          if (dot < 0) {
+            this.vel.x = (this.vel.x - 2 * dot * nx) * 0.78;
+            this.vel.y = (this.vel.y - 2 * dot * ny) * 0.78;
+            if (this.vz !== 0) this.vz = -this.vz * 0.55;
+          }
+
+          // Clatter Sparks & Woodwork Shockwave
+          this.burstShockwaves.push({
+            x: post.x,
+            y: post.y,
+            z: this.z,
+            angle: Math.atan2(ny, nx),
+            radius: 8,
+            maxRadius: 36,
+            life: 1.0,
+            color: 'rgba(250, 204, 21, 0.95)',
+          });
+          if (this.woodworkHitListener) {
+            this.woodworkHitListener('post', post.x, post.y);
+          }
+        }
+      });
+    }
+
+    // 2. Horizontal Crossbar (Home & Away Goal Tops at z = 65)
+    if (Math.abs(this.z - CROSSBAR_HEIGHT) < this.radius + postRadius) {
+      // Home Goal Crossbar
+      if (
+        Math.abs(this.pos.x - bounds.left) < this.radius + postRadius &&
+        this.pos.y >= goals.homeGoal.top - postRadius &&
+        this.pos.y <= goals.homeGoal.bottom + postRadius
+      ) {
+        this.pos.x = bounds.left + this.radius + postRadius;
+        this.vel.x = Math.abs(this.vel.x) * 0.75;
+        this.vz = -this.vz * 0.70;
+
+        this.burstShockwaves.push({
+          x: bounds.left,
+          y: this.pos.y,
+          z: CROSSBAR_HEIGHT,
+          angle: 0,
+          radius: 10,
+          maxRadius: 42,
+          life: 1.0,
+          color: 'rgba(253, 224, 71, 0.95)',
+        });
+        if (this.woodworkHitListener) {
+          this.woodworkHitListener('crossbar', bounds.left, this.pos.y);
         }
       }
-    });
 
+      // Away Goal Crossbar
+      if (
+        Math.abs(this.pos.x - bounds.right) < this.radius + postRadius &&
+        this.pos.y >= goals.awayGoal.top - postRadius &&
+        this.pos.y <= goals.awayGoal.bottom + postRadius
+      ) {
+        this.pos.x = bounds.right - (this.radius + postRadius);
+        this.vel.x = -Math.abs(this.vel.x) * 0.75;
+        this.vz = -this.vz * 0.70;
+
+        this.burstShockwaves.push({
+          x: bounds.right,
+          y: this.pos.y,
+          z: CROSSBAR_HEIGHT,
+          angle: Math.PI,
+          radius: 10,
+          maxRadius: 42,
+          life: 1.0,
+          color: 'rgba(253, 224, 71, 0.95)',
+        });
+        if (this.woodworkHitListener) {
+          this.woodworkHitListener('crossbar', bounds.right, this.pos.y);
+        }
+      }
+    }
     const isInHomeGoalY = this.pos.y >= goals.homeGoal.top && this.pos.y <= goals.homeGoal.bottom;
     const isInAwayGoalY = this.pos.y >= goals.awayGoal.top && this.pos.y <= goals.awayGoal.bottom;
 

@@ -48,7 +48,7 @@ export class Field {
     };
   }
 
-  draw(ctx: CanvasRenderingContext2D, isGoalShaking = false) {
+  draw(ctx: CanvasRenderingContext2D, isGoalShaking = false, crowdSurge = false) {
     const w = this.width;
     const h = this.height;
     const bounds = this.pitchBounds;
@@ -106,9 +106,12 @@ export class Field {
       const colStep = standW / crowdCols;
       for (let c = 0; c < crowdCols; c++) {
         const fanX = standX + c * colStep + 4;
-        const wave = Math.sin(animTime * 0.005 + c * 0.4 + t * 0.8);
-        const isCheering = wave > 0.6;
-        const bounceY = isCheering ? -2.5 : 0;
+        const isSurging = crowdSurge || isGoalShaking;
+        const wave = isSurging
+          ? Math.sin(animTime * 0.012 + c * 0.3 + t * 0.5)
+          : Math.sin(animTime * 0.005 + c * 0.4 + t * 0.8);
+        const isCheering = isSurging ? wave > -0.35 : wave > 0.6;
+        const bounceY = isSurging ? (wave > 0 ? -6.0 : -2.5) : (isCheering ? -2.5 : 0);
 
         // Fan colors based on seat section
         let shirtColor = '#ffffff';
@@ -133,7 +136,7 @@ export class Field {
         ctx.fillStyle = skin;
         ctx.fillRect(fanX + 0.5, curY + 2 + bounceY, 3.5, 4);
 
-        // Cheering Arms in the air
+        // Cheering Arms in the air or waving scarves
         if (isCheering) {
           ctx.fillStyle = shirtColor;
           ctx.fillRect(fanX - 1.5, curY + 1 + bounceY, 1.5, 4);
@@ -141,6 +144,13 @@ export class Field {
           ctx.fillStyle = skin;
           ctx.fillRect(fanX - 1.5, curY - 1 + bounceY, 1.5, 2);
           ctx.fillRect(fanX + 4.5, curY - 1 + bounceY, 1.5, 2);
+
+          // Team Scarf Waving during Crowd Surges
+          if (isSurging && c % 2 === 0) {
+            const scarfCol = c < 28 ? '#38bdf8' : c > 44 ? '#f59e0b' : '#facc15';
+            ctx.fillStyle = scarfCol;
+            ctx.fillRect(fanX - 2.5, curY - 3 + bounceY, 9.5, 2.2);
+          }
         }
       }
     }

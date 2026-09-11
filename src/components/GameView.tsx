@@ -7,7 +7,7 @@ import { Ball } from '../game/Ball';
 import { Player } from '../game/Player';
 import { MatchRules } from '../game/MatchRules';
 import { HUDOverlay } from './HUDOverlay';
-import { MatchMode, MatchRulesState, GamepadState, RadarData, OffScreenBallData } from '../types/game';
+import { MatchMode, MatchRulesState, GamepadState, RadarData, OffScreenBallData, TeamType, ActivePlayerData, ArcadeCallout } from '../types/game';
 import { HostPeerService } from '../services/peerService';
 import { PixelSpriteRenderer } from '../game/PixelSpriteRenderer';
 import { DeviceType } from './ControllerSelectModal';
@@ -342,26 +342,68 @@ export const GameView: React.FC<GameViewProps> = ({
   const playersRef = useRef<Player[]>([]);
 
   const [matchState, setMatchState] = useState<MatchRulesState>(matchRulesRef.current.state);
+  const [whistleBannerText, setWhistleBannerText] = useState<string | null>(null);
+  const [isCrowdSurging, setIsCrowdSurging] = useState<boolean>(false);
+  const [activePlayerData, setActivePlayerData] = useState<ActivePlayerData | null>(null);
+  const [arcadeCallouts, setArcadeCallouts] = useState<ArcadeCallout[]>([]);
 
+  const triggerCallout = useCallback((type: ArcadeCallout['type'], text: string, subtext?: string) => {
+    const callout: ArcadeCallout = {
+      id: `${Date.now()}_${Math.random()}`,
+      text,
+      subtext,
+      type,
+      timestamp: Date.now(),
+    };
+    setArcadeCallouts((prev) => [...prev.slice(-2), callout]);
+    setTimeout(() => {
+      setArcadeCallouts((prev) => prev.filter((c) => c.id !== callout.id));
+    }, 2200);
+  }, []);
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      (window as any).__SOCCER_GAME__ = {
+      (window as unknown as Record<string, unknown>).__SOCCER_GAME__ = {
         ball: ballRef.current,
         players: playersRef.current,
         field: fieldRef.current,
         camera: cameraRef.current,
       };
     }
-  }, []);
 
-  const resetMatchPositions = useCallback(() => {
+    // Wire woodwork clatter and kick statistics
+    ballRef.current.woodworkHitListener = (type) => {
+      cameraShakeRef.current = 24;
+      setIsCrowdSurging(true);
+      setWhistleBannerText(type === 'crossbar' ? '⚡ MISTAR GAWANG!' : '⚡ TIANG GAWANG!');
+      triggerCallout('woodwork', '⚡ WOODWORK CRUNCH!', 'Denting Keras Membentur Mistar Gawang');
+      setTimeout(() => {
+        setIsCrowdSurging(false);
+        setWhistleBannerText(null);
+      }, 1800);
+    };
+
+    ballRef.current.kickListener = (kickerId, power) => {
+      const kicker = playersRef.current.find((p) => p.id === kickerId);
+      if (kicker) {
+        if (power >= 14.0) {
+          matchRulesRef.current.recordShot(kicker.team, true);
+          triggerCallout('skill', '⚽ THUNDERBOLT SHOT!', 'Tembakan Gelegar Meluncur');
+        } else if (power >= 11.5) {
+          matchRulesRef.current.recordShot(kicker.team, true);
+        } else {
+          matchRulesRef.current.recordPass(kicker.team);
+        }
+      }
+    };
+  }, [triggerCallout]);
+
+  const resetMatchPositions = useCallback((kickingTeam: TeamType = 'home') => {
     ballRef.current.reset(WORLD_WIDTH * 0.5, WORLD_HEIGHT * 0.5);
 
     const players = playersRef.current;
     players.forEach((p) => {
       p.hasPossession = false;
     });
-
     if (customSpawns && customSpawns.length > 0) {
       // Map customized spawn positions directly to each player
       const homeNodes = customSpawns.filter((n) => n.team === 'home');
@@ -403,6 +445,15 @@ export const GameView: React.FC<GameViewProps> = ({
           players[3].reset(WORLD_WIDTH * 0.62, WORLD_HEIGHT * 0.58);
         }
       }
+    }
+
+    // Position kickoff kicker directly at the center circle
+    const kicker = players.find((p) => p.team === kickingTeam && (p.role === 'ST' || p.role === 'MF'))
+      || players.find((p) => p.team === kickingTeam);
+    if (kicker) {
+      const kickerX = kickingTeam === 'home' ? WORLD_WIDTH * 0.486 : WORLD_WIDTH * 0.514;
+      kicker.reset(kickerX, WORLD_HEIGHT * 0.5);
+      kicker.facingAngle = kickingTeam === 'home' ? 0 : Math.PI;
     }
 
     cameraRef.current = {
@@ -537,21 +588,41 @@ export const GameView: React.FC<GameViewProps> = ({
       prevBackBtnRef.current = isPressingBack;
     }
 
-    // 1. Update Match Rules & Timer
-    const goalScored = rules.update(dt, ball, field);
-    if (goalScored) {
-      const ballSpd = Math.hypot(ball.vel.x, ball.vel.y);
-      const shotSpeedKmH = Math.max(72, Math.round(ballSpd * 9.6));
-      cameraShakeRef.current = 34;
+    // 1. Update Match Rules, Statistics & Match Engine Phases
+    const matchResult = rules.update(dt, ball, field, players);
+    if (matchResult.goalScored) {
+      const shotSpeedKmH = rules.lastGoalShotSpeed;
+      cameraShakeRef.current = 36;
       setIsGoalShaking(true);
+      setIsCrowdSurging(true);
       setGoalBannerText(`⚽ GOAL! 🚀 ${shotSpeedKmH} KM/H THUNDERBOLT!`);
+      setWhistleBannerText('GOAL!');
+      triggerCallout('goal', '🎉 GOAL GOAL GOAL!', `🚀 ${shotSpeedKmH} KM/H Thunderbolt Strike`);
       setTimeout(() => {
-        resetMatchPositions();
-        setGoalBannerText(null);
-        setIsGoalShaking(false);
-      }, 1800);
+        setWhistleBannerText(null);
+      }, 2200);
     }
 
+    if (matchResult.needsKickoffReset) {
+      resetMatchPositions(rules.kickoffTeam);
+      setGoalBannerText(null);
+      setIsGoalShaking(false);
+      setIsCrowdSurging(false);
+      setWhistleBannerText('KICK-OFF!');
+      setTimeout(() => {
+        setWhistleBannerText(null);
+      }, 1500);
+    }
+
+    if (matchResult.phaseChanged) {
+      if (rules.state.phase === 'PHASE_HALF_TIME') {
+        setIsCrowdSurging(true);
+        setWhistleBannerText('HALF TIME!');
+      } else if (rules.state.phase === 'PHASE_FULL_TIME') {
+        setIsCrowdSurging(true);
+        setWhistleBannerText('FULL TIME!');
+      }
+    }
     if (rules.state.state !== 'GAME_OVER') {
       // 2. Update Players (P1, P2, AI Bots) with Configured Controllers & Devices
       players.forEach((player) => {
@@ -649,29 +720,82 @@ export const GameView: React.FC<GameViewProps> = ({
           const ballHitboxRadius = tackler.radius + ball.radius + 14;
           const bodyHitboxRadius = tackler.radius + ballCarrier.radius + 12;
           const slideHitboxRadius = tackler.radius + ballCarrier.radius + 75;
+          const pokeHitboxRadius = tackler.radius + ballCarrier.radius + (tackler.standingTackleReach || 24);
 
           const isDirectBallHit = distToBall < ballHitboxRadius;
           const isBodyContactHit = distToCarrier < bodyHitboxRadius && !isTacklerBehindCarrier;
           const isSlideHit = tackler.isTackling && (distToCarrier < slideHitboxRadius || distToBall < slideHitboxRadius);
+          const isPokeHit = tackler.isStandingTackling && (distToCarrier < pokeHitboxRadius || distToBall < pokeHitboxRadius + 10);
 
-          const canDispossess = (isDirectBallHit || isBodyContactHit || isSlideHit) && ballCarrier.dispossessProtectionTimer <= 0;
+          const canDispossess = (isDirectBallHit || isBodyContactHit || isSlideHit || isPokeHit) &&
+            ballCarrier.dispossessProtectionTimer <= 0 &&
+            tackler.dispossessProtectionTimer <= 0;
 
           if (canDispossess) {
             let stealChance = 0.85;
             if (isSlideHit) stealChance = 0.95;
+            else if (isPokeHit) stealChance = 0.92;
 
             if (Math.random() < stealChance) {
               ballCarrier.hasPossession = false;
               ball.attachedPlayerId = null;
-              ballCarrier.dispossessProtectionTimer = 0.40;
-              tackler.dispossessProtectionTimer = 0;
+              ballCarrier.dispossessProtectionTimer = 0.65;
+              ballCarrier.stumbleTimer = 0.35;
+
+              tackler.dispossessProtectionTimer = 0.50;
               tackler.hasPossession = true;
               ball.attachedPlayerId = tackler.id;
+              ball.attachToPlayer(tackler.pos, tackler.facingAngle, tackler.radius, tackler.vel, tackler.id, tackler.isCloseControl);
+              ball.releaseTimer = 0.15;
+
+              // Physical separation nudge to break contact boundary cleanly
+              const sepX = (ballCarrier.pos.x - tackler.pos.x) || (Math.random() - 0.5);
+              const sepY = (ballCarrier.pos.y - tackler.pos.y) || (Math.random() - 0.5);
+              const sepDist = Math.hypot(sepX, sepY) || 1;
+              ballCarrier.pos.x += (sepX / sepDist) * 14;
+              ballCarrier.pos.y += (sepY / sepDist) * 14;
+
+              rules.recordTackle(tackler.team);
+
+              if (isPokeHit) {
+                triggerCallout('tackle', '👟 POKE TACKLE!', 'Tekel Berdiri Cepat & Bersih');
+                tackler.triggerFeedback('👟 POKE STEAL!');
+                tackler.isStandingTackling = false;
+              } else {
+                triggerCallout('tackle', '🛡️ CLEAN TACKLE!', 'Rebutan Bola Sukses');
+                tackler.triggerFeedback('🛡️ TACKLE!');
+                tackler.isTackling = false;
+              }
               ballCarrier.triggerFeedback('💥 REBUT!');
-              tackler.isTackling = false;
             }
-          } else if (distToCarrier < bodyHitboxRadius && isTacklerBehindCarrier && !tackler.isTackling) {
-            if (Math.random() < 0.08) {
+          } else if (distToCarrier < bodyHitboxRadius + 10 && !isTacklerBehindCarrier && !tackler.isTackling && !tackler.isStandingTackling) {
+            // Physical Shoulder Charge / Body Barge duel
+            const tacklerSpd = Math.hypot(tackler.vel.x, tackler.vel.y);
+            if (tacklerSpd > 1.6) {
+              const toCarrierX = ballCarrier.pos.x - tackler.pos.x;
+              const toCarrierY = ballCarrier.pos.y - tackler.pos.y;
+              const toDist = Math.hypot(toCarrierX, toCarrierY) || 1;
+              const moveDot = (tackler.vel.x * toCarrierX + tackler.vel.y * toCarrierY) / (tacklerSpd * toDist);
+
+              if (moveDot > 0.42 && ballCarrier.stumbleTimer <= 0) {
+                ballCarrier.stumbleTimer = 0.35;
+                ballCarrier.triggerFeedback('💥 BODY CHARGE!');
+                // Nudge carrier away physically
+                ballCarrier.pos.x += (toCarrierX / toDist) * 7;
+                ballCarrier.pos.y += (toCarrierY / toDist) * 7;
+
+                // Physical scramble: chance to pop ball loose
+                if (ballCarrier.isExhausted || Math.random() < 0.35) {
+                  ballCarrier.hasPossession = false;
+                  ball.attachedPlayerId = null;
+                  ball.vel.x = tackler.vel.x * 0.7 + (Math.random() - 0.5) * 4;
+                  ball.vel.y = tackler.vel.y * 0.7 + (Math.random() - 0.5) * 4;
+                  ball.releaseTimer = 0.20;
+                  triggerCallout('tackle', '💥 SHOULDER BARGE!', 'Perebutan Fisik Memenangkan Bola');
+                  rules.recordTackle(tackler.team);
+                }
+              }
+            } else if (Math.random() < 0.08) {
               ballCarrier.triggerFeedback('🛡️ BODY SHIELD!');
             }
           }
@@ -682,7 +806,7 @@ export const GameView: React.FC<GameViewProps> = ({
       players.forEach((p) => {
         if (ball.attachedPlayerId === p.id) {
           p.hasPossession = true;
-          ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
+          ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id, p.isCloseControl);
         } else {
           const distToBall = Math.hypot(p.pos.x - ball.pos.x, p.pos.y - ball.pos.y);
           const receptionRadius = p.radius + ball.radius + 28;
@@ -737,9 +861,45 @@ export const GameView: React.FC<GameViewProps> = ({
       const targetZoomRaw = Math.min(reqZoomX, reqZoomY);
       const targetZoom = Math.max(0.52, Math.min(0.92, targetZoomRaw));
 
-      cameraRef.current.x = cameraRef.current.x * 0.90 + targetCamX * 0.10;
-      cameraRef.current.y = cameraRef.current.y * 0.90 + targetCamY * 0.10;
-      zoomRef.current = zoomRef.current * 0.92 + targetZoom * 0.08;
+      // Dramatic zoom in during Goal Celebration phase
+      if (rules.state.phase === 'PHASE_GOAL_CELEBRATION') {
+        const scorer = players.find((p) => p.team === rules.lastGoalScorerTeam && !p.isGoalkeeper) || players[0];
+        if (scorer) {
+          cameraRef.current.x = cameraRef.current.x * 0.90 + scorer.pos.x * 0.10;
+          cameraRef.current.y = cameraRef.current.y * 0.90 + scorer.pos.y * 0.10;
+          zoomRef.current = zoomRef.current * 0.92 + 1.15 * 0.08;
+        }
+      } else {
+        cameraRef.current.x = cameraRef.current.x * 0.90 + targetCamX * 0.10;
+        cameraRef.current.y = cameraRef.current.y * 0.90 + targetCamY * 0.10;
+        zoomRef.current = zoomRef.current * 0.92 + targetZoom * 0.08;
+      }
+    }
+
+    // Compute real-time Active Player Data for PES/FIFA Player Card Widget
+    const activeP = players.find((p) => p.hasPossession)
+      || players.find((p) => !p.isAI && (p.controllerIndex !== null || p.devType !== 'ai_bot'))
+      || players[0];
+
+    if (activeP) {
+      const pIdx = activeP.id.includes('p1') ? 10 : activeP.id.includes('p2') ? 9 : activeP.id.includes('p3') ? 4 : 7;
+      setActivePlayerData({
+        id: activeP.id,
+        name: activeP.name,
+        squadNumber: pIdx,
+        team: activeP.team,
+        role: activeP.role || 'MF',
+        stamina: activeP.stamina,
+        isSprinting: activeP.isSprinting,
+        isExhausted: activeP.isExhausted,
+        isTackling: activeP.isTackling,
+        isChargingShot: activeP.isChargingShot,
+        shotPower: activeP.shotPower,
+        hasPossession: activeP.hasPossession,
+        skinColor: activeP.skinColor,
+        hairColor: activeP.hairColor,
+        jerseyColor: activeP.color,
+      });
     }
 
     setMatchState({ ...matchRulesRef.current.state });
@@ -804,6 +964,7 @@ export const GameView: React.FC<GameViewProps> = ({
         id: p.id,
         name: p.name,
         team: p.team,
+        role: p.role,
         x: p.pos.x,
         y: p.pos.y,
         color: p.color,
@@ -827,7 +988,7 @@ export const GameView: React.FC<GameViewProps> = ({
     ctx.scale(currentZoom, currentZoom * tiltY);
     ctx.translate(-clampedCamX + shakeX, -clampedCamY + shakeY);
 
-    field.draw(ctx, isGoalShaking);
+    field.draw(ctx, isGoalShaking, isCrowdSurging || isGoalShaking);
 
     // Tactical Passing Grid, Vision Cone & Receiver Reticle
     drawTacticalPassingGrid(ctx, players, ball);
@@ -857,6 +1018,15 @@ export const GameView: React.FC<GameViewProps> = ({
         radarData={radarData}
         offScreenBall={offScreenBall}
         isGoalShaking={isGoalShaking}
+        whistleBannerText={whistleBannerText}
+        activePlayer={activePlayerData}
+        arcadeCallouts={arcadeCallouts}
+        onResumeSecondHalf={() => {
+          matchRulesRef.current.resumeFromHalfTime();
+          resetMatchPositions(matchRulesRef.current.kickoffTeam);
+          setWhistleBannerText('2ND HALF KICK-OFF!');
+          setTimeout(() => setWhistleBannerText(null), 1500);
+        }}
       />
 
       <canvas

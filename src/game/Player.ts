@@ -1,8 +1,8 @@
-import { GamepadState, PlayerEntity, TeamType, Vector2D } from '../types/game';
+import { AIState, GamepadState, PlayerEntity, TacticalRole, TeamType, Vector2D } from '../types/game';
 import { Ball } from './Ball';
 import { Field } from './Field';
 import { PixelSpriteRenderer } from './PixelSpriteRenderer';
-
+import { TacticalAI } from './TacticalAI';
 interface TurfParticle {
   x: number;
   y: number;
@@ -35,7 +35,8 @@ export class Player implements PlayerEntity {
   facingAngle: number;
   isSprinting: boolean;
   hasPossession: boolean;
-
+  role: TacticalRole = 'MF';
+  aiState: AIState = 'STATE_ZONE_COVER';
   // Stamina & Fatigue Properties
   stamina: number; // 0.0 to 1.0
   isExhausted: boolean;
@@ -51,6 +52,25 @@ export class Player implements PlayerEntity {
   tackleTimer: number;
   tackleSlideAngle: number;
 
+  // Standing Poke Tackle Properties
+  isStandingTackling: boolean = false;
+  standingTackleTimer: number = 0;
+  standingTackleReach: number = 24;
+
+  // Precision Close Control & Knock-On Sprint Burst
+  isCloseControl: boolean = false;
+  isKnockOnSprint: boolean = false;
+  knockOnTimer: number = 0;
+
+  // Fake Shot & Cruyff Turn
+  isFakeShotActive: boolean = false;
+  fakeShotTimer: number = 0;
+
+  // Aerial Volley & Bullet Header
+  isVolleying: boolean = false;
+  volleyTimer: number = 0;
+  isHeading: boolean = false;
+  headerTimer: number = 0;
   // Charged Shot Trajectory & Power Gauge Properties
   isChargingShot: boolean = false;
   shotPower: number = 0;
@@ -82,10 +102,13 @@ export class Player implements PlayerEntity {
   debugInputString: string = '';
 
   // Patrol / Walking Simulation & AI Cooldown Timers
-  private walkTimer: number = 0;
-  private aiGocekCooldownTimer: number = 0;
-  private aiTackleCooldownTimer: number = 0;
+  walkTimer: number = 0;
+  aiGocekCooldownTimer: number = 0;
+  aiTackleCooldownTimer: number = 0;
 
+  walkTimerTick(amount: number) {
+    this.walkTimer += amount;
+  }
   // Previous button states for single-press edge detection
   private prevX: boolean;
   private prevA: boolean;
@@ -116,8 +139,14 @@ export class Player implements PlayerEntity {
     const skinPalettes = ['#fcd34d', '#f59e0b', '#b45309', '#fed7aa'];
     this.hairColor = hairPalettes[idHash % hairPalettes.length];
     this.skinColor = skinPalettes[idHash % skinPalettes.length];
-    this.isGoalkeeper = id.includes('gk') || id.includes('bot_1') || name.toLowerCase().includes('kiper') || name.toLowerCase().includes('gk');
-
+    this.role = (id.includes('gk') || id.includes('bot_1') || name.toLowerCase().includes('kiper') || name.toLowerCase().includes('gk'))
+      ? 'GK'
+      : (id.includes('p2') || id.includes('away_2') || id.includes('p4'))
+      ? 'ST'
+      : (id.includes('away_1') || id.includes('p3'))
+      ? 'DF'
+      : 'MF';
+    this.isGoalkeeper = this.role === 'GK';
     // Stamina Defaults
     this.stamina = 1.0;
     this.isExhausted = false;
@@ -185,12 +214,18 @@ export class Player implements PlayerEntity {
     this.duelFeedbackYOffset = 0;
     this.dribbleSpinAngle = 0;
     this.aiGocekCooldownTimer = 0;
-    this.dispossessProtectionTimer = 0;
-
-    this.debugInputString = 'RESET - Position Cleared';
-    this.prevX = false;
-    this.prevA = false;
-    this.prevB = false;
+    this.tackleSlideAngle = 0;
+    this.isStandingTackling = false;
+    this.standingTackleTimer = 0;
+    this.isCloseControl = false;
+    this.isKnockOnSprint = false;
+    this.knockOnTimer = 0;
+    this.isFakeShotActive = false;
+    this.fakeShotTimer = 0;
+    this.isVolleying = false;
+    this.volleyTimer = 0;
+    this.isHeading = false;
+    this.headerTimer = 0;
     this.prevY = false;
     this.prevRB = false;
     this.prevLB = false;
@@ -263,7 +298,7 @@ export class Player implements PlayerEntity {
     };
   }
 
-  private updateParticles() {
+  updateParticles() {
     for (let i = this.turfParticles.length - 1; i >= 0; i--) {
       const p = this.turfParticles[i];
       p.x += p.vx;
@@ -310,189 +345,7 @@ export class Player implements PlayerEntity {
   }
 
   updateEnemyBotAI(ball: Ball, field: Field, opponents: Player[], teammates: Player[] = [], dt = 1 / 60) {
-    const frameScale = Math.min(2, Math.max(0.25, dt * 60));
-    this.walkTimer += 0.02 * frameScale;
-    this.updateParticles();
-
-    if (this.stumbleTimer > 0) this.stumbleTimer -= dt;
-    if (this.aiGocekCooldownTimer > 0) this.aiGocekCooldownTimer -= dt;
-    if (this.aiTackleCooldownTimer > 0) this.aiTackleCooldownTimer -= dt;
-    if (this.dispossessProtectionTimer > 0) this.dispossessProtectionTimer -= dt;
-    if (this.duelFeedbackTimer > 0) {
-      this.duelFeedbackTimer -= dt;
-      this.duelFeedbackYOffset += 0.4 * frameScale;
-    }
-
-
-    const teammateCarrier = teammates.find((t) => t.hasPossession);
-    const opponentCarrier = opponents.find((opp) => opp.hasPossession);
-
-    if (this.hasPossession) {
-      // 1. CARRIER BOT: Dribble towards Home Goal
-      const targetGoal = field.goals.homeGoal;
-      const targetY = targetGoal.top + (targetGoal.bottom - targetGoal.top) * 0.5;
-
-      const dxToGoal = targetGoal.x - this.pos.x;
-      const dyToGoal = targetY - this.pos.y;
-      const distToGoal = Math.hypot(dxToGoal, dyToGoal) || 1;
-
-      if (distToGoal < 380 && ball.releaseTimer <= 0) {
-        this.hasPossession = false;
-        const shootPower = 15.0;
-        const aimOffset = (Math.random() - 0.5) * 40;
-        const shootDirX = dxToGoal / distToGoal;
-        const shootDirY = (dyToGoal + aimOffset) / distToGoal;
-
-        ball.kick({ x: shootDirX, y: shootDirY }, shootPower, this.id);
-        this.triggerFeedback('⚽ AI SHOOT!');
-      } else if (teammateCarrier === undefined && teammates.length > 0 && Math.random() < 0.010) {
-        const openTeammate = teammates[0];
-        const distToTm = Math.hypot(openTeammate.pos.x - this.pos.x, openTeammate.pos.y - this.pos.y);
-        if (distToTm > 200 && distToTm < 600) {
-          this.hasPossession = false;
-          const passDirX = (openTeammate.pos.x - this.pos.x) / distToTm;
-          const passDirY = (openTeammate.pos.y - this.pos.y) / distToTm;
-          ball.kick({ x: passDirX, y: passDirY }, 9.5, this.id, openTeammate);
-          this.triggerFeedback('⚽ AI PASS!');
-        }
-      } else {
-        let moveX = dxToGoal / distToGoal;
-        let moveY = dyToGoal / distToGoal;
-
-        const blockingOpponent = opponents.find((opp) => {
-          const oppDist = Math.hypot(opp.pos.x - this.pos.x, opp.pos.y - this.pos.y);
-          if (oppDist > 90) return false;
-          const dot = (opp.pos.x - this.pos.x) * moveX + (opp.pos.y - this.pos.y) * moveY;
-          return dot > 0;
-        });
-
-        if (blockingOpponent) {
-          const sideSign = this.pos.y < blockingOpponent.pos.y ? -1 : 1;
-          const perpX = -moveY * sideSign;
-          const perpY = moveX * sideSign;
-
-          moveX = moveX * 0.35 + perpX * 0.65;
-          moveY = moveY * 0.35 + perpY * 0.65;
-          const norm = Math.hypot(moveX, moveY) || 1;
-          moveX /= norm;
-          moveY /= norm;
-        }
-
-        const walkSpeed = this.speed * 0.48;
-        this.vel.x = moveX * walkSpeed;
-        this.vel.y = moveY * walkSpeed;
-
-        const targetAngle = Math.atan2(this.vel.y, this.vel.x);
-        this.facingAngle = lerpAngle(this.facingAngle, targetAngle, 0.22);
-        ball.attachToPlayer(this.pos, this.facingAngle, this.radius, this.vel, this.id);
-      }
-    } else if (teammateCarrier) {
-      // 2. OFF-THE-BALL SUPPORT: Run in wide parallel channels (yOffset = 260px)
-      const yOffset = (this.id === 'p4' ? 260 : -260);
-      const targetRunX = Math.max(field.pitchBounds.left + 200, teammateCarrier.pos.x - 40);
-      const targetRunY = Math.max(field.pitchBounds.top + 120, Math.min(field.pitchBounds.bottom - 120, teammateCarrier.pos.y + yOffset));
-
-      const dx = targetRunX - this.pos.x;
-      const dy = targetRunY - this.pos.y;
-      const dist = Math.hypot(dx, dy) || 1;
-
-      const runSpeed = dist > 40 ? this.speed * 0.52 : 0;
-      this.vel.x = (dx / dist) * runSpeed;
-      this.vel.y = (dy / dist) * runSpeed;
-
-      const homeGoalCenterY = (field.goals.homeGoal.top + field.goals.homeGoal.bottom) * 0.5;
-      const targetAngle = Math.atan2(homeGoalCenterY - this.pos.y, field.goals.homeGoal.x - this.pos.x);
-      this.facingAngle = lerpAngle(this.facingAngle, targetAngle, 0.18);
-    } else if (opponentCarrier) {
-      // 3. DEFENDING OPPONENT: One bot presses gently, second bot covers
-      const isClosestToOpponent = teammates.every((t) => {
-        const myDist = Math.hypot(opponentCarrier.pos.x - this.pos.x, opponentCarrier.pos.y - this.pos.y);
-        const tDist = Math.hypot(opponentCarrier.pos.x - t.pos.x, opponentCarrier.pos.y - t.pos.y);
-        return myDist <= tDist;
-      });
-
-      if (isClosestToOpponent) {
-        const dx = opponentCarrier.pos.x - this.pos.x;
-        const dy = opponentCarrier.pos.y - this.pos.y;
-        const dist = Math.hypot(dx, dy) || 1;
-
-        // Slide Tackle ONLY if very close (< 65px), rare chance (8%), and 4.0s cooldown!
-        if (dist < 65 && !this.isTackling && this.aiTackleCooldownTimer <= 0 && Math.random() < 0.08) {
-          this.isTackling = true;
-          this.tackleTimer = 0.40;
-          this.aiTackleCooldownTimer = 4.0; // 4.0s Cooldown!
-          this.tackleSlideAngle = Math.atan2(dy, dx);
-          this.triggerFeedback('⚡ SLIDE TACKLE!');
-        }
-
-        const chaseSpeed = this.speed * 0.52; // Fair, non-brutal chase speed!
-        this.vel.x = (dx / dist) * chaseSpeed;
-        this.vel.y = (dy / dist) * chaseSpeed;
-        this.facingAngle = lerpAngle(this.facingAngle, Math.atan2(dy, dx), 0.22);
-      } else {
-        const awayGoalCenterY = (field.goals.awayGoal.top + field.goals.awayGoal.bottom) * 0.5;
-        const targetCoverX = (opponentCarrier.pos.x + field.goals.awayGoal.x) * 0.5;
-        const targetCoverY = (opponentCarrier.pos.y + awayGoalCenterY) * 0.5;
-
-        const dx = targetCoverX - this.pos.x;
-        const dy = targetCoverY - this.pos.y;
-        const dist = Math.hypot(dx, dy) || 1;
-
-        const coverSpeed = dist > 40 ? this.speed * 0.48 : 0;
-        this.vel.x = (dx / dist) * coverSpeed;
-        this.vel.y = (dy / dist) * coverSpeed;
-        this.facingAngle = lerpAngle(this.facingAngle, Math.atan2(dy, dx), 0.18);
-      }
-    } else {
-      // 4. LOOSE BALL CHASE: Only closest bot chases, other stays back
-      const isClosestToBall = teammates.every((t) => {
-        const myDist = Math.hypot(ball.pos.x - this.pos.x, ball.pos.y - this.pos.y);
-        const tDist = Math.hypot(ball.pos.x - t.pos.x, ball.pos.y - t.pos.y);
-        return myDist <= tDist;
-      });
-
-      if (isClosestToBall) {
-        const dx = ball.pos.x - this.pos.x;
-        const dy = ball.pos.y - this.pos.y;
-        const dist = Math.hypot(dx, dy) || 1;
-
-        this.vel.x = (dx / dist) * this.speed * 0.65;
-        this.vel.y = (dy / dist) * this.speed * 0.65;
-        this.facingAngle = lerpAngle(this.facingAngle, Math.atan2(dy, dx), 0.22);
-      } else {
-        const yOffset = (this.id === 'p4' ? 240 : -240);
-        const targetX = ball.pos.x - 140;
-        const targetY = ball.pos.y + yOffset;
-
-        const dx = targetX - this.pos.x;
-        const dy = targetY - this.pos.y;
-        const dist = Math.hypot(dx, dy) || 1;
-
-        this.vel.x = (dx / dist) * this.speed * 0.45;
-        this.vel.y = (dy / dist) * this.speed * 0.45;
-        this.facingAngle = lerpAngle(this.facingAngle, Math.atan2(dy, dx), 0.18);
-      }
-    }
-
-    // Anti-Clumping Repulsion Vector between Bot Teammates
-    teammates.forEach((teammate) => {
-      const tmDist = Math.hypot(teammate.pos.x - this.pos.x, teammate.pos.y - this.pos.y);
-      if (tmDist < 260 && tmDist > 0) {
-        const repX = (this.pos.x - teammate.pos.x) / tmDist;
-        const repY = (this.pos.y - teammate.pos.y) / tmDist;
-        const repForce = (260 - tmDist) * 0.035;
-
-        this.vel.x += repX * repForce;
-        this.vel.y += repY * repForce;
-      }
-    });
-
-    this.pos.x += this.vel.x * frameScale;
-    this.pos.y += this.vel.y * frameScale;
-
-    const bounds = field.pitchBounds;
-    this.pos.x = Math.max(bounds.left + this.radius, Math.min(bounds.right - this.radius, this.pos.x));
-    this.pos.y = Math.max(bounds.top + this.radius, Math.min(bounds.bottom - this.radius, this.pos.y));
+    TacticalAI.update(this, ball, field, opponents, teammates, dt);
   }
 
   updatePassiveReception(ball: Ball, field: Field, dt = 1 / 60) {
@@ -573,7 +426,7 @@ export class Player implements PlayerEntity {
         this.isSprinting = false;
         ball.attachToPlayer(this.pos, this.facingAngle, this.radius, this.vel, this.id);
       }
-    } else if (this.hasPossession) {
+    } else if (this.hasPossession && ball.attachedPlayerId === this.id) {
       const targetGoal = this.team === 'home' ? field.goals.awayGoal : field.goals.homeGoal;
       const targetY = targetGoal.top + (targetGoal.bottom - targetGoal.top) * 0.5;
 
@@ -627,6 +480,39 @@ export class Player implements PlayerEntity {
       this.isTackling = false;
     }
 
+    if (this.standingTackleTimer > 0) {
+      this.standingTackleTimer -= dt;
+      this.vel.x *= Math.pow(0.91, frameScale);
+      this.vel.y *= Math.pow(0.91, frameScale);
+      this.spawnTurfParticle(1.5, true);
+    } else {
+      this.isStandingTackling = false;
+    }
+
+    if (this.fakeShotTimer > 0) {
+      this.fakeShotTimer -= dt;
+    } else {
+      this.isFakeShotActive = false;
+    }
+
+    if (this.knockOnTimer > 0) {
+      this.knockOnTimer -= dt;
+    } else {
+      this.isKnockOnSprint = false;
+    }
+
+    if (this.volleyTimer > 0) {
+      this.volleyTimer -= dt;
+    } else {
+      this.isVolleying = false;
+    }
+
+    if (this.headerTimer > 0) {
+      this.headerTimer -= dt;
+    } else {
+      this.isHeading = false;
+    }
+
     if (this.skillDodgeInvincibleTimer > 0) {
       this.skillDodgeInvincibleTimer -= dt;
       this.dribbleSpinAngle += 0.35 * frameScale;
@@ -646,33 +532,36 @@ export class Player implements PlayerEntity {
     const moveX = gp.axes.leftStickX;
     const moveY = gp.axes.leftStickY;
 
-    // STAMINA & SPRINT LOGIC (R2 / RT)
-    const isWantsSprint = gp.buttons.rt > 0.3;
+    // Precision Close Control Mode (Holding Left Bumper or Left Trigger)
+    const isWantsCloseControl = gp.buttons.lb || gp.buttons.lt > 0.2;
+    this.isCloseControl = isWantsCloseControl && this.hasPossession;
 
-    if (isWantsSprint) {
-      if (this.isExhausted) {
-        this.isSprinting = false;
-      } else {
-        this.isSprinting = true;
-        this.stamina = Math.max(0, this.stamina - 0.004 * frameScale);
-
-        if (this.stamina === 0) {
-          this.isExhausted = true;
-          this.isSprinting = false;
-          this.triggerFeedback('⚠️ EXHAUSTED!');
-        }
-      }
-    } else {
-      this.isSprinting = false;
-      this.stamina = Math.min(1.0, this.stamina + 0.0025 * frameScale);
-
-      if (this.isExhausted && this.stamina >= 0.20) {
-        this.isExhausted = false;
-      }
+    // Knock-on Sprint Burst (Sprinting + RB / R1 single-press)
+    const isWantsKnockOn = this.isSprinting && this.hasPossession && gp.buttons.rb && !this.prevRB;
+    if (isWantsKnockOn && this.knockOnTimer <= 0) {
+      this.isKnockOnSprint = true;
+      this.knockOnTimer = 0.38;
+      this.triggerFeedback('💨 KNOCK-ON!');
+      this.spawnTurfParticle(2.8);
+      // Propel ball 42px ahead
+      ball.vel.x = Math.cos(this.facingAngle) * (this.speed * 2.2);
+      ball.vel.y = Math.sin(this.facingAngle) * (this.speed * 2.2);
+      ball.releaseTimer = 0.22;
+      ball.attachedPlayerId = null;
+      this.hasPossession = false;
     }
 
-    const dribbleMultiplier = this.hasPossession ? 0.90 : 1.0;
-    const currentSpeed = (this.isSprinting ? this.speed * 1.62 : this.speed) * moveMultiplier * dribbleMultiplier;
+    let speedBase = this.speed;
+    if (this.isCloseControl) {
+      speedBase = this.speed * 0.65; // Precision micro-dribble
+    } else if (this.isKnockOnSprint) {
+      speedBase = this.speed * 2.15; // Explosive sprint burst!
+    } else if (this.isSprinting) {
+      speedBase = this.speed * 1.62;
+    }
+
+    const dribbleMultiplier = (this.hasPossession && !this.isCloseControl) ? 0.92 : 1.0;
+    const currentSpeed = speedBase * moveMultiplier * dribbleMultiplier;
     const stickMagnitude = Math.hypot(moveX, moveY);
 
     let aimAngle = this.facingAngle;
@@ -681,10 +570,12 @@ export class Player implements PlayerEntity {
       const targetVelX = moveX * currentSpeed;
       const targetVelY = moveY * currentSpeed;
 
-      // Turn Inertia: Damp velocity smoothly when making sharp turns
+      // Turn Inertia: Damp velocity smoothly when making sharp turns, unless in Close Control
       const currentVelMag = Math.hypot(this.vel.x, this.vel.y);
       let turnFactor = 1.0;
-      if (currentVelMag > 0.5) {
+      if (this.isCloseControl) {
+        turnFactor = 1.0; // Zero inertia for razor-sharp micro-turns!
+      } else if (currentVelMag > 0.5) {
         const dot = (this.vel.x * targetVelX + this.vel.y * targetVelY) / (currentVelMag * currentSpeed);
         if (dot < 0) {
           turnFactor = Math.max(0.45, 1.0 + dot * 0.4);
@@ -696,8 +587,8 @@ export class Player implements PlayerEntity {
 
       aimAngle = Math.atan2(moveY, moveX);
       const angleDiff = aimAngle - this.facingAngle;
-      this.facingAngle = lerpAngle(this.facingAngle, aimAngle, 0.18);
-
+      const lerpSpeed = this.isCloseControl ? 0.38 : this.isFakeShotActive ? 0.45 : 0.20;
+      this.facingAngle = lerpAngle(this.facingAngle, aimAngle, lerpSpeed);
       this.bodyTiltAngle = Math.max(-0.28, Math.min(0.28, angleDiff * 0.40));
 
       if (this.isSprinting) {
@@ -717,12 +608,21 @@ export class Player implements PlayerEntity {
     this.pos.y = Math.max(bounds.top + this.radius, Math.min(bounds.bottom - this.radius, this.pos.y));
     const distToBall = Math.hypot(this.pos.x - ball.pos.x, this.pos.y - ball.pos.y);
 
-    if (ball.attachedPlayerId === this.id || this.hasPossession) {
+    if (ball.attachedPlayerId === this.id && ball.z < 8) {
       this.hasPossession = true;
-      ball.attachToPlayer(this.pos, this.facingAngle, this.radius, this.vel, this.id);
-    } else if (ball.releaseTimer <= 0 && distToBall < this.radius + ball.radius + 28 && !ball.homingTargetPlayer && !ball.attachedPlayerId) {
+      ball.attachToPlayer(this.pos, this.facingAngle, this.radius, this.vel, this.id, this.isCloseControl);
+    } else if (
+      ball.releaseTimer <= 0 &&
+      ball.z < 10 &&
+      distToBall < this.radius + ball.radius + 14 &&
+      !ball.homingTargetPlayer &&
+      !ball.attachedPlayerId &&
+      this.dispossessProtectionTimer <= 0
+    ) {
       this.hasPossession = true;
-      ball.attachToPlayer(this.pos, this.facingAngle, this.radius, this.vel, this.id);
+      ball.attachToPlayer(this.pos, this.facingAngle, this.radius, this.vel, this.id, this.isCloseControl);
+    } else {
+      this.hasPossession = (ball.attachedPlayerId === this.id);
     }
     
     // Single Source of Truth Enforcer:
@@ -767,6 +667,36 @@ export class Player implements PlayerEntity {
     if (isPressingStart) activeBtns.push('Start (ToggleHUD)');
 
     this.debugInputString = activeBtns.length > 0 ? `PRESSED: ${activeBtns.join(' + ')}` : `STICK: [${moveX.toFixed(2)}, ${moveY.toFixed(2)}]`;
+    // 0. AERIAL VOLLEY & BULLET HEADER (Executed on incoming airborne balls)
+    if (distToBall < this.radius + ball.radius + 36 && ball.z > 8 && isPressingX && !this.prevX) {
+      const targetGoal = this.team === 'home' ? field.goals.awayGoal : field.goals.homeGoal;
+      const targetY = targetGoal.top + (targetGoal.bottom - targetGoal.top) * 0.5;
+      const aimX = targetGoal.x - this.pos.x;
+      const aimY = targetY - this.pos.y;
+      const aimDist = Math.hypot(aimX, aimY) || 1;
+      const dirX = aimX / aimDist;
+      const dirY = aimY / aimDist;
+
+      this.hasPossession = false;
+      ball.attachedPlayerId = null;
+
+      if (ball.z >= 22) {
+        this.isHeading = true;
+        this.headerTimer = 0.35;
+        this.triggerFeedback('💥 BULLET HEADER!');
+        ball.kick({ x: dirX, y: dirY }, 16.5, this.id, null, null, 'rocket');
+        ball.vz = -2.5;
+      } else {
+        this.isVolleying = true;
+        this.volleyTimer = 0.40;
+        this.triggerFeedback('🚀 FLYING VOLLEY!');
+        ball.kick({ x: dirX, y: dirY }, 18.5, this.id, null, null, 'rocket');
+        ball.vz = 3.5;
+      }
+      this.isKickingTimer = 0.25;
+      this.prevX = isPressingX;
+      return { toggleHUDRequested };
+    }
 
     // 1. ATTACKING ACTIONS
     if (this.hasPossession) {
@@ -774,6 +704,38 @@ export class Player implements PlayerEntity {
       this.slidePower = 0;
 
       // X Button = Oscillating Aim Trajectory Shot (Hold to Aim & Charge/Decrease Power, Release to Shoot)
+      // FAKE SHOT / CRUYFF TURN TRIGGER (Cancel shot with A or B)
+      if (this.isChargingShot && (isPressingA || isPressingB)) {
+        this.isChargingShot = false;
+        this.shotPower = 0;
+        this.smoothShotPower = 0;
+        this.isFakeShotActive = true;
+        this.fakeShotTimer = 0.32;
+
+        const stickMag = Math.hypot(moveX, moveY);
+        if (stickMag > 0.15) {
+          this.facingAngle = Math.atan2(moveY, moveX);
+        } else {
+          this.facingAngle += Math.PI * 0.75;
+        }
+
+        this.vel.x = Math.cos(this.facingAngle) * (this.speed * 0.95);
+        this.vel.y = Math.sin(this.facingAngle) * (this.speed * 0.95);
+        this.triggerFeedback('✨ CRUYFF TURN!');
+        this.spawnTurfParticle(2.5);
+
+        // Bait nearby defending opponents
+        opponents.forEach((opp) => {
+          const oppDist = Math.hypot(opp.pos.x - this.pos.x, opp.pos.y - this.pos.y);
+          if (oppDist < 95 && opp.stumbleTimer <= 0) {
+            opp.stumbleTimer = 0.40;
+            opp.triggerFeedback('😵 DIKECIK!');
+          }
+        });
+        return { toggleHUDRequested };
+      }
+
+
       if (isPressingX) {
         if (!this.isChargingShot) {
           this.isChargingShot = true;
@@ -783,15 +745,15 @@ export class Player implements PlayerEntity {
         }
 
         // Oscillate back and forth continuously (0% -> 100% -> 0% -> 100%)
-        const chargeSpeed = 0.020; // Comfortable ~0.85s fill time per direction for precise timing
+        const chargeSpeed = 0.020;
         this.shotPower += this.shotPowerDirection * chargeSpeed;
 
         if (this.shotPower >= 1.0) {
           this.shotPower = 1.0;
-          this.shotPowerDirection = -1; // Reverse direction: decrease power!
+          this.shotPowerDirection = -1;
         } else if (this.shotPower <= 0.05) {
           this.shotPower = 0.05;
-          this.shotPowerDirection = 1; // Reverse direction: increase power!
+          this.shotPowerDirection = 1;
         }
 
         // Smooth Lerp for power bar filling & laser line length (silky 60 FPS transitions!)
@@ -928,17 +890,32 @@ export class Player implements PlayerEntity {
         this.slidePower = Math.min(1.0, this.slidePower + 0.035);
       } else if (this.prevB && this.isChargingSlide) {
         this.isChargingSlide = false;
-        this.isTackling = true;
 
-        const slideSpeed = 8.0 + this.slidePower * 14.0;
-        this.tackleTimer = 0.40 + this.slidePower * 0.35;
-        this.tackleSlideAngle = this.facingAngle;
+        if (this.slidePower < 0.22) {
+          // QUICK TAP B -> STANDING POKE TACKLE (Clean, Fast, Responsive!)
+          this.isStandingTackling = true;
+          this.standingTackleTimer = 0.25;
+          this.isTackling = false;
 
-        this.vel.x += Math.cos(this.facingAngle) * slideSpeed;
-        this.vel.y += Math.sin(this.facingAngle) * slideSpeed;
+          this.vel.x += Math.cos(this.facingAngle) * (this.speed * 0.7);
+          this.vel.y += Math.sin(this.facingAngle) * (this.speed * 0.7);
+          this.triggerFeedback('👟 POKE TACKLE!');
+          this.spawnTurfParticle(1.4);
+        } else {
+          // CHARGED POWER SLIDE TACKLE
+          this.isTackling = true;
+          this.isStandingTackling = false;
 
-        const powerPercent = Math.round(this.slidePower * 100);
-        this.triggerFeedback(`⚡ SLIDE ${powerPercent}%!`);
+          const slideSpeed = 8.0 + this.slidePower * 14.0;
+          this.tackleTimer = 0.40 + this.slidePower * 0.35;
+          this.tackleSlideAngle = this.facingAngle;
+
+          this.vel.x += Math.cos(this.facingAngle) * slideSpeed;
+          this.vel.y += Math.sin(this.facingAngle) * slideSpeed;
+
+          const powerPercent = Math.round(this.slidePower * 100);
+          this.triggerFeedback(`⚡ SLIDE ${powerPercent}%!`);
+        }
         this.slidePower = 0;
       } else {
         this.isChargingSlide = false;
@@ -975,6 +952,59 @@ export class Player implements PlayerEntity {
     });
     ctx.globalAlpha = 1.0;
 
+    // Under-foot Dynamic Circular Stamina Ring (Visually immediate at player's boots)
+    if (this.stamina < 0.98 || this.isSprinting || this.isExhausted) {
+      ctx.save();
+      const ringRadius = this.radius + 4;
+      const startAngle = -Math.PI / 2;
+      const endAngle = startAngle + Math.PI * 2 * Math.max(0, Math.min(1, this.stamina));
+
+      // Background track ring
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.50)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(this.pos.x, this.pos.y, ringRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Colored active stamina arc
+      const staminaColor = this.isExhausted ? '#ef4444' : this.stamina < 0.35 ? '#f59e0b' : '#10b981';
+      ctx.strokeStyle = staminaColor;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(this.pos.x, this.pos.y, ringRadius, startAngle, endAngle);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Mini Tactical Role Pill Badge (ST, MF, DF, GK)
+    const role = this.role || 'MF';
+    const roleColors: Record<TacticalRole, { bg: string; text: string; border: string }> = {
+      GK: { bg: 'rgba(202, 138, 4, 0.88)', text: '#fef08a', border: '#eab308' },
+      DF: { bg: 'rgba(21, 128, 61, 0.88)', text: '#bbf7d0', border: '#22c55e' },
+      MF: { bg: 'rgba(29, 78, 216, 0.88)', text: '#bfdbfe', border: '#3b82f6' },
+      ST: { bg: 'rgba(185, 28, 28, 0.88)', text: '#fecaca', border: '#ef4444' },
+    };
+    const rc = roleColors[role] || roleColors.MF;
+    const badgeW = 20;
+    const badgeH = 10;
+    const badgeX = this.pos.x - badgeW / 2;
+    const badgeY = isActiveUser ? this.pos.y - 70 : this.pos.y - 36;
+
+    ctx.save();
+    ctx.fillStyle = rc.bg;
+    ctx.strokeStyle = rc.border;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 2.5);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = rc.text;
+    ctx.font = 'bold 7px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(role, this.pos.x, badgeY + badgeH / 2);
+    ctx.restore();
     // 1. SLEEK RETRO OVERHEAD DIAMOND & P1/P2 INDICATOR BADGE (Active Human Controller Only)
     if (isActiveUser) {
       ctx.save();
@@ -1244,6 +1274,28 @@ export class Player implements PlayerEntity {
       ctx.restore();
     }
 
+    if (this.isStandingTackling) {
+      ctx.save();
+      ctx.translate(this.pos.x, this.pos.y);
+      ctx.rotate(this.facingAngle);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.arc(this.radius + 10, 0, 15, -Math.PI / 3, Math.PI / 3);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (this.isCloseControl) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.65)';
+      ctx.lineWidth = 2.0;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.arc(this.pos.x, this.pos.y, this.radius + 7, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
     if (this.skillDodgeInvincibleTimer > 0) {
       ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 4;
@@ -1281,12 +1333,12 @@ export class Player implements PlayerEntity {
     PixelSpriteRenderer.drawCharacter(ctx, {
       x: this.pos.x,
       y: this.pos.y,
-      z: this.isDiving ? 14 : 0,
+      z: this.isDiving ? 14 : (this.isVolleying || this.isHeading ? 18 : 0),
       facingAngle: this.facingAngle,
       stepPhase: this.stepPhase,
       isMoving: spd > 0.15,
-      isKicking: this.isKickingTimer > 0,
-      isTackling: this.isTackling,
+      isKicking: this.isKickingTimer > 0 || this.isVolleying || this.isHeading,
+      isTackling: this.isTackling || this.isStandingTackling,
       isGoalkeeper: this.isGoalkeeper,
       isDiving: this.isDiving,
       team: this.team,
