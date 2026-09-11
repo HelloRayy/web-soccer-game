@@ -676,13 +676,13 @@ export class Player implements PlayerEntity {
       this.bodyTiltAngle = 0;
     }
 
-    this.pos.x += this.vel.x;
-    this.pos.y += this.vel.y;
+    const frameScale = Math.min(2, Math.max(0.25, 0.016 * 60));
+    this.pos.x += this.vel.x * frameScale;
+    this.pos.y += this.vel.y * frameScale;
 
     const bounds = field.pitchBounds;
     this.pos.x = Math.max(bounds.left + this.radius, Math.min(bounds.right - this.radius, this.pos.x));
     this.pos.y = Math.max(bounds.top + this.radius, Math.min(bounds.bottom - this.radius, this.pos.y));
-
     const distToBall = Math.hypot(this.pos.x - ball.pos.x, this.pos.y - ball.pos.y);
 
     if (ball.attachedPlayerId === this.id || this.hasPossession) {

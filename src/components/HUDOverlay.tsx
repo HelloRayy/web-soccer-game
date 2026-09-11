@@ -172,6 +172,11 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
         </div>
 
       </div>
+      {matchState.state === 'GOLDEN_GOAL' && (
+        <div className="fixed top-32 left-1/2 -translate-x-1/2 z-40 bg-amber-950/90 border-2 border-amber-400 px-5 py-2 rounded-xl shadow-2xl text-amber-300 font-mono text-xs font-black tracking-wider animate-pulse">
+          GOLDEN GOAL • NEXT SCORE WINS
+        </div>
+      )}
 
       {/* Bottom-Left Keyboard Controls & Telemetry Legend */}
       {showHUD && (
