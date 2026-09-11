@@ -359,15 +359,15 @@ export const GameView: React.FC<GameViewProps> = ({
         }
 
         if (activeGp && !player.isAI && devType !== 'ai_bot') {
-          const { toggleHUDRequested } = player.updateFromGamepad(activeGp, ball, field, teammates, opponents);
+          const { toggleHUDRequested } = player.updateFromGamepad(activeGp, ball, field, teammates, opponents, dt);
           if (toggleHUDRequested) {
             setShowHUD((prev) => !prev);
           }
         } else if (player.isAI || devType === 'ai_bot') {
           // AI Enemy Bot Intelligence Loop
-          player.updateEnemyBotAI(ball, field, opponents, teammates);
+          player.updateEnemyBotAI(ball, field, opponents, teammates, dt);
         } else {
-          player.updatePassiveReception(ball, field);
+          player.updatePassiveReception(ball, field, dt);
         }
       });
 

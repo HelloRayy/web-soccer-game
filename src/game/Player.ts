@@ -278,18 +278,20 @@ export class Player implements PlayerEntity {
     ball.kick({ x: dx / dist, y: dy / dist }, passPower, this.id, targetPlayer);
   }
 
-  updateEnemyBotAI(ball: Ball, field: Field, opponents: Player[], teammates: Player[] = []) {
-    this.walkTimer += 0.02;
+  updateEnemyBotAI(ball: Ball, field: Field, opponents: Player[], teammates: Player[] = [], dt = 1 / 60) {
+    const frameScale = Math.min(2, Math.max(0.25, dt * 60));
+    this.walkTimer += 0.02 * frameScale;
     this.updateParticles();
 
-    if (this.stumbleTimer > 0) this.stumbleTimer -= 0.016;
-    if (this.aiGocekCooldownTimer > 0) this.aiGocekCooldownTimer -= 0.016;
-    if (this.aiTackleCooldownTimer > 0) this.aiTackleCooldownTimer -= 0.016;
-    if (this.dispossessProtectionTimer > 0) this.dispossessProtectionTimer -= 0.016;
+    if (this.stumbleTimer > 0) this.stumbleTimer -= dt;
+    if (this.aiGocekCooldownTimer > 0) this.aiGocekCooldownTimer -= dt;
+    if (this.aiTackleCooldownTimer > 0) this.aiTackleCooldownTimer -= dt;
+    if (this.dispossessProtectionTimer > 0) this.dispossessProtectionTimer -= dt;
     if (this.duelFeedbackTimer > 0) {
-      this.duelFeedbackTimer -= 0.016;
-      this.duelFeedbackYOffset += 0.4;
+      this.duelFeedbackTimer -= dt;
+      this.duelFeedbackYOffset += 0.4 * frameScale;
     }
+
 
     const teammateCarrier = teammates.find((t) => t.hasPossession);
     const opponentCarrier = opponents.find((opp) => opp.hasPossession);
@@ -454,16 +456,17 @@ export class Player implements PlayerEntity {
       }
     });
 
-    this.pos.x += this.vel.x;
-    this.pos.y += this.vel.y;
+    this.pos.x += this.vel.x * frameScale;
+    this.pos.y += this.vel.y * frameScale;
 
     const bounds = field.pitchBounds;
     this.pos.x = Math.max(bounds.left + this.radius, Math.min(bounds.right - this.radius, this.pos.x));
     this.pos.y = Math.max(bounds.top + this.radius, Math.min(bounds.bottom - this.radius, this.pos.y));
   }
 
-  updatePassiveReception(ball: Ball, field: Field) {
-    this.walkTimer += 0.02;
+  updatePassiveReception(ball: Ball, field: Field, dt = 1 / 60) {
+    const frameScale = Math.min(2, Math.max(0.25, dt * 60));
+    this.walkTimer += 0.02 * frameScale;
     this.updateParticles();
 
     if (!this.isSprinting) {
@@ -573,15 +576,15 @@ export class Player implements PlayerEntity {
       }
     }
 
-    this.pos.x += this.vel.x;
-    this.pos.y += this.vel.y;
+    this.pos.x += this.vel.x * frameScale;
+    this.pos.y += this.vel.y * frameScale;
 
     const bounds = field.pitchBounds;
     this.pos.x = Math.max(bounds.left + this.radius, Math.min(bounds.right - this.radius, this.pos.x));
     this.pos.y = Math.max(bounds.top + this.radius, Math.min(bounds.bottom - this.radius, this.pos.y));
   }
 
-  updateFromGamepad(gp: GamepadState, ball: Ball, field: Field, teammates: Player[], opponents: Player[]): { toggleHUDRequested: boolean } {
+  updateFromGamepad(gp: GamepadState, ball: Ball, field: Field, teammates: Player[], opponents: Player[], dt = 1 / 60): { toggleHUDRequested: boolean } {
     let toggleHUDRequested = false;
     this.updateParticles();
 
@@ -676,7 +679,7 @@ export class Player implements PlayerEntity {
       this.bodyTiltAngle = 0;
     }
 
-    const frameScale = Math.min(2, Math.max(0.25, 0.016 * 60));
+    const frameScale = Math.min(2, Math.max(0.25, dt * 60));
     this.pos.x += this.vel.x * frameScale;
     this.pos.y += this.vel.y * frameScale;
 
