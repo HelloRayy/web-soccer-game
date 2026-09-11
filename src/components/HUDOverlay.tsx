@@ -195,9 +195,11 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
             <span>•</span>
             <span><strong className="text-emerald-400">J</strong> Umpan</span>
             <span>•</span>
-            <span><strong className="text-cyan-400">K</strong> Tembak</span>
-            <span>•</span>
             <span><strong className="text-amber-400">L</strong> Terobos</span>
+            <span>•</span>
+            <span><strong className="text-purple-400">Space</strong> Lambung</span>
+            <span>•</span>
+            <span><strong className="text-cyan-400">K</strong> Tembak</span>
             <span>•</span>
             <span><strong className="text-teal-400">Shift</strong> Sprint</span>
           </div>

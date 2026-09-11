@@ -44,8 +44,6 @@ function drawTacticalPassingGrid(
   if (!carrier) return;
 
   const teammates = players.filter((p) => p.team === carrier.team && p.id !== carrier.id);
-  if (teammates.length === 0) return;
-
   const animTime = Date.now();
   const aimAngle = carrier.facingAngle;
 
@@ -92,11 +90,12 @@ function drawTacticalPassingGrid(
   });
   ctx.setLineDash([]);
 
-  // 3. Find Locked Receiver
-  const passTarget = carrier.findBestPassTarget(teammates, aimAngle);
-  const throughData = carrier.findBestThroughPassTarget(teammates, aimAngle);
+  // 3. Find Locked Receiver (if teammates exist) or Directional Aim Guide (if solo)
+  if (teammates.length > 0) {
+    const passTarget = carrier.findBestPassTarget(teammates, aimAngle);
+    const throughData = carrier.findBestThroughPassTarget(teammates, aimAngle);
 
-  if (passTarget) {
+    if (passTarget) {
     const distPx = Math.hypot(passTarget.pos.x - carrier.pos.x, passTarget.pos.y - carrier.pos.y);
     const distM = Math.max(1, Math.round(distPx / 22));
 
@@ -227,6 +226,33 @@ function drawTacticalPassingGrid(
       ctx.textBaseline = 'middle';
       ctx.fillText('[Y/L] RUN', throughPos.x, throughPos.y);
     }
+  }
+  } else {
+    // Solo / 1v1 Mode: Forward Directional Aim Laser Guide
+    const aimLen = 220;
+    const endX = carrier.pos.x + Math.cos(aimAngle) * aimLen;
+    const endY = carrier.pos.y + Math.sin(aimAngle) * aimLen;
+    const dashOffset = -(animTime * 0.035) % 18;
+
+    ctx.shadowColor = '#17FFBF';
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = 'rgba(23, 255, 191, 0.75)';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([10, 6]);
+    ctx.lineDashOffset = dashOffset;
+    ctx.beginPath();
+    ctx.moveTo(carrier.pos.x, carrier.pos.y);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.shadowBlur = 0;
+
+    // Front target reticle
+    ctx.strokeStyle = '#17FFBF';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(endX, endY, 8, 0, Math.PI * 2);
+    ctx.stroke();
   }
 
   ctx.restore();

@@ -17,7 +17,7 @@ const MainGameContainer: React.FC = () => {
     }
     return 'splash';
   });
-  const [selectedMode, setSelectedMode] = useState<'1v1' | '2vBot'>('1v1');
+  const [selectedMode, setSelectedMode] = useState<'1v1' | '2vBot'>('2vBot');
   const [p1Device, setP1Device] = useState<DeviceType>('keyboard1');
   const [p2Device, setP2Device] = useState<DeviceType>('keyboard2');
   const [homeControllers, setHomeControllers] = useState<PlayerDeviceConfig[]>([]);
