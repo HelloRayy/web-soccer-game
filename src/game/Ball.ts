@@ -131,8 +131,13 @@ export class Ball {
       this.dribblePhase = 0;
       this.travelAngle = facingAngle;
       const restGap = playerRadius + this.radius + 7;
-      this.pos.x = playerPos.x + Math.cos(facingAngle) * restGap;
-      this.pos.y = playerPos.y + Math.sin(facingAngle) * restGap;
+      const targetX = playerPos.x + Math.cos(facingAngle) * restGap;
+      const targetY = playerPos.y + Math.sin(facingAngle) * restGap;
+
+      // Smooth LERP even when stationary to prevent visual teleport / snapping glitch
+      const lerpRate = 0.45;
+      this.pos.x = this.pos.x * (1 - lerpRate) + targetX * lerpRate;
+      this.pos.y = this.pos.y * (1 - lerpRate) + targetY * lerpRate;
       this.vel.x = 0;
       this.vel.y = 0;
     }

@@ -420,15 +420,25 @@ export const GameView: React.FC<GameViewProps> = ({
 
           const isTacklerBehindCarrier = angleDiff > 1.83;
 
+          const tacklerSpeed = Math.hypot(tackler.vel.x, tackler.vel.y);
+          const carrierSpeed = Math.hypot(ballCarrier.vel.x, ballCarrier.vel.y);
+
+          const isTacklerMoving = tacklerSpeed > 0.8;
+          const isCarrierMoving = carrierSpeed > 0.8;
+
           const ballHitboxRadius = tackler.radius + ball.radius + 14;
           const bodyHitboxRadius = tackler.radius + ballCarrier.radius + 12;
           const slideHitboxRadius = tackler.radius + ballCarrier.radius + 75;
 
-          const isDirectBallHit = distToBall < ballHitboxRadius;
-          const isBodyContactHit = distToCarrier < bodyHitboxRadius && !isTacklerBehindCarrier;
+          // Body contact or direct ball steal requires either active movement or an intentional tackle attempt.
+          // Standing completely still next to each other will NOT trigger continuous automatic steals.
+          const isDirectBallHit = distToBall < ballHitboxRadius && (isTacklerMoving || isCarrierMoving || tackler.isTackling);
+          const isBodyContactHit = distToCarrier < bodyHitboxRadius && !isTacklerBehindCarrier && (isTacklerMoving || isCarrierMoving || tackler.isTackling);
           const isSlideHit = tackler.isTackling && (distToCarrier < slideHitboxRadius || distToBall < slideHitboxRadius);
 
-          const canDispossess = (isDirectBallHit || isBodyContactHit || isSlideHit) && ballCarrier.dispossessProtectionTimer <= 0;
+          const canDispossess = (isDirectBallHit || isBodyContactHit || isSlideHit) &&
+                                 ballCarrier.dispossessProtectionTimer <= 0 &&
+                                 tackler.dispossessProtectionTimer <= 0;
 
           if (canDispossess) {
             let stealChance = 0.85;
@@ -437,8 +447,8 @@ export const GameView: React.FC<GameViewProps> = ({
             if (Math.random() < stealChance) {
               ballCarrier.hasPossession = false;
               ball.attachedPlayerId = null;
-              ballCarrier.dispossessProtectionTimer = 0.40;
-              tackler.dispossessProtectionTimer = 0;
+              ballCarrier.dispossessProtectionTimer = 0.80;
+              tackler.dispossessProtectionTimer = 0.50;
               tackler.hasPossession = true;
               ball.attachedPlayerId = tackler.id;
               ballCarrier.triggerFeedback('💥 REBUT!');
@@ -461,7 +471,7 @@ export const GameView: React.FC<GameViewProps> = ({
           const distToBall = Math.hypot(p.pos.x - ball.pos.x, p.pos.y - ball.pos.y);
           const receptionRadius = p.radius + ball.radius + 28;
 
-          if (ball.releaseTimer <= 0 && distToBall < receptionRadius) {
+          if (ball.releaseTimer <= 0 && p.dispossessProtectionTimer <= 0 && distToBall < receptionRadius) {
             if (ball.homingTargetPlayer && ball.homingTargetPlayer.id === p.id) {
               p.hasPossession = true;
               ball.homingTargetPlayer = null;

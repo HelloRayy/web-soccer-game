@@ -491,6 +491,7 @@ export class Player implements PlayerEntity {
     }
 
     if (this.stumbleTimer > 0) this.stumbleTimer -= 0.016;
+    if (this.dispossessProtectionTimer > 0) this.dispossessProtectionTimer -= 0.016;
     if (this.duelFeedbackTimer > 0) {
       this.duelFeedbackTimer -= 0.016;
       this.duelFeedbackYOffset += 0.4;
@@ -603,6 +604,7 @@ export class Player implements PlayerEntity {
     }
 
     if (this.stumbleTimer > 0) this.stumbleTimer -= 0.016;
+    if (this.dispossessProtectionTimer > 0) this.dispossessProtectionTimer -= 0.016;
     if (this.duelFeedbackTimer > 0) {
       this.duelFeedbackTimer -= 0.016;
       this.duelFeedbackYOffset += 0.4;
