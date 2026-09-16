@@ -1,13 +1,16 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { audioService } from '../services/audioService';
 
 interface SplashScreenProps {
   onStartGame: () => void;
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ onStartGame }) => {
-  // Listen to any keypress (Enter, Space, etc.) to trigger start
+  // Listen to any keypress (Enter, Space, etc.) to trigger start & play Menu BGM
   useEffect(() => {
+    audioService.startMenuBGM();
+
     const handleKeyDown = (e: KeyboardEvent) => {
       onStartGame();
     };
@@ -35,9 +38,9 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onStartGame }) => {
         transition={{ duration: 0.25, ease: 'easeOut' }}
         className="relative z-10 my-auto w-full max-w-4xl mx-auto flex flex-col items-center justify-center text-center gap-6 sm:gap-7"
       >
-        {/* 1. Logo Branding: PES 26 */}
+        {/* 1. Logo Branding: GOAL CLASH */}
         <h1 className="text-3xl sm:text-4xl font-black italic tracking-tighter text-white font-['Outfit',sans-serif] uppercase drop-shadow-md">
-          PES<span className="text-[#3B82F6]">26</span>
+          GOAL <span className="text-[#3B82F6]">CLASH</span>
         </h1>
 
         {/* 2. Main Headline: THE CLUB IS YOURS */}

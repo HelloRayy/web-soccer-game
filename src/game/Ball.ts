@@ -2,6 +2,7 @@ import { Vector2D } from '../types/game';
 import { Field } from './Field';
 import { Player } from './Player';
 import { PixelSpriteRenderer } from './PixelSpriteRenderer';
+import { audioService } from '../services/audioService';
 import footballSvgUrl from '../assets/ion_football.svg';
 
 export class Ball {
@@ -221,6 +222,10 @@ export class Ball {
     } else {
       this.shotType = 'normal';
     }
+
+    // Play Kick Ball Sound Effect
+    const sfxType = this.shotType === 'rocket' ? 'shoot' : this.shotType === 'chip' ? 'chip' : 'pass';
+    audioService.playKickSFX(sfxType);
 
     // Shot Archetype Altitude & Aerodynamics
     if (this.shotType === 'ground') {

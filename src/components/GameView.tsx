@@ -12,6 +12,7 @@ import { HostPeerService } from '../services/peerService';
 import { PixelSpriteRenderer } from '../game/PixelSpriteRenderer';
 import { DeviceType } from './ControllerSelectModal';
 import { PlayerNode } from './TeamSelectView';
+import { audioService } from '../services/audioService';
 
 // Large Virtual Stadium World Dimensions
 const WORLD_WIDTH = 2200;
@@ -36,226 +37,11 @@ function mapSpawnCoords(node: PlayerNode, worldWidth: number, worldHeight: numbe
   }
 }
 function drawTacticalPassingGrid(
-  ctx: CanvasRenderingContext2D,
-  players: Player[],
-  ball: Ball
+  _ctx: CanvasRenderingContext2D,
+  _players: Player[],
+  _ball: Ball
 ) {
-  const carrier = players.find((p) => p.hasPossession || ball.attachedPlayerId === p.id);
-  if (!carrier) return;
-
-  const teammates = players.filter((p) => p.team === carrier.team && p.id !== carrier.id);
-  const animTime = Date.now();
-  const aimAngle = carrier.facingAngle;
-
-  ctx.save();
-
-  // 1. Passing Vision Cone (80 degrees semi-transparent cone on turf)
-  const coneAngle = Math.PI * 0.45;
-  const coneRadius = 340;
-  const coneGrad = ctx.createRadialGradient(
-    carrier.pos.x, carrier.pos.y, 10,
-    carrier.pos.x, carrier.pos.y, coneRadius
-  );
-  coneGrad.addColorStop(0, 'rgba(23, 255, 191, 0.16)');
-  coneGrad.addColorStop(0.7, 'rgba(23, 255, 191, 0.05)');
-  coneGrad.addColorStop(1, 'rgba(23, 255, 191, 0)');
-
-  ctx.fillStyle = coneGrad;
-  ctx.beginPath();
-  ctx.moveTo(carrier.pos.x, carrier.pos.y);
-  ctx.arc(carrier.pos.x, carrier.pos.y, coneRadius, aimAngle - coneAngle / 2, aimAngle + coneAngle / 2);
-  ctx.closePath();
-  ctx.fill();
-
-  // Cone boundary edges
-  ctx.strokeStyle = 'rgba(23, 255, 191, 0.22)';
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([8, 6]);
-  ctx.beginPath();
-  ctx.moveTo(carrier.pos.x, carrier.pos.y);
-  ctx.lineTo(carrier.pos.x + Math.cos(aimAngle - coneAngle / 2) * coneRadius, carrier.pos.y + Math.sin(aimAngle - coneAngle / 2) * coneRadius);
-  ctx.moveTo(carrier.pos.x, carrier.pos.y);
-  ctx.lineTo(carrier.pos.x + Math.cos(aimAngle + coneAngle / 2) * coneRadius, carrier.pos.y + Math.sin(aimAngle + coneAngle / 2) * coneRadius);
-  ctx.stroke();
-
-  // 2. Concentric Radial Distance Rings (120px Short, 240px Medium, 380px Long)
-  const rings = [120, 240, 380];
-  ctx.strokeStyle = 'rgba(0, 216, 246, 0.15)';
-  ctx.lineWidth = 1.2;
-  ctx.setLineDash([6, 8]);
-  rings.forEach((r) => {
-    ctx.beginPath();
-    ctx.arc(carrier.pos.x, carrier.pos.y, r, aimAngle - coneAngle / 2, aimAngle + coneAngle / 2);
-    ctx.stroke();
-  });
-  ctx.setLineDash([]);
-
-  // 3. Find Locked Receiver (if teammates exist) or Directional Aim Guide (if solo)
-  if (teammates.length > 0) {
-    const passTarget = carrier.findBestPassTarget(teammates, aimAngle);
-    const throughData = carrier.findBestThroughPassTarget(teammates, aimAngle);
-
-    if (passTarget) {
-    const distPx = Math.hypot(passTarget.pos.x - carrier.pos.x, passTarget.pos.y - carrier.pos.y);
-    const distM = Math.max(1, Math.round(distPx / 22));
-
-    // A. Glowing Animated Dashed Passing Line from Carrier to Receiver
-    const dashOffset = -(animTime * 0.04) % 20;
-    ctx.shadowColor = '#17FFBF';
-    ctx.shadowBlur = 10;
-    ctx.strokeStyle = 'rgba(23, 255, 191, 0.85)';
-    ctx.lineWidth = 3;
-    ctx.setLineDash([12, 8]);
-    ctx.lineDashOffset = dashOffset;
-    ctx.beginPath();
-    ctx.moveTo(carrier.pos.x, carrier.pos.y);
-    ctx.lineTo(passTarget.pos.x, passTarget.pos.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.shadowBlur = 0;
-
-    // B. Distance Tick Markers every 50px along the pass line
-    const dx = (passTarget.pos.x - carrier.pos.x) / distPx;
-    const dy = (passTarget.pos.y - carrier.pos.y) / distPx;
-    const perpX = -dy;
-    const perpY = dx;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.lineWidth = 2;
-    for (let d = 50; d < distPx - 30; d += 50) {
-      const tx = carrier.pos.x + dx * d;
-      const ty = carrier.pos.y + dy * d;
-      ctx.beginPath();
-      ctx.moveTo(tx - perpX * 5, ty - perpY * 5);
-      ctx.lineTo(tx + perpX * 5, ty + perpY * 5);
-      ctx.stroke();
-    }
-
-    // Distance Badge on mid-point
-    const midX = (carrier.pos.x + passTarget.pos.x) * 0.5;
-    const midY = (carrier.pos.y + passTarget.pos.y) * 0.5 - 12;
-    ctx.fillStyle = 'rgba(6, 13, 23, 0.85)';
-    ctx.strokeStyle = '#17FFBF';
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.roundRect(midX - 24, midY - 8, 48, 16, 4);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = '#17FFBF';
-    ctx.font = 'bold 9.5px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`${distM}m [A/J]`, midX, midY);
-
-    // C. Target Lock Corner Brackets around Receiver's Feet
-    const bracketSize = 18;
-    const bracketArm = 6;
-    const bx = passTarget.pos.x;
-    const by = passTarget.pos.y + 4;
-    const pulse = Math.sin(animTime * 0.008) * 2;
-
-    ctx.strokeStyle = '#10E894';
-    ctx.lineWidth = 2.5;
-    ctx.shadowColor = '#10E894';
-    ctx.shadowBlur = 8;
-
-    // Top-Left
-    ctx.beginPath();
-    ctx.moveTo(bx - bracketSize - pulse, by - bracketSize - pulse + bracketArm);
-    ctx.lineTo(bx - bracketSize - pulse, by - bracketSize - pulse);
-    ctx.lineTo(bx - bracketSize - pulse + bracketArm, by - bracketSize - pulse);
-    ctx.stroke();
-
-    // Top-Right
-    ctx.beginPath();
-    ctx.moveTo(bx + bracketSize + pulse - bracketArm, by - bracketSize - pulse);
-    ctx.lineTo(bx + bracketSize + pulse, by - bracketSize - pulse);
-    ctx.lineTo(bx + bracketSize + pulse, by - bracketSize - pulse + bracketArm);
-    ctx.stroke();
-
-    // Bottom-Left
-    ctx.beginPath();
-    ctx.moveTo(bx - bracketSize - pulse, by + bracketSize + pulse - bracketArm);
-    ctx.lineTo(bx - bracketSize - pulse, by + bracketSize + pulse);
-    ctx.lineTo(bx - bracketSize - pulse + bracketArm, by + bracketSize + pulse);
-    ctx.stroke();
-
-    // Bottom-Right
-    ctx.beginPath();
-    ctx.moveTo(bx + bracketSize + pulse - bracketArm, by + bracketSize + pulse);
-    ctx.lineTo(bx + bracketSize + pulse, by + bracketSize + pulse);
-    ctx.lineTo(bx + bracketSize + pulse, by + bracketSize + pulse - bracketArm);
-    ctx.stroke();
-
-    // Receiver Lock Badge
-    ctx.fillStyle = '#10E894';
-    ctx.font = 'bold 8.5px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('TARGET LOCK', bx, by - bracketSize - pulse - 6);
-    ctx.shadowBlur = 0;
-
-    // D. Through-Pass Ghost Target Marker in Open Space Ahead
-    if (throughData) {
-      const { throughPos } = throughData;
-      // Dotted curve leading to through position
-      ctx.strokeStyle = 'rgba(255, 209, 59, 0.7)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
-      ctx.beginPath();
-      ctx.moveTo(passTarget.pos.x, passTarget.pos.y);
-      ctx.quadraticCurveTo(
-        (passTarget.pos.x + throughPos.x) * 0.5,
-        (passTarget.pos.y + throughPos.y) * 0.5 - 20,
-        throughPos.x,
-        throughPos.y
-      );
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Through-ball target circle
-      ctx.strokeStyle = '#FFD13B';
-      ctx.fillStyle = 'rgba(255, 209, 59, 0.15)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(throughPos.x, throughPos.y, 14, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = '#FFD13B';
-      ctx.font = 'bold 8.5px monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('[Y/L] RUN', throughPos.x, throughPos.y);
-    }
-  }
-  } else {
-    // Solo / 1v1 Mode: Forward Directional Aim Laser Guide
-    const aimLen = 220;
-    const endX = carrier.pos.x + Math.cos(aimAngle) * aimLen;
-    const endY = carrier.pos.y + Math.sin(aimAngle) * aimLen;
-    const dashOffset = -(animTime * 0.035) % 18;
-
-    ctx.shadowColor = '#17FFBF';
-    ctx.shadowBlur = 8;
-    ctx.strokeStyle = 'rgba(23, 255, 191, 0.75)';
-    ctx.lineWidth = 2.5;
-    ctx.setLineDash([10, 6]);
-    ctx.lineDashOffset = dashOffset;
-    ctx.beginPath();
-    ctx.moveTo(carrier.pos.x, carrier.pos.y);
-    ctx.lineTo(endX, endY);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.shadowBlur = 0;
-
-    // Front target reticle
-    ctx.strokeStyle = '#17FFBF';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(endX, endY, 8, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  ctx.restore();
+  // Disabled aiming arrow / dashed line / cone overlay per GDD Task 2 for clean pitch visuals
 }
 
 interface GameViewProps {
@@ -526,8 +312,12 @@ export const GameView: React.FC<GameViewProps> = ({
     resetMatchPositions();
   }, [selectedMode, customSpawns, p1Device, p2Device, resetMatchPositions]);
 
-  // Window Resize & Keyboard Ctrl Listener
+  // Window Resize, Keyboard Ctrl & Audio Lifecycle Listener
   useEffect(() => {
+    audioService.stopMenuBGM();
+    audioService.startCrowdAmbience();
+    audioService.playWhistleSFX('short');
+
     const handleResize = () => {
       setDimensions({
         width: window.innerWidth,
@@ -547,6 +337,7 @@ export const GameView: React.FC<GameViewProps> = ({
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('keydown', handleKeyDown);
+      audioService.stopCrowdAmbience();
     };
   }, []);
 
@@ -598,6 +389,7 @@ export const GameView: React.FC<GameViewProps> = ({
       setGoalBannerText(`⚽ GOAL! 🚀 ${shotSpeedKmH} KM/H THUNDERBOLT!`);
       setWhistleBannerText('GOAL!');
       triggerCallout('goal', '🎉 GOAL GOAL GOAL!', `🚀 ${shotSpeedKmH} KM/H Thunderbolt Strike`);
+      audioService.playGoalSound();
       setTimeout(() => {
         setWhistleBannerText(null);
       }, 2200);
@@ -609,6 +401,7 @@ export const GameView: React.FC<GameViewProps> = ({
       setIsGoalShaking(false);
       setIsCrowdSurging(false);
       setWhistleBannerText('KICK-OFF!');
+      audioService.playWhistleSFX('short');
       setTimeout(() => {
         setWhistleBannerText(null);
       }, 1500);
@@ -618,9 +411,11 @@ export const GameView: React.FC<GameViewProps> = ({
       if (rules.state.phase === 'PHASE_HALF_TIME') {
         setIsCrowdSurging(true);
         setWhistleBannerText('HALF TIME!');
+        audioService.playWhistleSFX('double');
       } else if (rules.state.phase === 'PHASE_FULL_TIME') {
         setIsCrowdSurging(true);
         setWhistleBannerText('FULL TIME!');
+        audioService.playWhistleSFX('double');
       }
     }
     if (rules.state.state !== 'GAME_OVER') {
@@ -763,6 +558,7 @@ export const GameView: React.FC<GameViewProps> = ({
               ballCarrier.pos.y += (sepY / sepDist) * 14;
 
               rules.recordTackle(tackler.team);
+              audioService.playTackleSFX();
 
               if (isPokeHit) {
                 triggerCallout('tackle', '👟 POKE TACKLE!', 'Tekel Berdiri Cepat & Bersih');
