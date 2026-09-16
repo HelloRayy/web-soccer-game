@@ -96,7 +96,7 @@ Sesuai spesifikasi GDD Bagian 6 (Audio), sistem audio wajib mengintegrasikan efe
 ## 6. Daftar Tugas Pengembang (Action Checklist for Developers)
 
 - [x] **Task 1 (UI Branding)**: Ganti seluruh teks dan logo `FL 25` menjadi **Goal Clash** di `src/components/LobbyView.tsx`, `src/components/SplashScreen.tsx`, dan `index.html`.
-- [ ] **Task 2 (Visual Clean-up)**: Nonaktifkan pemanggilan `drawPassAimAssist` di `src/components/GameView.tsx` agar garis panah/cone putus-putus hilang dari lapangan.
-- [ ] **Task 3 (Audio System)**: Buat modul `src/services/audioService.ts` dan masukkan asset audio peluit, tendangan, sorakan penonton, musik menu, dan suara gol.
-- [ ] **Task 4 (Gameplay Verification)**: Uji pertandingan mode PvP dan PvBot untuk memastikan kontrol WASD, Panah, Gamepad, dan HP Remote berjalan lancar.
-- [ ] **Task 5 (Quality Gate)**: Pastikan `npm run build` sukses 100% tanpa error TypeScript sebelum perubahan di-commit.
+- [x] **Task 2 (Visual Clean-up)**: Nonaktifkan pemanggilan `drawPassAimAssist` / `drawTacticalPassingGrid` di `src/components/GameView.tsx` agar garis panah/cone putus-putus hilang dari lapangan.
+- [x] **Task 3 (Audio System)**: Buat modul `src/services/audioService.ts` dan masukkan asset audio peluit, tendangan, sorakan penonton, musik menu, dan suara gol.
+- [x] **Task 4 (Gameplay Verification)**: Uji pertandingan mode PvP dan PvBot untuk memastikan kontrol WASD, Panah, Gamepad, dan HP Remote berjalan lancar.
+- [x] **Task 5 (Quality Gate)**: Pastikan `npm run build` sukses 100% tanpa error TypeScript sebelum perubahan di-commit.

@@ -3,6 +3,7 @@ import { Field } from './Field';
 import { Player } from './Player';
 import { PixelSpriteRenderer } from './PixelSpriteRenderer';
 import footballSvgUrl from '../assets/ion_football.svg';
+import { audioService } from '../services/audioService';
 
 export class Ball {
   pos: Vector2D;
@@ -221,6 +222,9 @@ export class Ball {
     } else {
       this.shotType = 'normal';
     }
+
+    const sfxKind = this.shotType === 'chip' ? 'chip' : (power >= 14.0 || this.shotType === 'rocket') ? 'shoot' : 'pass';
+    audioService.playKickSFX(sfxKind);
 
     // Shot Archetype Altitude & Aerodynamics
     if (this.shotType === 'ground') {

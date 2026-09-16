@@ -5,6 +5,8 @@ import { QRCodeModal } from './QRCodeModal';
 import { ControllerSelectModal, DeviceType, PlayerDeviceConfig } from './ControllerSelectModal';
 import { MatchModeModal } from './MatchModeModal';
 
+import { audioService } from '../services/audioService';
+
 interface LobbyViewProps {
   onStartMatch: (
     mode: '1v1' | '2vBot',
@@ -78,6 +80,10 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
   const [showControllerSelectModal, setShowControllerSelectModal] = useState(false);
 
   const currentConfig = MENU_ITEMS.find((item) => item.id === activeItem) || MENU_ITEMS[0];
+
+  useEffect(() => {
+    audioService.startMenuBGM();
+  }, []);
 
   // Console Keyboard Navigation (UP / DOWN / ENTER)
   useEffect(() => {
@@ -223,7 +229,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
           </div>
 
           {/* Goal Clash Metallic Logo */}
-          <h1 className="text-3xl sm:text-4xl font-black italic tracking-tighter text-white font-['Plus_Jakarta_Sans',sans-serif] leading-none uppercase drop-shadow-lg flex items-center gap-2">
+          <h1 className="text-3xl sm:text-5xl font-black italic tracking-tighter text-white font-['Plus_Jakarta_Sans',sans-serif] leading-none uppercase drop-shadow-lg flex items-center gap-1">
             GOAL <span className="text-[#3B82F6]">CLASH</span>
           </h1>
         </div>
