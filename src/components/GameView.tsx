@@ -132,19 +132,26 @@ export const GameView: React.FC<GameViewProps> = ({
   const [isCrowdSurging, setIsCrowdSurging] = useState<boolean>(false);
   const [activePlayerData, setActivePlayerData] = useState<ActivePlayerData | null>(null);
   const [arcadeCallouts, setArcadeCallouts] = useState<ArcadeCallout[]>([]);
+  const lastCalloutTimeRef = useRef<number>(0);
 
   const triggerCallout = useCallback((type: ArcadeCallout['type'], text: string, subtext?: string) => {
+    const now = Date.now();
+    // Debounce fast repeated callouts within 350ms so notifications don't flicker or stack
+    if (now - lastCalloutTimeRef.current < 350) return;
+    lastCalloutTimeRef.current = now;
+
     const callout: ArcadeCallout = {
-      id: `${Date.now()}_${Math.random()}`,
+      id: `${now}_${Math.random()}`,
       text,
       subtext,
       type,
-      timestamp: Date.now(),
+      timestamp: now,
     };
-    setArcadeCallouts((prev) => [...prev.slice(-2), callout]);
+    // Keep only 1 single active callout banner at a time to prevent overlapping notification cards
+    setArcadeCallouts([callout]);
     setTimeout(() => {
       setArcadeCallouts((prev) => prev.filter((c) => c.id !== callout.id));
-    }, 2200);
+    }, 1800);
   }, []);
   useEffect(() => {
     if (typeof window !== 'undefined') {

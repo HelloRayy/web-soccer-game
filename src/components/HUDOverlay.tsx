@@ -257,11 +257,11 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
 
       {/* RETRO ARCADE ACTION CALLOUT BANNERS (Retro Goal / Super Sidekicks) */}
       {arcadeCallouts && arcadeCallouts.length > 0 && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-2">
+        <div className="fixed top-[72px] left-1/2 -translate-x-1/2 z-40 pointer-events-none flex flex-col items-center">
           {arcadeCallouts.map((callout) => (
             <div
               key={callout.id}
-              className={`px-6 py-2 rounded-2xl shadow-2xl backdrop-blur-xl border-2 flex flex-col items-center animate-in zoom-in-75 slide-in-from-top-2 duration-150 ${
+              className={`px-5 py-1.5 rounded-xl shadow-2xl backdrop-blur-xl border-2 flex flex-col items-center animate-in zoom-in-75 slide-in-from-top-1 duration-150 ${
                 callout.type === 'save'
                   ? 'bg-amber-950/95 border-amber-400 text-amber-300 shadow-amber-500/30'
                   : callout.type === 'woodwork'
@@ -275,7 +275,7 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
                   : 'bg-cyan-950/95 border-cyan-400 text-cyan-300 shadow-cyan-500/30'
               }`}
             >
-              <div className="font-mono text-sm sm:text-base font-black tracking-widest uppercase drop-shadow">
+              <div className="font-mono text-xs sm:text-sm font-black tracking-widest uppercase drop-shadow">
                 {callout.text}
               </div>
               {callout.subtext && (
@@ -288,7 +288,7 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
         </div>
       )}
       {matchState.state === 'GOLDEN_GOAL' && (
-        <div className="fixed top-32 left-1/2 -translate-x-1/2 z-40 bg-amber-950/90 border-2 border-amber-400 px-5 py-2 rounded-xl shadow-2xl text-amber-300 font-mono text-xs font-black tracking-wider animate-pulse">
+        <div className="fixed top-[172px] left-1/2 -translate-x-1/2 z-40 bg-amber-950/90 border-2 border-amber-400 px-5 py-2 rounded-xl shadow-2xl text-amber-300 font-mono text-xs font-black tracking-wider animate-pulse">
           GOLDEN GOAL • NEXT SCORE WINS
         </div>
       )}
@@ -404,7 +404,7 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
       )}
         {/* Referee Whistle Flash Banner */}
         {whistleBannerText && (
-          <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-1 animate-in zoom-in-90 duration-150">
+          <div className="fixed top-[124px] left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-1 animate-in zoom-in-90 duration-150">
             <div className="bg-[#0b0f0c]/95 border-2 border-amber-400/90 text-amber-300 px-6 py-2 rounded-2xl shadow-2xl backdrop-blur-xl flex items-center gap-3">
               <span className="text-xl animate-bounce">📢</span>
               <span className="font-mono text-xs font-black tracking-widest uppercase text-amber-300 drop-shadow">

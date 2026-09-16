@@ -527,6 +527,10 @@ export class Player implements PlayerEntity {
     if (this.duelFeedbackTimer > 0) {
       this.duelFeedbackTimer -= dt;
       this.duelFeedbackYOffset += 0.4 * frameScale;
+      if (this.duelFeedbackTimer <= 0) {
+        this.duelFeedbackText = '';
+        this.duelFeedbackYOffset = 0;
+      }
     }
 
     const moveMultiplier = this.stumbleTimer > 0 ? 0.3 : 1.0;
