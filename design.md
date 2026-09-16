@@ -1,6 +1,6 @@
-# Design System: FL 25 / EA FC 25 Authentic Console UI ⚽🎮
+# Design System: Goal Clash Authentic Console UI ⚽🎮
 
-Panduan Design System resmi untuk **Web Soccer Game (FC26 / FL25 Edition)**, dianalisis 100% presisi dari antarmuka konsol **EA Sports FC 25 / Football Life 25**.
+Panduan Design System resmi untuk **Goal Clash (Web Soccer Game)**, dianalisis 100% presisi dari antarmuka konsol sepak bola modern.
 
 ---
 
@@ -22,7 +22,7 @@ Panduan Design System resmi untuk **Web Soccer Game (FC26 / FL25 Edition)**, dia
 
 ```
 +-----------------------------------------------------------------------------------------+
-| [⚙] [👤]  FL25 / FC26                                       [User] [Level 0] [💎 0/1000] |
+| [⚙] [👤]  Goal Clash                                        [User] [Level 0] [💎 0/1000] |
 |                                                                                         |
 |   Kick Off (ACTIVE - PURE WHITE BOLD)                                                   |
 |   Master League                                               [ DYNAMIC PLAYERS IN      |
@@ -39,7 +39,7 @@ Panduan Design System resmi untuk **Web Soccer Game (FC26 / FL25 Edition)**, dia
 
 1. **Top-Left Header**:
    - Gear (Settings) & Person (Accessibility) icons stacked on far top-left.
-   - Branding Logo: `FC26` / `FL25` in bold italic metallic white.
+   - Branding Logo: `Goal Clash` in bold italic metallic white.
 
 2. **Top-Right Profile Badge**:
    - Username (`EferQ`), Level Badge (`Level 0`), and EXP Coins (`0/1,000` with purple diamond/shield icon).

@@ -4,7 +4,6 @@ import { Smartphone, Swords, Bot, Info, Settings, User, Gem, Shield, Music } fro
 import { QRCodeModal } from './QRCodeModal';
 import { ControllerSelectModal, DeviceType, PlayerDeviceConfig } from './ControllerSelectModal';
 import { MatchModeModal } from './MatchModeModal';
-import { audioService } from '../services/audioService';
 
 interface LobbyViewProps {
   onStartMatch: (
@@ -80,10 +79,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
 
   const currentConfig = MENU_ITEMS.find((item) => item.id === activeItem) || MENU_ITEMS[0];
 
-  // Menu BGM & Console Keyboard Navigation (UP / DOWN / ENTER)
+  // Console Keyboard Navigation (UP / DOWN / ENTER)
   useEffect(() => {
-    audioService.startMenuBGM();
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (showControlsModal || showControllerSelectModal || showMatchModeModal || isQRModalOpen) return;
 
@@ -131,7 +128,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
     awayControllers?: PlayerDeviceConfig[]
   ) => {
     setShowControllerSelectModal(false);
-    audioService.stopMenuBGM();
     onStartMatch(selectedMode, p1Device, p2Device, homeControllers, awayControllers);
   };
 
@@ -227,7 +223,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
           </div>
 
           {/* Goal Clash Metallic Logo */}
-          <h1 className="text-3xl sm:text-5xl font-black italic tracking-tighter text-white font-['Plus_Jakarta_Sans',sans-serif] leading-none uppercase drop-shadow-lg flex items-center gap-1">
+          <h1 className="text-3xl sm:text-4xl font-black italic tracking-tighter text-white font-['Plus_Jakarta_Sans',sans-serif] leading-none uppercase drop-shadow-lg flex items-center gap-2">
             GOAL <span className="text-[#3B82F6]">CLASH</span>
           </h1>
         </div>
