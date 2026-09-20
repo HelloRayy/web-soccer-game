@@ -55,7 +55,7 @@ export class Player implements PlayerEntity {
   // Standing Poke Tackle Properties
   isStandingTackling: boolean = false;
   standingTackleTimer: number = 0;
-  standingTackleReach: number = 24;
+  standingTackleReach: number = 36;
 
   // Precision Close Control & Knock-On Sprint Burst
   isCloseControl: boolean = false;
@@ -877,6 +877,17 @@ export class Player implements PlayerEntity {
       this.shotPower = 0;
       this.shotPowerDirection = 1;
 
+      if (isPressingA && !this.prevA) {
+        // Press A while defending -> STANDING POKE TACKLE / PRESS
+        this.isStandingTackling = true;
+        this.standingTackleTimer = 0.30;
+        this.isTackling = false;
+        this.vel.x += Math.cos(this.facingAngle) * (this.speed * 0.7);
+        this.vel.y += Math.sin(this.facingAngle) * (this.speed * 0.7);
+        this.triggerFeedback('👟 POKE TACKLE!');
+        this.spawnTurfParticle(1.4);
+      }
+
       if (isPressingB) {
         this.isChargingSlide = true;
         this.slidePower = Math.min(1.0, this.slidePower + 0.035);
@@ -886,7 +897,7 @@ export class Player implements PlayerEntity {
         if (this.slidePower < 0.22) {
           // QUICK TAP B -> STANDING POKE TACKLE (Clean, Fast, Responsive!)
           this.isStandingTackling = true;
-          this.standingTackleTimer = 0.25;
+          this.standingTackleTimer = 0.30;
           this.isTackling = false;
 
           this.vel.x += Math.cos(this.facingAngle) * (this.speed * 0.7);

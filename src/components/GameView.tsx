@@ -479,8 +479,7 @@ export const GameView: React.FC<GameViewProps> = ({
       // Smooth camera follow during replay
       cameraRef.current.x = cameraRef.current.x * 0.88 + ball.pos.x * 0.12;
       cameraRef.current.y = cameraRef.current.y * 0.88 + ball.pos.y * 0.12;
-      return;
-    }
+    } else {
 
     // 2. Update Match Rules, Statistics & Match Engine Phases
     const matchResult = rules.update(dt, ball, field, players);
@@ -615,48 +614,38 @@ export const GameView: React.FC<GameViewProps> = ({
           const distToCarrier = Math.hypot(tackler.pos.x - ballCarrier.pos.x, tackler.pos.y - ballCarrier.pos.y);
           const distToBall = Math.hypot(tackler.pos.x - ball.pos.x, tackler.pos.y - ball.pos.y);
 
-          const dxToTackler = tackler.pos.x - ballCarrier.pos.x;
-          const dyToTackler = tackler.pos.y - ballCarrier.pos.y;
-          const angleToTackler = Math.atan2(dyToTackler, dxToTackler);
-
-          let angleDiff = Math.abs(angleToTackler - ballCarrier.facingAngle);
-          while (angleDiff > Math.PI) angleDiff = Math.abs(angleDiff - Math.PI * 2);
-
-          const isTacklerBehindCarrier = angleDiff > 1.83;
-
           const tacklerSpeed = Math.hypot(tackler.vel.x, tackler.vel.y);
           const carrierSpeed = Math.hypot(ballCarrier.vel.x, ballCarrier.vel.y);
 
-          const isTacklerMoving = tacklerSpeed > 0.8;
-          const isCarrierMoving = carrierSpeed > 0.8;
+          const isTacklerMoving = tacklerSpeed > 0.6;
+          const isCarrierMoving = carrierSpeed > 0.6;
 
-          const ballHitboxRadius = tackler.radius + ball.radius + 14;
-          const bodyHitboxRadius = tackler.radius + ballCarrier.radius + 12;
-          const slideHitboxRadius = tackler.radius + ballCarrier.radius + 75;
-          const pokeHitboxRadius = tackler.radius + ballCarrier.radius + (tackler.standingTackleReach || 24);
+          const ballHitboxRadius = tackler.radius + ball.radius + 22;
+          const bodyHitboxRadius = tackler.radius + ballCarrier.radius + 20;
+          const slideHitboxRadius = tackler.radius + ballCarrier.radius + 80;
+          const pokeHitboxRadius = tackler.radius + ballCarrier.radius + (tackler.standingTackleReach || 36);
 
           // Body contact or direct ball steal requires either active movement or an intentional tackle attempt.
-          // Standing completely still next to each other will NOT trigger continuous automatic steals.
-          const isDirectBallHit = distToBall < ballHitboxRadius && (isTacklerMoving || isCarrierMoving || tackler.isTackling);
-          const isBodyContactHit = distToCarrier < bodyHitboxRadius && !isTacklerBehindCarrier && (isTacklerMoving || isCarrierMoving || tackler.isTackling);
+          const isDirectBallHit = distToBall < ballHitboxRadius && (isTacklerMoving || isCarrierMoving || tackler.isTackling || tackler.isStandingTackling);
+          const isBodyContactHit = distToCarrier < bodyHitboxRadius && (isTacklerMoving || isCarrierMoving || tackler.isTackling || tackler.isStandingTackling);
           const isSlideHit = tackler.isTackling && (distToCarrier < slideHitboxRadius || distToBall < slideHitboxRadius);
-          const isPokeHit = tackler.isStandingTackling && (distToCarrier < pokeHitboxRadius || distToBall < pokeHitboxRadius + 10);
+          const isPokeHit = tackler.isStandingTackling && (distToCarrier < pokeHitboxRadius || distToBall < pokeHitboxRadius + 14);
 
           const canDispossess = (isDirectBallHit || isBodyContactHit || isSlideHit || isPokeHit) &&
             ballCarrier.dispossessProtectionTimer <= 0 &&
             tackler.dispossessProtectionTimer <= 0;
 
           if (canDispossess) {
-            let stealChance = 0.85;
+            let stealChance = 0.88;
             if (isSlideHit) stealChance = 0.95;
-            else if (isPokeHit) stealChance = 0.92;
+            else if (isPokeHit) stealChance = 0.94;
 
             if (Math.random() < stealChance) {
               ballCarrier.hasPossession = false;
               ball.attachedPlayerId = null;
-              ballCarrier.dispossessProtectionTimer = 0.80;
+              ballCarrier.dispossessProtectionTimer = 0.35;
               ballCarrier.stumbleTimer = 0.35;
-              tackler.dispossessProtectionTimer = 0.50;
+              tackler.dispossessProtectionTimer = 0.35;
               tackler.hasPossession = true;
               ball.attachedPlayerId = tackler.id;
               ball.attachToPlayer(tackler.pos, tackler.facingAngle, tackler.radius, tackler.vel, tackler.id, tackler.isCloseControl);
@@ -683,25 +672,25 @@ export const GameView: React.FC<GameViewProps> = ({
               ballCarrier.triggerFeedback('💥 REBUT!');
               audioService.playTackleSFX();
             }
-          } else if (distToCarrier < bodyHitboxRadius + 10 && !isTacklerBehindCarrier && !tackler.isTackling && !tackler.isStandingTackling) {
+          } else if (distToCarrier < bodyHitboxRadius + 10 && !tackler.isTackling && !tackler.isStandingTackling) {
             // Physical Shoulder Charge / Body Barge duel
             const tacklerSpd = Math.hypot(tackler.vel.x, tackler.vel.y);
-            if (tacklerSpd > 1.6) {
+            if (tacklerSpd > 1.2) {
               const toCarrierX = ballCarrier.pos.x - tackler.pos.x;
               const toCarrierY = ballCarrier.pos.y - tackler.pos.y;
               const toDist = Math.hypot(toCarrierX, toCarrierY) || 1;
               const moveDot = (tackler.vel.x * toCarrierX + tackler.vel.y * toCarrierY) / (tacklerSpd * toDist);
 
-              if (moveDot > 0.42 && ballCarrier.stumbleTimer <= 0) {
+              if (moveDot > 0.25 && ballCarrier.stumbleTimer <= 0) {
                 ballCarrier.stumbleTimer = 0.35;
                 ballCarrier.triggerFeedback('💥 BODY CHARGE!');
                 audioService.playTackleSFX();
                 // Nudge carrier away physically
-                ballCarrier.pos.x += (toCarrierX / toDist) * 7;
-                ballCarrier.pos.y += (toCarrierY / toDist) * 7;
+                ballCarrier.pos.x += (toCarrierX / toDist) * 8;
+                ballCarrier.pos.y += (toCarrierY / toDist) * 8;
 
                 // Physical scramble: chance to pop ball loose
-                if (ballCarrier.isExhausted || Math.random() < 0.35) {
+                if (ballCarrier.isExhausted || Math.random() < 0.45) {
                   ballCarrier.hasPossession = false;
                   ball.attachedPlayerId = null;
                   ball.vel.x = tackler.vel.x * 0.7 + (Math.random() - 0.5) * 4;
@@ -789,6 +778,7 @@ export const GameView: React.FC<GameViewProps> = ({
         zoomRef.current = zoomRef.current * 0.92 + targetZoom * 0.08;
       }
     }
+  }
 
     // Compute real-time Active Player Data for PES/FIFA Player Card Widget
     const activeP = players.find((p) => p.hasPossession)
