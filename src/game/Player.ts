@@ -538,6 +538,26 @@ export class Player implements PlayerEntity {
     const moveX = gp.axes.leftStickX;
     const moveY = gp.axes.leftStickY;
 
+    // Sprint Mode (Holding Shift / RT / R2 Trigger)
+    const isWantsSprint = (typeof gp.buttons.rt === 'number' ? gp.buttons.rt > 0.2 : !!gp.buttons.rt);
+    if (isWantsSprint && !this.isExhausted && this.stamina > 0.05) {
+      this.isSprinting = true;
+      this.stamina = Math.max(0, this.stamina - 0.003 * frameScale);
+      if (this.stamina === 0) {
+        this.isExhausted = true;
+        this.isSprinting = false;
+        this.triggerFeedback('⚠️ EXHAUSTED!');
+      }
+    } else {
+      this.isSprinting = false;
+      if (this.stamina < 1.0) {
+        this.stamina = Math.min(1.0, this.stamina + 0.002 * frameScale);
+        if (this.isExhausted && this.stamina > 0.30) {
+          this.isExhausted = false;
+        }
+      }
+    }
+
     // Precision Close Control Mode (Holding Left Bumper or Left Trigger)
     const isWantsCloseControl = gp.buttons.lb || gp.buttons.lt > 0.2;
     this.isCloseControl = isWantsCloseControl && this.hasPossession;

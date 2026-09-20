@@ -16,19 +16,29 @@ export function useKeyboardInput(): DualKeyboardState {
         e.preventDefault();
       }
 
-      const key = e.code.toLowerCase();
-      if (!keysPressedRef.current[key]) {
-        keysPressedRef.current[key] = true;
+      const codeKey = e.code.toLowerCase();
+      const valKey = e.key.toLowerCase();
+
+      let changed = false;
+      if (!keysPressedRef.current[codeKey]) {
+        keysPressedRef.current[codeKey] = true;
+        changed = true;
+      }
+      if (!keysPressedRef.current[valKey]) {
+        keysPressedRef.current[valKey] = true;
+        changed = true;
+      }
+      if (changed) {
         setTick((t) => t + 1);
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      const key = e.code.toLowerCase();
-      if (keysPressedRef.current[key]) {
-        keysPressedRef.current[key] = false;
-        setTick((t) => t + 1);
-      }
+      const codeKey = e.code.toLowerCase();
+      const valKey = e.key.toLowerCase();
+      keysPressedRef.current[codeKey] = false;
+      keysPressedRef.current[valKey] = false;
+      setTick((t) => t + 1);
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -60,7 +70,7 @@ export function useKeyboardInput(): DualKeyboardState {
   const p1X = !!keys['keyk'];
   const p1Y = !!keys['keyl'];
   const p1B = !!keys['space'];
-  const p1Sprint = !!keys['shiftleft'];
+  const p1Sprint = !!(keys['shiftleft'] || keys['shiftright'] || keys['shift']);
   const p1RB = !!(keys['keye'] || keys['keyr']);
 
   // --- P2 CONTROLS: Arrow Keys + Numpad / N/M/,/. ---
@@ -81,7 +91,7 @@ export function useKeyboardInput(): DualKeyboardState {
   const p2X = !!(keys['numpad2'] || keys['keym']);
   const p2Y = !!(keys['numpad3'] || keys['comma']);
   const p2B = !!(keys['numpad0'] || keys['period']);
-  const p2Sprint = !!(keys['shiftright'] || keys['controlright']);
+  const p2Sprint = !!(keys['shiftright'] || keys['shiftleft'] || keys['controlright'] || keys['shift']);
   const p2RB = !!keys['numpad7'];
 
   const isStart = !!(keys['escape'] || keys['enter']);
