@@ -84,6 +84,7 @@ export const GameView: React.FC<GameViewProps> = ({
   const [radarData, setRadarData] = useState<RadarData | null>(null);
   const [offScreenBall, setOffScreenBall] = useState<OffScreenBallData | null>(null);
   const [isGoalShaking, setIsGoalShaking] = useState(false);
+  const [isReplayActive, setIsReplayActive] = useState(false);
   const cameraShakeRef = useRef(0);
   const remoteGamepadStateRef = useRef<GamepadState | null>(null);
 
@@ -147,12 +148,6 @@ export const GameView: React.FC<GameViewProps> = ({
     players: Array<{ id: string; pos: { x: number; y: number }; facingAngle: number }>;
   }>>([]);
   const replayFrameIndexRef = useRef<number>(0);
-  const [isReplayActive, setIsReplayActive] = useState<boolean>(false);
-
-  const skipReplay = useCallback(() => {
-    isReplayActiveRef.current = false;
-    setIsReplayActive(false);
-  }, []);
 
   const triggerCallout = useCallback((type: ArcadeCallout['type'], text: string, subtext?: string) => {
     const now = Date.now();
@@ -275,6 +270,21 @@ export const GameView: React.FC<GameViewProps> = ({
     };
   }, [selectedMode, customSpawns]);
 
+  const skipReplay = useCallback(() => {
+    if (!isReplayActiveRef.current) return;
+    isReplayActiveRef.current = false;
+    setIsReplayActive(false);
+    resetMatchPositions(matchRulesRef.current.kickoffTeam);
+    setGoalBannerText(null);
+    setIsGoalShaking(false);
+    setIsCrowdSurging(false);
+    setWhistleBannerText('KICK-OFF!');
+    audioService.playWhistleSFX('short');
+    setTimeout(() => {
+      setWhistleBannerText(null);
+    }, 1500);
+  }, [resetMatchPositions]);
+
   // Re-instantiate players whenever selectedMode or customSpawns changes
   useEffect(() => {
     if (customSpawns && customSpawns.length > 0) {
@@ -316,10 +326,16 @@ export const GameView: React.FC<GameViewProps> = ({
         return p;
       });
     } else if (selectedMode === '1v1') {
-      const p1 = new Player('p1', 'Player 1 (Home)', 'home', 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5);
+      const isP1Bot = p1Device === 'ai_bot';
+      const p1 = new Player('p1', isP1Bot ? 'Bot AI (Home)' : 'Player 1 (Home)', 'home', isP1Bot ? null : 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5);
       p1.devType = p1Device;
-      const p2 = new Player('p2', 'Player 2 (Away)', 'away', 1, '#f59e0b', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.5);
+      if (isP1Bot) p1.isAI = true;
+
+      const isP2Bot = p2Device === 'ai_bot';
+      const p2 = new Player('p2', isP2Bot ? 'Bot AI (Away)' : 'Player 2 (Away)', 'away', isP2Bot ? null : 1, '#f59e0b', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.5);
       p2.devType = p2Device;
+      if (isP2Bot) p2.isAI = true;
+
       playersRef.current = [p1, p2];
     } else {
       // 2 vs BOT Mode
@@ -431,32 +447,39 @@ export const GameView: React.FC<GameViewProps> = ({
       }
     }
 
-    // Handle Gamepad / Keyboard Skip Replay Action
+    // Handle 0.6x Slow-Motion Replay Playback Mode
     if (isReplayActiveRef.current) {
       if (gamepads[0]?.buttons.a) {
         skipReplay();
-      } else {
-        replayFrameIndexRef.current += 0.6;
-        if (replayFrameIndexRef.current >= replayFramesRef.current.length) {
-          skipReplay();
-        } else {
-          const frame = replayFramesRef.current[Math.floor(replayFrameIndexRef.current)];
-          if (frame) {
-            ball.pos.x = frame.ballPos.x;
-            ball.pos.y = frame.ballPos.y;
-            ball.z = frame.ballPos.z;
-            ball.rotationAngle = frame.ballRotation;
-            frame.players.forEach((pf) => {
-              const p = players.find((pl) => pl.id === pf.id);
-              if (p) {
-                p.pos.x = pf.pos.x;
-                p.pos.y = pf.pos.y;
-                p.facingAngle = pf.facingAngle;
-              }
-            });
-          }
-        }
+        return;
       }
+
+      replayFrameIndexRef.current += 0.6;
+      if (replayFrameIndexRef.current >= replayFramesRef.current.length) {
+        skipReplay();
+        return;
+      }
+
+      const frame = replayFramesRef.current[Math.floor(replayFrameIndexRef.current)];
+      if (frame) {
+        ball.pos.x = frame.ballPos.x;
+        ball.pos.y = frame.ballPos.y;
+        ball.z = frame.ballPos.z;
+        ball.rotationAngle = frame.ballRotation;
+        frame.players.forEach((pf) => {
+          const p = players.find((pl) => pl.id === pf.id);
+          if (p) {
+            p.pos.x = pf.pos.x;
+            p.pos.y = pf.pos.y;
+            p.facingAngle = pf.facingAngle;
+          }
+        });
+      }
+
+      // Smooth camera follow during replay
+      cameraRef.current.x = cameraRef.current.x * 0.88 + ball.pos.x * 0.12;
+      cameraRef.current.y = cameraRef.current.y * 0.88 + ball.pos.y * 0.12;
+      return;
     }
 
     // 2. Update Match Rules, Statistics & Match Engine Phases

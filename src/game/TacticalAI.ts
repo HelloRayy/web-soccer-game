@@ -638,26 +638,29 @@ export class TacticalAI {
 
     // Defending or Loose Ball
     if (opponentCarrier) {
-      bot.aiState = 'STATE_ZONE_COVER';
-      // Stay high upfield to be ready for counter-attack outlet pass
-      const highPressX = targetGoal.x - attackDir * 450;
-      TacticalAI.moveTowards(bot, highPressX, ball.pos.y * 0.5 + targetGoalCenterY * 0.5, bot.speed * 0.45);
-    } else {
-      // Chase loose ball if in attacking half
-      const isClosest = teammates.every((t) => {
-        const myDist = Math.hypot(ball.pos.x - bot.pos.x, ball.pos.y - bot.pos.y);
-        const tDist = Math.hypot(ball.pos.x - t.pos.x, ball.pos.y - t.pos.y);
-        return myDist <= tDist;
-      });
+      bot.aiState = 'STATE_PRESS_BALL';
+      // Press opponent ball carrier aggressively
+      TacticalAI.moveTowards(bot, opponentCarrier.pos.x, opponentCarrier.pos.y, bot.speed * 0.85);
 
-      if (isClosest) {
-        bot.aiState = 'STATE_PRESS_BALL';
-        TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.82);
-      } else {
-        bot.aiState = 'STATE_ZONE_COVER';
-        const attackPosX = targetGoal.x - attackDir * 360;
-        TacticalAI.moveTowards(bot, attackPosX, targetGoalCenterY, bot.speed * 0.5);
+      const distToCarrier = Math.hypot(opponentCarrier.pos.x - bot.pos.x, opponentCarrier.pos.y - bot.pos.y);
+      if (distToCarrier < 75 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
+        if (Math.random() < 0.60) {
+          bot.isStandingTackling = true;
+          bot.standingTackleTimer = 0.25;
+          bot.aiTackleCooldownTimer = 2.0;
+          bot.triggerFeedback('👟 BOT POKE!');
+        } else {
+          bot.isTackling = true;
+          bot.tackleTimer = 0.40;
+          bot.aiTackleCooldownTimer = 3.2;
+          bot.tackleSlideAngle = Math.atan2(opponentCarrier.pos.y - bot.pos.y, opponentCarrier.pos.x - bot.pos.x);
+          bot.triggerFeedback('⚡ BOT SLIDE!');
+        }
       }
+    } else {
+      // Chase loose ball
+      bot.aiState = 'STATE_PRESS_BALL';
+      TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.85);
     }
   }
 

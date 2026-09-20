@@ -675,13 +675,14 @@ export class Player implements PlayerEntity {
     this.debugInputString = activeBtns.length > 0 ? `PRESSED: ${activeBtns.join(' + ')}` : `STICK: [${moveX.toFixed(2)}, ${moveY.toFixed(2)}]`;
     // 0. AERIAL VOLLEY & BULLET HEADER (Executed on incoming airborne balls)
     if (distToBall < this.radius + ball.radius + 36 && ball.z > 8 && isPressingX && !this.prevX) {
-      const targetGoal = this.team === 'home' ? field.goals.awayGoal : field.goals.homeGoal;
-      const targetY = targetGoal.top + (targetGoal.bottom - targetGoal.top) * 0.5;
-      const aimX = targetGoal.x - this.pos.x;
-      const aimY = targetY - this.pos.y;
-      const aimDist = Math.hypot(aimX, aimY) || 1;
-      const dirX = aimX / aimDist;
-      const dirY = aimY / aimDist;
+      const stickMag = Math.hypot(moveX, moveY);
+      let dirX = Math.cos(this.facingAngle);
+      let dirY = Math.sin(this.facingAngle);
+
+      if (stickMag > 0.15) {
+        dirX = moveX / stickMag;
+        dirY = moveY / stickMag;
+      }
 
       this.hasPossession = false;
       ball.attachedPlayerId = null;
@@ -709,7 +710,7 @@ export class Player implements PlayerEntity {
       this.isChargingSlide = false;
       this.slidePower = 0;
 
-      // X Button = Oscillating Aim Trajectory Shot (Hold to Aim & Charge/Decrease Power, Release to Shoot)
+      // X Button = Aim Trajectory Shot (Hold to Aim & Charge Power, Release to Shoot)
       // FAKE SHOT / CRUYFF TURN TRIGGER (Cancel shot with A or B)
       if (this.isChargingShot && (isPressingA || isPressingB)) {
         this.isChargingShot = false;
@@ -741,43 +742,28 @@ export class Player implements PlayerEntity {
         return { toggleHUDRequested };
       }
 
-
       if (isPressingX) {
         if (!this.isChargingShot) {
           this.isChargingShot = true;
           this.shotPower = 0.05;
           this.smoothShotPower = 0.05;
-          this.shotPowerDirection = 1;
+          this.shotAimAngle = this.facingAngle;
         }
 
-        // Oscillate back and forth continuously (0% -> 100% -> 0% -> 100%)
-        const chargeSpeed = 0.020;
-        this.shotPower += this.shotPowerDirection * chargeSpeed;
-
-        if (this.shotPower >= 1.0) {
-          this.shotPower = 1.0;
-          this.shotPowerDirection = -1;
-        } else if (this.shotPower <= 0.05) {
-          this.shotPower = 0.05;
-          this.shotPowerDirection = 1;
-        }
-
-        // Smooth Lerp for power bar filling & laser line length (silky 60 FPS transitions!)
+        // Monotonic charge up to 1.0 (standard football power bar)
+        const chargeSpeed = 0.022;
+        this.shotPower = Math.min(1.0, this.shotPower + chargeSpeed);
         this.smoothShotPower += (this.shotPower - this.smoothShotPower) * 0.35;
 
         const stickMag = Math.hypot(moveX, moveY);
         let targetAimAngle = this.facingAngle;
+
         if (stickMag > 0.15) {
           targetAimAngle = Math.atan2(moveY, moveX);
-        } else {
-          const targetGoal = this.team === 'home' ? field.goals.awayGoal : field.goals.homeGoal;
-          const targetY = targetGoal.top + (targetGoal.bottom - targetGoal.top) * 0.5;
-          targetAimAngle = Math.atan2(targetY - this.pos.y, targetGoal.x - this.pos.x);
+          this.facingAngle = lerpAngle(this.facingAngle, targetAimAngle, 0.28);
         }
 
-        // Smooth Angular Lerp for Shot Aim Trajectory (Fluid 60 FPS rotation!)
-        this.shotAimAngle = lerpAngle(this.shotAimAngle, targetAimAngle, 0.28);
-        this.facingAngle = lerpAngle(this.facingAngle, this.shotAimAngle, 0.28);
+        this.shotAimAngle = lerpAngle(this.shotAimAngle, targetAimAngle, 0.35);
 
         const targetLineLen = 110 + this.smoothShotPower * 260;
         this.smoothLineLength += (targetLineLen - this.smoothLineLength) * 0.28;
