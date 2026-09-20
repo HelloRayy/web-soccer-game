@@ -73,7 +73,7 @@ export function useKeyboardInput(): DualKeyboardState {
   const p1Sprint = !!(keys['shiftleft'] || keys['shiftright'] || keys['shift']);
   const p1RB = !!(keys['keye'] || keys['keyr']);
 
-  // --- P2 CONTROLS: Arrow Keys + Numpad / N/M/,/. ---
+  // --- P2 CONTROLS: Arrow Keys + (I/O/P/; or N/M/,/. or Numpad) ---
   let p2MoveX = 0;
   let p2MoveY = 0;
   if (keys['arrowup']) p2MoveY -= 1;
@@ -87,12 +87,31 @@ export function useKeyboardInput(): DualKeyboardState {
     p2MoveY /= len;
   }
 
-  const p2A = !!(keys['numpad1'] || keys['keyn']);
-  const p2X = !!(keys['numpad2'] || keys['keym']);
-  const p2Y = !!(keys['numpad3'] || keys['comma']);
-  const p2B = !!(keys['numpad0'] || keys['period']);
-  const p2Sprint = !!(keys['shiftright'] || keys['shiftleft'] || keys['controlright'] || keys['shift']);
-  const p2RB = !!keys['numpad7'];
+  // Pass (A): Numpad 1/4 | I | N | Z | 1
+  const p2A = !!(keys['numpad1'] || keys['numpad4'] || keys['keyi'] || keys['keyn'] || keys['keyz'] || keys['digit1']);
+
+  // Shoot (X): Numpad 2/5 | O | M | X | 2
+  const p2X = !!(keys['numpad2'] || keys['numpad5'] || keys['keyo'] || keys['keym'] || keys['keyx'] || keys['digit2']);
+
+  // Through Pass (Y): Numpad 3/6 | P | Comma | C | 3
+  const p2Y = !!(keys['numpad3'] || keys['numpad6'] || keys['keyp'] || keys['comma'] || keys['keyc'] || keys['digit3']);
+
+  // Lofted Pass / Tackle (B): Numpad 0 | Semicolon | Period | V | Slash | 4
+  const p2B = !!(keys['numpad0'] || keys['semicolon'] || keys['period'] || keys['keyv'] || keys['slash'] || keys['digit4']);
+
+  // Sprint (RT): ShiftRight / ShiftLeft / ControlRight / ControlLeft / Shift / Numpad 9 / Quote
+  const p2Sprint = !!(
+    keys['shiftright'] ||
+    keys['shiftleft'] ||
+    keys['controlright'] ||
+    keys['controlleft'] ||
+    keys['shift'] ||
+    keys['numpad9'] ||
+    keys['quote']
+  );
+
+  // Gocek / Skill / Request Ball (RB): Numpad 7/8 | U | B | 7
+  const p2RB = !!(keys['numpad7'] || keys['numpad8'] || keys['keyu'] || keys['keyb'] || keys['digit7']);
 
   const isStart = !!(keys['escape'] || keys['enter']);
 

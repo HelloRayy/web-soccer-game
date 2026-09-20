@@ -439,19 +439,31 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
           )}
 
           {/* Keyboard Controls Quick Legend */}
-          <div className="bg-[#0b0f0c]/85 border border-slate-800/90 rounded-lg px-2.5 py-1.5 font-mono text-[10px] text-slate-300 flex flex-wrap items-center gap-1.5 shadow-lg backdrop-blur-md">
-            <span className="text-cyan-400 font-bold">⌨️</span>
-            <span><strong className="text-emerald-400">WASD</strong> Lari</span>
-            <span>•</span>
-            <span><strong className="text-emerald-400">J</strong> Umpan</span>
-            <span>•</span>
-            <span><strong className="text-amber-400">L</strong> Terobos</span>
-            <span>•</span>
-            <span><strong className="text-purple-400">Space</strong> Lambung</span>
-            <span>•</span>
-            <span><strong className="text-cyan-400">K</strong> Tembak</span>
-            <span>•</span>
-            <span><strong className="text-teal-400">Shift</strong> Sprint</span>
+          <div className="bg-[#0b0f0c]/90 border border-slate-800/90 rounded-xl px-3 py-2 font-mono text-[10px] text-slate-300 flex flex-col gap-1.5 shadow-xl backdrop-blur-md">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-cyan-400 font-bold">⌨️ WASD:</span>
+              <span><strong className="text-emerald-400">J</strong> Umpan</span>
+              <span>•</span>
+              <span><strong className="text-cyan-400">K</strong> Tembak</span>
+              <span>•</span>
+              <span><strong className="text-amber-400">L</strong> Terobos</span>
+              <span>•</span>
+              <span><strong className="text-purple-400">Space</strong> Lambung</span>
+              <span>•</span>
+              <span><strong className="text-teal-400">Shift</strong> Sprint</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 text-slate-300 border-t border-slate-800/70 pt-1.5">
+              <span className="text-amber-400 font-bold">🎯 PANAH:</span>
+              <span><strong className="text-emerald-400">I / N / 1</strong> Umpan</span>
+              <span>•</span>
+              <span><strong className="text-cyan-400">O / M / 2</strong> Tembak</span>
+              <span>•</span>
+              <span><strong className="text-amber-400">P / , / 3</strong> Terobos</span>
+              <span>•</span>
+              <span><strong className="text-purple-400">; / . / 0</strong> Lambung</span>
+              <span>•</span>
+              <span><strong className="text-teal-400">Shift</strong> Sprint</span>
+            </div>
           </div>
         </div>
       )}
