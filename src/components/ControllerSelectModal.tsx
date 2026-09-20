@@ -64,90 +64,48 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
   const [ipAddress, setIpAddress] = useState<string>(() => window.location.hostname || '192.168.1.100');
   const [showQRPopover, setShowQRPopover] = useState<boolean>(false);
+  const [warningToast, setWarningToast] = useState<string | null>(null);
 
-  // Haptic feedback & Gamepad Input Navigation in Modal
-  useEffect(() => {
-    if (!isOpen) return;
-
-    // Check if new gamepad connected and vibrate
-    Object.values(gamepads).forEach((gp) => {
-      if (gp && gp.connected && !prevGpConnectedRef.current[gp.index]) {
-        prevGpConnectedRef.current[gp.index] = true;
-        triggerVibration(gp.index, 0.4, 0.6, 250);
-      }
-    });
-
-    // Gamepad button debounce tracker
-    let lastNavTime = 0;
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-      if (now - lastNavTime < 220) return;
-
-      // Check Gamepad 0 (Home Controller)
-      const gp0 = gamepads[0] || Object.values(gamepads)[0];
-      if (gp0) {
-        if (gp0.axes.leftStickX < -0.6 || gp0.buttons.lb) {
-          cycleHomeDevice(0, -1);
-          lastNavTime = now;
-        } else if (gp0.axes.leftStickX > 0.6 || gp0.buttons.rb) {
-          cycleHomeDevice(0, 1);
-          lastNavTime = now;
-        }
-      }
-
-      // Check Gamepad 1 (Away Controller)
-      const gp1 = gamepads[1];
-      if (gp1 && selectedMode === '1v1') {
-        if (gp1.axes.leftStickX < -0.6 || gp1.buttons.lb) {
-          cycleAwayDevice(0, -1);
-          lastNavTime = now;
-        } else if (gp1.axes.leftStickX > 0.6 || gp1.buttons.rb) {
-          cycleAwayDevice(0, 1);
-          lastNavTime = now;
-        }
-      }
-    }, 50);
-
-    return () => clearInterval(interval);
-  }, [isOpen, gamepads, selectedMode]);
-
-  // Keyboard navigation for Primary Players (Home P1 & Away P2)
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'a' || e.key === 'A') {
-        cycleHomeDevice(0, -1);
-      } else if (e.key === 'd' || e.key === 'D') {
-        cycleHomeDevice(0, 1);
-      } else if (e.key === 'ArrowLeft' && selectedMode === '1v1') {
-        cycleAwayDevice(0, -1);
-      } else if (e.key === 'ArrowRight' && selectedMode === '1v1') {
-        cycleAwayDevice(0, 1);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedMode]);
-
-  if (!isOpen) return null;
+  const showWarning = (msg: string) => {
+    setWarningToast(msg);
+    setTimeout(() => {
+      setWarningToast((prev) => (prev === msg ? null : prev));
+    }, 3200);
+  };
 
   const cycleHomeDevice = (seatIdx: number, delta: number) => {
     setHomeSeats((prev) => {
       const next = [...prev];
       const currentDevIdx = next[seatIdx] || 0;
-      next[seatIdx] = (currentDevIdx + delta + DEVICE_OPTIONS.length) % DEVICE_OPTIONS.length;
+      let targetIdx = (currentDevIdx + delta + DEVICE_OPTIONS.length) % DEVICE_OPTIONS.length;
+
+      const candidateDevId = DEVICE_OPTIONS[targetIdx].id;
+      const isOccupiedByAway = selectedMode !== '2vBot' && awaySeats.some((aDevIdx) => DEVICE_OPTIONS[aDevIdx]?.id === candidateDevId);
+
+      if (isOccupiedByAway && candidateDevId !== 'hp_remote') {
+        showWarning(`Controller [${DEVICE_OPTIONS[targetIdx].name}] sudah digunakan oleh Tim Away! Silakan pilih controller lain.`);
+        targetIdx = (targetIdx + delta + DEVICE_OPTIONS.length) % DEVICE_OPTIONS.length;
+      }
+      next[seatIdx] = targetIdx;
       return next;
     });
   };
 
   const cycleAwayDevice = (seatIdx: number, delta: number) => {
+    if (selectedMode === '2vBot' && seatIdx === 0) return;
     setAwaySeats((prev) => {
       const next = [...prev];
-      const currentDevIdx = next[seatIdx] || 0;
-      next[seatIdx] = (currentDevIdx + delta + DEVICE_OPTIONS.length) % DEVICE_OPTIONS.length;
+      const currentDevIdx = next[seatIdx] || 1;
+      let targetIdx = (currentDevIdx + delta + DEVICE_OPTIONS.length) % DEVICE_OPTIONS.length;
+
+      const candidateDevId = DEVICE_OPTIONS[targetIdx].id;
+      const isOccupiedByHome = homeSeats.some((hDevIdx) => DEVICE_OPTIONS[hDevIdx]?.id === candidateDevId);
+
+      if (isOccupiedByHome && candidateDevId !== 'hp_remote') {
+        showWarning(`Controller [${DEVICE_OPTIONS[targetIdx].name}] sudah digunakan oleh Tim Home! Silakan pilih controller lain.`);
+        targetIdx = (targetIdx + delta + DEVICE_OPTIONS.length) % DEVICE_OPTIONS.length;
+      }
+      next[seatIdx] = targetIdx;
       return next;
     });
   };
@@ -209,6 +167,21 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                   <X className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* INTERACTIVE WARNING TOAST BANNER */}
+              <AnimatePresence>
+                {warningToast && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    className="absolute top-14 left-1/2 -translate-x-1/2 z-40 bg-red-950/95 border border-red-500/80 text-red-200 px-4 py-2.5 rounded-lg shadow-2xl flex items-center gap-2.5 text-xs font-semibold max-w-lg text-center"
+                  >
+                    <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+                    <span>{warningToast}</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* 5 SYMMETRICAL UNIFIED ROWS (100% PERFECT HORIZONTAL & VERTICAL ALIGNMENT) */}
               <div className="relative w-full p-4 flex flex-col divide-y divide-white/10 max-h-[340px] sm:max-h-[380px] overflow-y-auto custom-scrollbar bg-[#111513]">
@@ -432,6 +405,16 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
 
               <button
                 onClick={() => {
+                  const homeDevTypes = homeSeats.map((s) => DEVICE_OPTIONS[s]?.id);
+                  const awayDevTypes = selectedMode === '2vBot' ? ['ai_bot' as DeviceType] : awaySeats.map((s) => DEVICE_OPTIONS[s]?.id);
+
+                  const conflict = homeDevTypes.find((hDev) => hDev && hDev !== 'hp_remote' && awayDevTypes.includes(hDev));
+                  if (conflict) {
+                    const confName = DEVICE_OPTIONS.find((o) => o.id === conflict)?.name || conflict;
+                    showWarning(`Konflik Controller: [${confName}] dipilih oleh kedua tim! Silakan ubah controller salah satu tim.`);
+                    return;
+                  }
+
                   const homeConfig: PlayerDeviceConfig[] = homeSeats.map((seatDevIdx, i) => {
                     const opt = DEVICE_OPTIONS[seatDevIdx] || DEVICE_OPTIONS[0];
                     return {

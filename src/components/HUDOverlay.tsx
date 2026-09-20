@@ -20,6 +20,8 @@ interface HUDOverlayProps {
   onResumeSecondHalf?: () => void;
   activePlayer?: ActivePlayerData | null;
   arcadeCallouts?: ArcadeCallout[];
+  isReplayActive?: boolean;
+  onSkipReplay?: () => void;
 }
 export const HUDOverlay: React.FC<HUDOverlayProps> = ({
   matchState,
@@ -37,6 +39,8 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
   onResumeSecondHalf,
   activePlayer = null,
   arcadeCallouts = [],
+  isReplayActive = false,
+  onSkipReplay,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isCRTFilterActive, setIsCRTFilterActive] = useState(false);
@@ -255,10 +259,37 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
         </div>
       </div>
 
-      {/* RETRO ARCADE ACTION CALLOUT BANNERS (Retro Goal / Super Sidekicks) */}
-      {arcadeCallouts && arcadeCallouts.length > 0 && (
+      {/* INSTANT GOAL REPLAY OVERLAY BANNER & SKIP BUTTON */}
+      {isReplayActive && (
+        <div className="fixed inset-0 z-50 pointer-events-none flex flex-col justify-between p-6 select-none font-mono">
+          {/* Top Replay Banner */}
+          <div className="flex items-center justify-between w-full">
+            <div className="bg-red-600/90 border border-red-400 text-white font-black text-sm px-4 py-1.5 rounded-xl shadow-2xl flex items-center gap-2 animate-pulse">
+              <span className="w-3 h-3 rounded-full bg-white animate-ping" />
+              <span>🔴 INSTANT REPLAY (0.6x SLOW-MOTION)</span>
+            </div>
+            <div className="text-xs text-slate-200 bg-slate-900/80 px-3 py-1 rounded-lg border border-white/10">
+              0.6x SLOW-MOTION
+            </div>
+          </div>
+
+          {/* Bottom Right Skip Button */}
+          <div className="flex justify-end pointer-events-auto">
+            <button
+              onClick={onSkipReplay}
+              className="bg-[#2563EB] hover:bg-[#3B82F6] text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-2xl border border-blue-400/50 transition cursor-pointer flex items-center gap-2"
+            >
+              <span>SKIP REPLAY [SPACE / ENTER]</span>
+              <span>⏭️</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* RETRO ARCADE ACTION CALLOUT BANNERS (Single clean Toast to avoid UI clutter) */}
+      {!isReplayActive && arcadeCallouts && arcadeCallouts.length > 0 && (
         <div className="fixed top-[72px] left-1/2 -translate-x-1/2 z-40 pointer-events-none flex flex-col items-center">
-          {arcadeCallouts.map((callout) => (
+          {arcadeCallouts.slice(-1).map((callout) => (
             <div
               key={callout.id}
               className={`px-5 py-1.5 rounded-xl shadow-2xl backdrop-blur-xl border-2 flex flex-col items-center animate-in zoom-in-75 slide-in-from-top-1 duration-150 ${

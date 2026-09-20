@@ -22,6 +22,7 @@ export class HostPeerService {
   private peer: Peer | null = null;
   private connections: Map<string, DataConnection> = new Map();
   private bc: BroadcastChannel | null = null;
+  private storageListener: ((e: StorageEvent) => void) | null = null;
 
   public roomId: string;
   public onConnectionStateChange?: (connected: boolean) => void;
@@ -58,7 +59,7 @@ export class HostPeerService {
           };
         }
 
-        window.addEventListener('storage', (e) => {
+        this.storageListener = (e: StorageEvent) => {
           if (e.key === `soccer_game_input_${this.roomId}` && e.newValue) {
             try {
               const data = JSON.parse(e.newValue);
@@ -69,7 +70,8 @@ export class HostPeerService {
               }
             } catch (err) {}
           }
-        });
+        };
+        window.addEventListener('storage', this.storageListener);
       } catch (err) {}
     }
 
@@ -134,6 +136,11 @@ export class HostPeerService {
   public destroy() {
     this.connections.forEach((conn) => conn.close());
     this.connections.clear();
+
+    if (this.storageListener && typeof window !== 'undefined') {
+      window.removeEventListener('storage', this.storageListener);
+      this.storageListener = null;
+    }
 
     if (this.peer) {
       this.peer.destroy();

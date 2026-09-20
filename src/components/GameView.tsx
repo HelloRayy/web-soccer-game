@@ -134,6 +134,26 @@ export const GameView: React.FC<GameViewProps> = ({
   const [arcadeCallouts, setArcadeCallouts] = useState<ArcadeCallout[]>([]);
   const lastCalloutTimeRef = useRef<number>(0);
 
+  // 240-Frame Circular Snapshot Buffer for Automatic Instant Goal Replay System
+  const replayBufferRef = useRef<Array<{
+    ballPos: { x: number; y: number; z: number };
+    ballRotation: number;
+    players: Array<{ id: string; pos: { x: number; y: number }; facingAngle: number }>;
+  }>>([]);
+  const isReplayActiveRef = useRef<boolean>(false);
+  const replayFramesRef = useRef<Array<{
+    ballPos: { x: number; y: number; z: number };
+    ballRotation: number;
+    players: Array<{ id: string; pos: { x: number; y: number }; facingAngle: number }>;
+  }>>([]);
+  const replayFrameIndexRef = useRef<number>(0);
+  const [isReplayActive, setIsReplayActive] = useState<boolean>(false);
+
+  const skipReplay = useCallback(() => {
+    isReplayActiveRef.current = false;
+    setIsReplayActive(false);
+  }, []);
+
   const triggerCallout = useCallback((type: ArcadeCallout['type'], text: string, subtext?: string) => {
     const now = Date.now();
     // Debounce fast repeated callouts within 350ms so notifications don't flicker or stack
@@ -343,6 +363,9 @@ export const GameView: React.FC<GameViewProps> = ({
       if (e.key === 'Control' || e.ctrlKey) {
         setShowCursor((prev) => !prev);
       }
+      if ((e.key === ' ' || e.key === 'Enter') && isReplayActiveRef.current) {
+        skipReplay();
+      }
     };
 
     window.addEventListener('resize', handleResize);
@@ -392,7 +415,51 @@ export const GameView: React.FC<GameViewProps> = ({
       prevBackBtnRef.current = isPressingBack;
     }
 
-    // 1. Update Match Rules, Statistics & Match Engine Phases
+    // 1. Record 240-Frame Circular Match Buffer (if not currently in Replay Mode)
+    if (!isReplayActiveRef.current) {
+      replayBufferRef.current.push({
+        ballPos: { x: ball.pos.x, y: ball.pos.y, z: ball.z },
+        ballRotation: ball.rotationAngle,
+        players: players.map((p) => ({
+          id: p.id,
+          pos: { x: p.pos.x, y: p.pos.y },
+          facingAngle: p.facingAngle,
+        })),
+      });
+      if (replayBufferRef.current.length > 240) {
+        replayBufferRef.current.shift();
+      }
+    }
+
+    // Handle Gamepad / Keyboard Skip Replay Action
+    if (isReplayActiveRef.current) {
+      if (gamepads[0]?.buttons.a) {
+        skipReplay();
+      } else {
+        replayFrameIndexRef.current += 0.6;
+        if (replayFrameIndexRef.current >= replayFramesRef.current.length) {
+          skipReplay();
+        } else {
+          const frame = replayFramesRef.current[Math.floor(replayFrameIndexRef.current)];
+          if (frame) {
+            ball.pos.x = frame.ballPos.x;
+            ball.pos.y = frame.ballPos.y;
+            ball.z = frame.ballPos.z;
+            ball.rotationAngle = frame.ballRotation;
+            frame.players.forEach((pf) => {
+              const p = players.find((pl) => pl.id === pf.id);
+              if (p) {
+                p.pos.x = pf.pos.x;
+                p.pos.y = pf.pos.y;
+                p.facingAngle = pf.facingAngle;
+              }
+            });
+          }
+        }
+      }
+    }
+
+    // 2. Update Match Rules, Statistics & Match Engine Phases
     const matchResult = rules.update(dt, ball, field, players);
     if (matchResult.goalScored) {
       const shotSpeedKmH = rules.lastGoalShotSpeed;
@@ -403,6 +470,15 @@ export const GameView: React.FC<GameViewProps> = ({
       setWhistleBannerText('GOAL!');
       triggerCallout('goal', '🎉 GOAL GOAL GOAL!', `🚀 ${shotSpeedKmH} KM/H Thunderbolt Strike`);
       audioService.playGoalSound();
+
+      // Trigger 240-frame 0.6x Slow-Motion Replay System
+      if (replayBufferRef.current.length > 30) {
+        replayFramesRef.current = [...replayBufferRef.current];
+        replayFrameIndexRef.current = 0;
+        isReplayActiveRef.current = true;
+        setIsReplayActive(true);
+      }
+
       setTimeout(() => {
         setWhistleBannerText(null);
       }, 2200);
@@ -628,14 +704,12 @@ export const GameView: React.FC<GameViewProps> = ({
           const distToBall = Math.hypot(p.pos.x - ball.pos.x, p.pos.y - ball.pos.y);
           const receptionRadius = p.radius + ball.radius + 28;
 
+          // Task 2 Fix: Ground ball reception requires ball.z <= 12 and allows any player (teammate or opponent interceptor) to catch the ball
           if (ball.releaseTimer <= 0 && p.dispossessProtectionTimer <= 0 && distToBall < receptionRadius) {
-            if (ball.homingTargetPlayer && ball.homingTargetPlayer.id === p.id) {
+            if (ball.z <= 12) {
               p.hasPossession = true;
               ball.homingTargetPlayer = null;
               ball.throughPassTargetPos = null;
-              ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
-            } else if (!ball.homingTargetPlayer && !ball.attachedPlayerId) {
-              p.hasPossession = true;
               ball.attachToPlayer(p.pos, p.facingAngle, p.radius, p.vel, p.id);
             }
           }
@@ -838,6 +912,8 @@ export const GameView: React.FC<GameViewProps> = ({
         whistleBannerText={whistleBannerText}
         activePlayer={activePlayerData}
         arcadeCallouts={arcadeCallouts}
+        isReplayActive={isReplayActive}
+        onSkipReplay={skipReplay}
         onResumeSecondHalf={() => {
           matchRulesRef.current.resumeFromHalfTime();
           resetMatchPositions(matchRulesRef.current.kickoffTeam);

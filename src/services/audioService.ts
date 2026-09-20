@@ -39,6 +39,9 @@ class AudioService {
     return this.ctx;
   }
 
+  private pinkNoiseBuffer: AudioBuffer | null = null;
+  private crowdFilter: BiquadFilterNode | null = null;
+
   public setMuted(muted: boolean) {
     this.isMuted = muted;
     if (this.isMuted) {
@@ -62,8 +65,8 @@ class AudioService {
     const now = ctx.currentTime;
 
     // Pitch & Energy parameters based on kick type
-    const startFreq = type === 'shoot' ? 180 : type === 'chip' ? 220 : 130;
-    const endFreq = type === 'shoot' ? 30 : type === 'chip' ? 50 : 25;
+    const startFreq = type === 'shoot' ? 200 : type === 'chip' ? 240 : 140;
+    const endFreq = type === 'shoot' ? 30 : type === 'chip' ? 50 : 35;
     const duration = type === 'shoot' ? 0.18 : 0.12;
 
     // Low Frequency Oscillator Sweep (Punchy Impact)
@@ -74,7 +77,8 @@ class AudioService {
     osc.frequency.setValueAtTime(startFreq, now);
     osc.frequency.exponentialRampToValueAtTime(endFreq, now + duration);
 
-    oscGain.gain.setValueAtTime(type === 'shoot' ? 0.9 : 0.6, now);
+    // Boost volume gain to 0.95 for thick, solid punch
+    oscGain.gain.setValueAtTime(0.95, now);
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
     osc.connect(oscGain);
@@ -82,6 +86,21 @@ class AudioService {
 
     osc.start(now);
     osc.stop(now + duration);
+
+    // Punchy 90Hz Thud Transient for shoe-on-ball impact
+    const thudOsc = ctx.createOscillator();
+    const thudGain = ctx.createGain();
+    thudOsc.type = 'sine';
+    thudOsc.frequency.setValueAtTime(90, now);
+    thudOsc.frequency.exponentialRampToValueAtTime(35, now + 0.08);
+
+    thudGain.gain.setValueAtTime(0.85, now);
+    thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+    thudOsc.connect(thudGain);
+    thudGain.connect(ctx.destination);
+    thudOsc.start(now);
+    thudOsc.stop(now + 0.08);
 
     // Turf Contact Noise Burst
     const bufferSize = ctx.sampleRate * 0.04; // 40ms noise
@@ -96,10 +115,10 @@ class AudioService {
 
     const noiseFilter = ctx.createBiquadFilter();
     noiseFilter.type = 'lowpass';
-    noiseFilter.frequency.setValueAtTime(type === 'shoot' ? 1200 : 800, now);
+    noiseFilter.frequency.setValueAtTime(type === 'shoot' ? 1200 : 900, now);
 
     const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.3, now);
+    noiseGain.gain.setValueAtTime(0.4, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
 
     noise.connect(noiseFilter);
@@ -118,7 +137,7 @@ class AudioService {
     if (!ctx) return;
 
     const playBlast = (startTime: number, blastDuration: number) => {
-      // Dual frequencies matching real Pea Whistle (2800Hz & 3100Hz)
+      // Dual frequencies matching real Pea Whistle (2850Hz & 3120Hz)
       const osc1 = ctx.createOscillator();
       const osc2 = ctx.createOscillator();
 
@@ -178,94 +197,89 @@ class AudioService {
 
     const now = ctx.currentTime;
 
-    // Stadium Goal Horn Sawtooth Synthesizer
-    const osc1 = ctx.createOscillator();
-    const osc2 = ctx.createOscillator();
+    // High-Power Double/Triple Harmony Stadium Foghorn: C4 (261.63), G4 (392.00), C5 (523.25)
+    const freqs = [261.63, 392.00, 523.25];
     const hornGain = ctx.createGain();
-
-    osc1.type = 'sawtooth';
-    osc2.type = 'sawtooth';
-
-    // Chord: F3 (174.6Hz) & A3 (220.0Hz) stadium horn
-    osc1.frequency.setValueAtTime(174.6, now);
-    osc2.frequency.setValueAtTime(220.0, now);
-
     hornGain.gain.setValueAtTime(0.001, now);
-    hornGain.gain.linearRampToValueAtTime(0.65, now + 0.1);
-    hornGain.gain.setValueAtTime(0.65, now + 1.2);
-    hornGain.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+    hornGain.gain.linearRampToValueAtTime(0.75, now + 0.12);
+    hornGain.gain.setValueAtTime(0.75, now + 1.4);
+    hornGain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
 
-    osc1.connect(hornGain);
-    osc2.connect(hornGain);
+    freqs.forEach((freq) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now);
+      osc.connect(hornGain);
+      osc.start(now);
+      osc.stop(now + 2.2);
+    });
+
     hornGain.connect(ctx.destination);
 
-    osc1.start(now);
-    osc2.start(now);
-    osc1.stop(now + 1.8);
-    osc2.stop(now + 1.8);
-
-    // Deep Sub-Bass Explosion Drop
+    // Deep Sub-Bass Explosion Drop (120Hz -> 45Hz sub-drop boom)
     const subOsc = ctx.createOscillator();
     const subGain = ctx.createGain();
     subOsc.type = 'sine';
     subOsc.frequency.setValueAtTime(120, now);
-    subOsc.frequency.exponentialRampToValueAtTime(28, now + 0.6);
+    subOsc.frequency.exponentialRampToValueAtTime(45, now + 0.8);
 
-    subGain.gain.setValueAtTime(0.9, now);
-    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    subGain.gain.setValueAtTime(1.0, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
 
     subOsc.connect(subGain);
     subGain.connect(ctx.destination);
 
     subOsc.start(now);
-    subOsc.stop(now + 0.6);
+    subOsc.stop(now + 0.8);
 
-    // Also trigger referee whistle and crowd surge
+    // Trigger referee whistle and crowd surge
     this.playWhistleSFX('long');
     this.triggerCrowdCheer();
   }
 
   /**
-   * 4. Crowd Stadium Ambient Sound (Pink Noise Rumble)
+   * 4. Crowd Stadium Ambient Sound (Pink Noise Rumble with Cached Buffer)
    */
   public startCrowdAmbience() {
     if (this.isMuted || this.crowdNode) return;
     const ctx = this.initAudioContext();
     if (!ctx) return;
 
-    const sampleRate = ctx.sampleRate;
-    const bufferSize = sampleRate * 3.0; // 3 sec loop
-    const noiseBuffer = ctx.createBuffer(1, bufferSize, sampleRate);
-    const output = noiseBuffer.getChannelData(0);
+    if (!this.pinkNoiseBuffer) {
+      const sampleRate = ctx.sampleRate;
+      const bufferSize = sampleRate * 3.0; // 3 sec loop
+      this.pinkNoiseBuffer = ctx.createBuffer(1, bufferSize, sampleRate);
+      const output = this.pinkNoiseBuffer.getChannelData(0);
 
-    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-    for (let i = 0; i < bufferSize; i++) {
-      const white = Math.random() * 2 - 1;
-      b0 = 0.99886 * b0 + white * 0.0555179;
-      b1 = 0.99332 * b1 + white * 0.0750759;
-      b2 = 0.96900 * b2 + white * 0.1538520;
-      b3 = 0.86650 * b3 + white * 0.3104856;
-      b4 = 0.55000 * b4 + white * 0.5329522;
-      b5 = -0.7616 * b5 - white * 0.0168980;
-      output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
-      output[i] *= 0.11;
-      b6 = white * 0.115926;
+      let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        b3 = 0.86650 * b3 + white * 0.3104856;
+        b4 = 0.55000 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.0168980;
+        output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+        output[i] *= 0.11;
+        b6 = white * 0.115926;
+      }
     }
 
     const noiseSrc = ctx.createBufferSource();
-    noiseSrc.buffer = noiseBuffer;
+    noiseSrc.buffer = this.pinkNoiseBuffer;
     noiseSrc.loop = true;
 
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(450, ctx.currentTime);
-    filter.Q.setValueAtTime(0.8, ctx.currentTime);
+    this.crowdFilter = ctx.createBiquadFilter();
+    this.crowdFilter.type = 'bandpass';
+    this.crowdFilter.frequency.setValueAtTime(450, ctx.currentTime);
+    this.crowdFilter.Q.setValueAtTime(0.8, ctx.currentTime);
 
     this.crowdGain = ctx.createGain();
     this.crowdGain.gain.setValueAtTime(0.12, ctx.currentTime);
 
-    noiseSrc.connect(filter);
-    filter.connect(this.crowdGain);
+    noiseSrc.connect(this.crowdFilter);
+    this.crowdFilter.connect(this.crowdGain);
     this.crowdGain.connect(ctx.destination);
 
     noiseSrc.start();
@@ -276,8 +290,17 @@ class AudioService {
     if (this.crowdNode) {
       try {
         (this.crowdNode as any).stop();
+        this.crowdNode.disconnect();
       } catch (e) {}
       this.crowdNode = null;
+    }
+    if (this.crowdFilter) {
+      try { this.crowdFilter.disconnect(); } catch (e) {}
+      this.crowdFilter = null;
+    }
+    if (this.crowdGain) {
+      try { this.crowdGain.disconnect(); } catch (e) {}
+      this.crowdGain = null;
     }
   }
 
