@@ -590,24 +590,24 @@ export class TacticalAI {
       // Check if defender blocking direct line
       const blockingOpponent = opponents.find((opp) => {
         const oppDist = Math.hypot(opp.pos.x - bot.pos.x, opp.pos.y - bot.pos.y);
-        return oppDist < 95;
+        return oppDist < 65;
       });
 
       let moveX = (targetGoal.x - bot.pos.x) / distToGoal;
       let moveY = (targetGoalCenterY - bot.pos.y) / distToGoal;
 
       if (blockingOpponent) {
-        // Gocek / Feint around blocker
-        if (bot.aiGocekCooldownTimer <= 0 && Math.random() < 0.015) {
+        // Rare skill move attempt (12s cooldown, 0.3% chance per frame)
+        if (bot.aiGocekCooldownTimer <= 0 && Math.random() < 0.003) {
           bot.isDribbleSkillActive = true;
-          bot.skillDodgeInvincibleTimer = 0.20;
-          bot.aiGocekCooldownTimer = 7.0;
+          bot.skillDodgeInvincibleTimer = 0.18;
+          bot.aiGocekCooldownTimer = 12.0;
           bot.triggerFeedback('✨ GOCEK SKILL!');
         }
 
+        // Smooth gentle curve around defender instead of violent sideways wiggling
         const sideSign = bot.pos.y < blockingOpponent.pos.y ? -1 : 1;
-        moveX = moveX * 0.3 + (-moveY * sideSign) * 0.7;
-        moveY = moveY * 0.3 + (moveX * sideSign) * 0.7;
+        moveY += sideSign * 0.35;
         const norm = Math.hypot(moveX, moveY) || 1;
         moveX /= norm;
         moveY /= norm;
