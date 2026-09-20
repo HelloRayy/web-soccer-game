@@ -43,7 +43,7 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
   onSkipReplay,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isCRTFilterActive, setIsCRTFilterActive] = useState(false);
+  const [isCRTFilterActive, setIsCRTFilterActive] = useState(true);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
 
   useEffect(() => {
@@ -105,7 +105,7 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
           title="Toggle Filter TV Tabung Retro CRT"
         >
           <Tv className="w-4 h-4" />
-          <span className="hidden sm:inline">{isCRTFilterActive ? 'CRT ON' : 'CRT'}</span>
+          <span className="hidden sm:inline">{isCRTFilterActive ? 'CRT ON' : 'CRT OFF'}</span>
         </button>
         {/* Mobile Controller QR Code Button */}
         <button
