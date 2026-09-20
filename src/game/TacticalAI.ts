@@ -219,38 +219,38 @@ export class TacticalAI {
       // Calculate projected ball arrival at goal line (in seconds)
       const timeToGoalFrames = Math.abs(distToGoalX / (ball.vel.x || 0.001));
       const timeToGoal = timeToGoalFrames * (1 / 60);
-      if (timeToGoal > 0 && timeToGoal < 0.85) {
+      if (timeToGoal > 0 && timeToGoal < 0.75) {
         const predictedY = ball.pos.y + ball.vel.y * timeToGoalFrames;
         const isHeadingInsideGoal =
-          predictedY >= defendingGoal.top - 25 && predictedY <= defendingGoal.bottom + 25;
+          predictedY >= defendingGoal.top - 20 && predictedY <= defendingGoal.bottom + 20;
         if (isHeadingInsideGoal) {
           bot.aiState = 'STATE_SWEEPER_CLEAR';
           // Trigger Diving Save across goalmouth
           const distToIntercept = Math.hypot(goalLineX - bot.pos.x, predictedY - bot.pos.y);
-          if (distToIntercept < 220 && !bot.isDiving) {
+          if (distToIntercept < 180 && !bot.isDiving) {
             bot.isDiving = true;
-            bot.diveTimer = 0.55;
+            bot.diveTimer = 0.50;
             const diveDirY = predictedY > bot.pos.y ? 1 : -1;
             bot.facingAngle = Math.atan2(predictedY - bot.pos.y, attackDir * 20);
-            bot.vel.x = attackDir * bot.speed * 0.4;
-            bot.vel.y = diveDirY * bot.speed * 1.75;
+            bot.vel.x = attackDir * bot.speed * 0.35;
+            bot.vel.y = diveDirY * bot.speed * 1.5;
             bot.triggerFeedback('🧤 DIVING SAVE!');
           }
           // Parry or Catch check if ball is within reach
           const distToBall = Math.hypot(ball.pos.x - bot.pos.x, ball.pos.y - bot.pos.y);
-          if (distToBall < bot.radius + ball.radius + 18) {
+          if (distToBall < bot.radius + ball.radius + 6) {
             const ballSpeed = Math.hypot(ball.vel.x, ball.vel.y);
-            if (ballSpeed < 10.5) {
+            if (ballSpeed < 8.5) {
               // Catch & hold
               bot.hasPossession = true;
               ball.attachToPlayer(bot.pos, bot.facingAngle, bot.radius, bot.vel, bot.id);
               bot.triggerFeedback('🧤 CAUGHT!');
             } else {
               // High speed shot -> Parry / Deflect to side
-              const parryY = predictedY > goalCenterY ? 7.5 : -7.5;
-              ball.vel.x = attackDir * 8.5;
+              const parryY = predictedY > goalCenterY ? 6.5 : -6.5;
+              ball.vel.x = attackDir * 7.0;
               ball.vel.y = parryY;
-              ball.vz = 3.5;
+              ball.vz = 3.0;
               ball.releaseTimer = 0.4;
               bot.triggerFeedback('🧤 PARRY!');
             }
@@ -282,7 +282,7 @@ export class TacticalAI {
     const moveDist = Math.hypot(moveDx, moveDy);
 
     if (moveDist > 8) {
-      const spd = Math.min(bot.speed * 0.85, moveDist * 0.15);
+      const spd = Math.min(bot.speed * 0.70, moveDist * 0.12);
       bot.vel.x = (moveDx / moveDist) * spd;
       bot.vel.y = (moveDy / moveDist) * spd;
     } else {
@@ -332,8 +332,8 @@ export class TacticalAI {
       // Safe dribble out of danger
       const safeDirX = attackDir * 0.85;
       const safeDirY = bot.pos.y < goalCenterY ? -0.5 : 0.5;
-      bot.vel.x = safeDirX * bot.speed * 0.55;
-      bot.vel.y = safeDirY * bot.speed * 0.55;
+      bot.vel.x = safeDirX * bot.speed * 0.45;
+      bot.vel.y = safeDirY * bot.speed * 0.45;
       bot.facingAngle = lerpAngle(bot.facingAngle, Math.atan2(bot.vel.y, bot.vel.x), 0.2);
       ball.attachToPlayer(bot.pos, bot.facingAngle, bot.radius, bot.vel, bot.id);
       return;
@@ -345,7 +345,7 @@ export class TacticalAI {
       // Maintain backline cover behind carrier
       const targetDepthX = goalLineX + attackDir * Math.max(340, Math.abs(teammateCarrier.pos.x - goalLineX) * 0.65);
       const targetY = teammateCarrier.pos.y * 0.6 + goalCenterY * 0.4;
-      TacticalAI.moveTowards(bot, targetDepthX, targetY, bot.speed * 0.6);
+      TacticalAI.moveTowards(bot, targetDepthX, targetY, bot.speed * 0.50);
       return;
     }
 
@@ -365,20 +365,20 @@ export class TacticalAI {
     if (distBallToGoal < 420 && isClosestToBall) {
       // Urgent Sweeper Clearance!
       bot.aiState = 'STATE_SWEEPER_CLEAR';
-      TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.85);
+      TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.65);
 
       // Standing Poke or Slide tackle loose ball / steal
-      if (distToBall < 52 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
-        if (Math.random() < 0.04) {
+      if (distToBall < 48 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
+        if (Math.random() < 0.02) {
           if (Math.random() < 0.75) {
             bot.isStandingTackling = true;
             bot.standingTackleTimer = 0.25;
-            bot.aiTackleCooldownTimer = 4.5;
+            bot.aiTackleCooldownTimer = 5.5;
             bot.triggerFeedback('👟 SWEEPER POKE!');
           } else {
             bot.isTackling = true;
             bot.tackleTimer = 0.4;
-            bot.aiTackleCooldownTimer = 6.0;
+            bot.aiTackleCooldownTimer = 7.5;
             bot.tackleSlideAngle = Math.atan2(ball.pos.y - bot.pos.y, ball.pos.x - bot.pos.x);
             bot.triggerFeedback('⚡ SWEEPER TACKLE!');
           }
@@ -394,20 +394,20 @@ export class TacticalAI {
       // Press if threat enters dangerous zone (< 380px from goal or < 120px from bot)
       if (threatDistToGoal < 450 || distToThreat < 130) {
         bot.aiState = 'STATE_PRESS_BALL';
-        TacticalAI.moveTowards(bot, targetThreat.pos.x, targetThreat.pos.y, bot.speed * 0.62);
+        TacticalAI.moveTowards(bot, targetThreat.pos.x, targetThreat.pos.y, bot.speed * 0.50);
 
         // Standing Poke Tackle or Slide Tackle execution in box
-        if (distToThreat < 52 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
-          if (Math.random() < 0.04) {
+        if (distToThreat < 48 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
+          if (Math.random() < 0.02) {
             if (Math.random() < 0.75) {
               bot.isStandingTackling = true;
               bot.standingTackleTimer = 0.25;
-              bot.aiTackleCooldownTimer = 4.5;
+              bot.aiTackleCooldownTimer = 5.5;
               bot.triggerFeedback('👟 DEFENDER POKE!');
             } else {
               bot.isTackling = true;
               bot.tackleTimer = 0.42;
-              bot.aiTackleCooldownTimer = 6.0;
+              bot.aiTackleCooldownTimer = 7.5;
               bot.tackleSlideAngle = Math.atan2(targetThreat.pos.y - bot.pos.y, targetThreat.pos.x - bot.pos.x);
               bot.triggerFeedback('⚡ DEFENDER SLIDE!');
             }
@@ -418,19 +418,19 @@ export class TacticalAI {
         bot.aiState = 'STATE_ZONE_COVER';
         const coverX = (targetThreat.pos.x + goalLineX) * 0.5;
         const coverY = (targetThreat.pos.y + goalCenterY) * 0.5;
-        TacticalAI.moveTowards(bot, coverX, coverY, bot.speed * 0.52);
+        TacticalAI.moveTowards(bot, coverX, coverY, bot.speed * 0.45);
       }
     } else {
       // Loose Ball Chase or Defensive Base
       if (isClosestToBall) {
         bot.aiState = 'STATE_PRESS_BALL';
-        TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.65);
+        TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.55);
       } else {
         bot.aiState = 'STATE_ZONE_COVER';
         // Base defensive position
         const baseDefX = goalLineX + attackDir * 320;
         const baseDefY = Math.max(field.pitchBounds.top + 160, Math.min(field.pitchBounds.bottom - 160, ball.pos.y * 0.5 + goalCenterY * 0.5));
-        TacticalAI.moveTowards(bot, baseDefX, baseDefY, bot.speed * 0.5);
+        TacticalAI.moveTowards(bot, baseDefX, baseDefY, bot.speed * 0.45);
       }
     }
   }
@@ -476,20 +476,20 @@ export class TacticalAI {
           const dx = throughPos.x - bot.pos.x;
           const dy = throughPos.y - bot.pos.y;
           const len = Math.hypot(dx, dy) || 1;
-          ball.kick({ x: dx / len, y: dy / len }, 11.5, bot.id, striker, throughPos);
+          ball.kick({ x: dx / len, y: dy / len }, 10.5, bot.id, striker, throughPos);
           bot.triggerFeedback('🎯 THROUGH BALL!');
           return;
         }
       }
 
-      // Check shooting chance from medium range (< 320px)
+      // Check shooting chance from medium range (< 240px)
       const distToGoal = Math.hypot(targetGoal.x - bot.pos.x, targetGoalCenterY - bot.pos.y);
-      if (distToGoal < 320 && ball.releaseTimer <= 0 && Math.random() < 0.05) {
+      if (distToGoal < 240 && ball.releaseTimer <= 0 && Math.random() < 0.02) {
         bot.hasPossession = false;
         const dx = targetGoal.x - bot.pos.x;
-        const dy = targetGoalCenterY - bot.pos.y + (Math.random() - 0.5) * 45;
+        const dy = targetGoalCenterY - bot.pos.y + (Math.random() - 0.5) * 75;
         const len = Math.hypot(dx, dy) || 1;
-        ball.kick({ x: dx / len, y: dy / len }, 14.5, bot.id);
+        ball.kick({ x: dx / len, y: dy / len }, 11.0, bot.id);
         bot.triggerFeedback('⚽ MIDFIELD ROCKET!');
         return;
       }
@@ -497,8 +497,8 @@ export class TacticalAI {
       // Progressively dribble towards attacking third while scanning options
       const dribbleDirX = attackDir * 0.85;
       const dribbleDirY = (targetGoalCenterY - bot.pos.y) * 0.003;
-      bot.vel.x = dribbleDirX * bot.speed * 0.58;
-      bot.vel.y = dribbleDirY * bot.speed * 0.58;
+      bot.vel.x = dribbleDirX * bot.speed * 0.48;
+      bot.vel.y = dribbleDirY * bot.speed * 0.48;
       bot.facingAngle = lerpAngle(bot.facingAngle, Math.atan2(bot.vel.y, bot.vel.x), 0.2);
       ball.attachToPlayer(bot.pos, bot.facingAngle, bot.radius, bot.vel, bot.id);
       return;
@@ -514,14 +514,14 @@ export class TacticalAI {
         field.pitchBounds.top + 140,
         Math.min(field.pitchBounds.bottom - 140, teammateCarrier.pos.y + sideSign * 200)
       );
-      TacticalAI.moveTowards(bot, supportX, supportY, bot.speed * 0.65);
+      TacticalAI.moveTowards(bot, supportX, supportY, bot.speed * 0.52);
       return;
     }
 
     // Press opponent or contest loose ball in midfield
     if (opponentCarrier) {
       bot.aiState = 'STATE_PRESS_BALL';
-      TacticalAI.moveTowards(bot, opponentCarrier.pos.x, opponentCarrier.pos.y, bot.speed * 0.60);
+      TacticalAI.moveTowards(bot, opponentCarrier.pos.x, opponentCarrier.pos.y, bot.speed * 0.48);
     } else {
       // Loose ball or zone coverage
       const isClosest = teammates.every((t) => {
@@ -532,14 +532,14 @@ export class TacticalAI {
 
       if (isClosest) {
         bot.aiState = 'STATE_PRESS_BALL';
-        TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.68);
+        TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.52);
       } else {
         bot.aiState = 'STATE_ZONE_COVER';
         // Central midfield hub
         const pitchCenter = (field.pitchBounds.left + field.pitchBounds.right) * 0.5;
         const targetX = pitchCenter + attackDir * 60;
         const targetY = ball.pos.y * 0.4 + targetGoalCenterY * 0.6;
-        TacticalAI.moveTowards(bot, targetX, targetY, bot.speed * 0.52);
+        TacticalAI.moveTowards(bot, targetX, targetY, bot.speed * 0.45);
       }
     }
   }
@@ -569,19 +569,18 @@ export class TacticalAI {
       bot.aiState = 'STATE_ATTACK_FINISH';
       const distToGoal = Math.hypot(targetGoal.x - bot.pos.x, targetGoalCenterY - bot.pos.y);
 
-      // In shooting range (< 390px from goal) -> Shoot clinical first-time finish!
-      if (distToGoal < 390 && ball.releaseTimer <= 0) {
+      // In shooting range (< 280px from goal) -> Shoot finish
+      if (distToGoal < 280 && ball.releaseTimer <= 0) {
         bot.hasPossession = false;
-        // Aim for top or bottom corner of target goal
         const cornerTargetY =
-          bot.pos.y < targetGoalCenterY ? targetGoal.top + 28 : targetGoal.bottom - 28;
-        const aimJitter = (Math.random() - 0.5) * 22;
+          bot.pos.y < targetGoalCenterY ? targetGoal.top + 35 : targetGoal.bottom - 35;
+        const aimJitter = (Math.random() - 0.5) * 75;
         const dx = targetGoal.x - bot.pos.x;
         const dy = cornerTargetY + aimJitter - bot.pos.y;
         const len = Math.hypot(dx, dy) || 1;
 
-        const isRocket = distToGoal > 250;
-        const shotPower = isRocket ? 16.5 : 14.0;
+        const isRocket = distToGoal > 210;
+        const shotPower = isRocket ? 12.5 : 11.0;
         ball.kick({ x: dx / len, y: dy / len }, shotPower, bot.id, null, null, isRocket ? 'rocket' : 'normal');
         bot.triggerFeedback(isRocket ? '⚡ THUNDERBOLT!' : '⚽ POACHER FINISH!');
         return;
@@ -597,11 +596,11 @@ export class TacticalAI {
       let moveY = (targetGoalCenterY - bot.pos.y) / distToGoal;
 
       if (blockingOpponent) {
-        // Rare skill move attempt (12s cooldown, 0.3% chance per frame)
-        if (bot.aiGocekCooldownTimer <= 0 && Math.random() < 0.003) {
+        // Rare skill move attempt (15s cooldown, 0.2% chance per frame)
+        if (bot.aiGocekCooldownTimer <= 0 && Math.random() < 0.002) {
           bot.isDribbleSkillActive = true;
-          bot.skillDodgeInvincibleTimer = 0.18;
-          bot.aiGocekCooldownTimer = 12.0;
+          bot.skillDodgeInvincibleTimer = 0.15;
+          bot.aiGocekCooldownTimer = 15.0;
           bot.triggerFeedback('✨ GOCEK SKILL!');
         }
 
@@ -613,7 +612,7 @@ export class TacticalAI {
         moveY /= norm;
       }
 
-      const dribbleSpeed = bot.speed * 0.65;
+      const dribbleSpeed = bot.speed * 0.48;
       bot.vel.x = moveX * dribbleSpeed;
       bot.vel.y = moveY * dribbleSpeed;
       bot.facingAngle = lerpAngle(bot.facingAngle, Math.atan2(bot.vel.y, bot.vel.x), 0.24);
@@ -636,28 +635,28 @@ export class TacticalAI {
         Math.min(field.pitchBounds.bottom - 130, targetGoalCenterY + postOffset)
       );
 
-      TacticalAI.moveTowards(bot, runDepthX, runTargetY, bot.speed * 0.75);
+      TacticalAI.moveTowards(bot, runDepthX, runTargetY, bot.speed * 0.55);
       return;
     }
 
     // Defending or Loose Ball
     if (opponentCarrier) {
       bot.aiState = 'STATE_PRESS_BALL';
-      // Press opponent ball carrier aggressively
-      TacticalAI.moveTowards(bot, opponentCarrier.pos.x, opponentCarrier.pos.y, bot.speed * 0.65);
+      // Press opponent ball carrier gently
+      TacticalAI.moveTowards(bot, opponentCarrier.pos.x, opponentCarrier.pos.y, bot.speed * 0.48);
 
       const distToCarrier = Math.hypot(opponentCarrier.pos.x - bot.pos.x, opponentCarrier.pos.y - bot.pos.y);
-      if (distToCarrier < 52 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
-        if (Math.random() < 0.035) {
+      if (distToCarrier < 48 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
+        if (Math.random() < 0.02) {
           if (Math.random() < 0.75) {
             bot.isStandingTackling = true;
             bot.standingTackleTimer = 0.25;
-            bot.aiTackleCooldownTimer = 4.5;
+            bot.aiTackleCooldownTimer = 5.5;
             bot.triggerFeedback('👟 BOT POKE!');
           } else {
             bot.isTackling = true;
             bot.tackleTimer = 0.40;
-            bot.aiTackleCooldownTimer = 6.0;
+            bot.aiTackleCooldownTimer = 7.5;
             bot.tackleSlideAngle = Math.atan2(opponentCarrier.pos.y - bot.pos.y, opponentCarrier.pos.x - bot.pos.x);
             bot.triggerFeedback('⚡ BOT SLIDE!');
           }
@@ -666,7 +665,7 @@ export class TacticalAI {
     } else {
       // Chase loose ball
       bot.aiState = 'STATE_PRESS_BALL';
-      TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.72);
+      TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.50);
     }
   }
 
