@@ -368,18 +368,20 @@ export class TacticalAI {
       TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.85);
 
       // Standing Poke or Slide tackle loose ball / steal
-      if (distToBall < 60 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
-        if (Math.random() < 0.60) {
-          bot.isStandingTackling = true;
-          bot.standingTackleTimer = 0.25;
-          bot.aiTackleCooldownTimer = 2.0;
-          bot.triggerFeedback('👟 SWEEPER POKE!');
-        } else {
-          bot.isTackling = true;
-          bot.tackleTimer = 0.4;
-          bot.aiTackleCooldownTimer = 3.5;
-          bot.tackleSlideAngle = Math.atan2(ball.pos.y - bot.pos.y, ball.pos.x - bot.pos.x);
-          bot.triggerFeedback('⚡ SWEEPER TACKLE!');
+      if (distToBall < 52 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
+        if (Math.random() < 0.04) {
+          if (Math.random() < 0.75) {
+            bot.isStandingTackling = true;
+            bot.standingTackleTimer = 0.25;
+            bot.aiTackleCooldownTimer = 4.5;
+            bot.triggerFeedback('👟 SWEEPER POKE!');
+          } else {
+            bot.isTackling = true;
+            bot.tackleTimer = 0.4;
+            bot.aiTackleCooldownTimer = 6.0;
+            bot.tackleSlideAngle = Math.atan2(ball.pos.y - bot.pos.y, ball.pos.x - bot.pos.x);
+            bot.triggerFeedback('⚡ SWEEPER TACKLE!');
+          }
         }
       }
       return;
@@ -392,21 +394,23 @@ export class TacticalAI {
       // Press if threat enters dangerous zone (< 380px from goal or < 120px from bot)
       if (threatDistToGoal < 450 || distToThreat < 130) {
         bot.aiState = 'STATE_PRESS_BALL';
-        TacticalAI.moveTowards(bot, targetThreat.pos.x, targetThreat.pos.y, bot.speed * 0.72);
+        TacticalAI.moveTowards(bot, targetThreat.pos.x, targetThreat.pos.y, bot.speed * 0.62);
 
         // Standing Poke Tackle or Slide Tackle execution in box
-        if (distToThreat < 70 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
-          if (Math.random() < 0.65) {
-            bot.isStandingTackling = true;
-            bot.standingTackleTimer = 0.25;
-            bot.aiTackleCooldownTimer = 2.2;
-            bot.triggerFeedback('👟 DEFENDER POKE!');
-          } else {
-            bot.isTackling = true;
-            bot.tackleTimer = 0.42;
-            bot.aiTackleCooldownTimer = 3.8;
-            bot.tackleSlideAngle = Math.atan2(targetThreat.pos.y - bot.pos.y, targetThreat.pos.x - bot.pos.x);
-            bot.triggerFeedback('⚡ DEFENDER SLIDE!');
+        if (distToThreat < 52 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
+          if (Math.random() < 0.04) {
+            if (Math.random() < 0.75) {
+              bot.isStandingTackling = true;
+              bot.standingTackleTimer = 0.25;
+              bot.aiTackleCooldownTimer = 4.5;
+              bot.triggerFeedback('👟 DEFENDER POKE!');
+            } else {
+              bot.isTackling = true;
+              bot.tackleTimer = 0.42;
+              bot.aiTackleCooldownTimer = 6.0;
+              bot.tackleSlideAngle = Math.atan2(targetThreat.pos.y - bot.pos.y, targetThreat.pos.x - bot.pos.x);
+              bot.triggerFeedback('⚡ DEFENDER SLIDE!');
+            }
           }
         }
       } else {
@@ -414,13 +418,13 @@ export class TacticalAI {
         bot.aiState = 'STATE_ZONE_COVER';
         const coverX = (targetThreat.pos.x + goalLineX) * 0.5;
         const coverY = (targetThreat.pos.y + goalCenterY) * 0.5;
-        TacticalAI.moveTowards(bot, coverX, coverY, bot.speed * 0.58);
+        TacticalAI.moveTowards(bot, coverX, coverY, bot.speed * 0.52);
       }
     } else {
       // Loose Ball Chase or Defensive Base
       if (isClosestToBall) {
         bot.aiState = 'STATE_PRESS_BALL';
-        TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.75);
+        TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.65);
       } else {
         bot.aiState = 'STATE_ZONE_COVER';
         // Base defensive position
@@ -517,7 +521,7 @@ export class TacticalAI {
     // Press opponent or contest loose ball in midfield
     if (opponentCarrier) {
       bot.aiState = 'STATE_PRESS_BALL';
-      TacticalAI.moveTowards(bot, opponentCarrier.pos.x, opponentCarrier.pos.y, bot.speed * 0.68);
+      TacticalAI.moveTowards(bot, opponentCarrier.pos.x, opponentCarrier.pos.y, bot.speed * 0.60);
     } else {
       // Loose ball or zone coverage
       const isClosest = teammates.every((t) => {
@@ -528,7 +532,7 @@ export class TacticalAI {
 
       if (isClosest) {
         bot.aiState = 'STATE_PRESS_BALL';
-        TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.75);
+        TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.68);
       } else {
         bot.aiState = 'STATE_ZONE_COVER';
         // Central midfield hub
@@ -594,10 +598,10 @@ export class TacticalAI {
 
       if (blockingOpponent) {
         // Gocek / Feint around blocker
-        if (bot.aiGocekCooldownTimer <= 0 && Math.random() < 0.15) {
+        if (bot.aiGocekCooldownTimer <= 0 && Math.random() < 0.015) {
           bot.isDribbleSkillActive = true;
-          bot.skillDodgeInvincibleTimer = 0.45;
-          bot.aiGocekCooldownTimer = 2.5;
+          bot.skillDodgeInvincibleTimer = 0.20;
+          bot.aiGocekCooldownTimer = 7.0;
           bot.triggerFeedback('✨ GOCEK SKILL!');
         }
 
@@ -640,27 +644,29 @@ export class TacticalAI {
     if (opponentCarrier) {
       bot.aiState = 'STATE_PRESS_BALL';
       // Press opponent ball carrier aggressively
-      TacticalAI.moveTowards(bot, opponentCarrier.pos.x, opponentCarrier.pos.y, bot.speed * 0.85);
+      TacticalAI.moveTowards(bot, opponentCarrier.pos.x, opponentCarrier.pos.y, bot.speed * 0.65);
 
       const distToCarrier = Math.hypot(opponentCarrier.pos.x - bot.pos.x, opponentCarrier.pos.y - bot.pos.y);
-      if (distToCarrier < 75 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
-        if (Math.random() < 0.60) {
-          bot.isStandingTackling = true;
-          bot.standingTackleTimer = 0.25;
-          bot.aiTackleCooldownTimer = 2.0;
-          bot.triggerFeedback('👟 BOT POKE!');
-        } else {
-          bot.isTackling = true;
-          bot.tackleTimer = 0.40;
-          bot.aiTackleCooldownTimer = 3.2;
-          bot.tackleSlideAngle = Math.atan2(opponentCarrier.pos.y - bot.pos.y, opponentCarrier.pos.x - bot.pos.x);
-          bot.triggerFeedback('⚡ BOT SLIDE!');
+      if (distToCarrier < 52 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
+        if (Math.random() < 0.035) {
+          if (Math.random() < 0.75) {
+            bot.isStandingTackling = true;
+            bot.standingTackleTimer = 0.25;
+            bot.aiTackleCooldownTimer = 4.5;
+            bot.triggerFeedback('👟 BOT POKE!');
+          } else {
+            bot.isTackling = true;
+            bot.tackleTimer = 0.40;
+            bot.aiTackleCooldownTimer = 6.0;
+            bot.tackleSlideAngle = Math.atan2(opponentCarrier.pos.y - bot.pos.y, opponentCarrier.pos.x - bot.pos.x);
+            bot.triggerFeedback('⚡ BOT SLIDE!');
+          }
         }
       }
     } else {
       // Chase loose ball
       bot.aiState = 'STATE_PRESS_BALL';
-      TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.85);
+      TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.72);
     }
   }
 
