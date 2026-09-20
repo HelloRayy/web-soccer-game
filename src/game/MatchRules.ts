@@ -3,8 +3,8 @@ import { Ball } from './Ball';
 import { Field } from './Field';
 import { Player } from './Player';
 
-const MATCH_LIMIT_SECONDS = 180; // 3 Minutes Full Time (Countdown from 3:00 to 0:00)
-const HALF_TIME_SECONDS = 90; // 1:30 Half Time whistle
+const MATCH_LIMIT_SECONDS = 60; // 60s Total Match (30s 1st Half + 30s 2nd Half)
+const HALF_TIME_SECONDS = 30; // 30s Half Time whistle
 
 export interface MatchUpdateResult {
   goalScored: boolean;
@@ -182,17 +182,17 @@ export class MatchRules {
     // B. Match Timer Count-Up
     this.state.timerSeconds += dt;
 
-    // Check Half-Time at 1:30 (90s)
+    // Check Half-Time at 30s (0:30 remaining)
     if (!this.halfTimeTriggered && this.state.timerSeconds >= HALF_TIME_SECONDS && this.state.state !== 'GOLDEN_GOAL') {
       this.halfTimeTriggered = true;
       this.state.phase = 'PHASE_HALF_TIME';
       this.halfTimeTimer = 3.5;
-      this.state.logMessage = '⏸️ HALF TIME! 1ST HALF FINISHED';
+      this.state.logMessage = '⏸️ HALF TIME (30s)! BABAK PERTAMA SELESAI';
       this.state.debugInputText = '[HALF TIME]';
       return { goalScored: false, phaseChanged: true };
     }
 
-    // Check Full-Time at 3:00 (180s)
+    // Check Full-Time at 60s (0:00 remaining)
     if (this.state.timerSeconds >= MATCH_LIMIT_SECONDS) {
       this.state.timerSeconds = MATCH_LIMIT_SECONDS;
 
@@ -209,10 +209,10 @@ export class MatchRules {
         this.state.logMessage = '🏆 FULL TIME (0:00) - AWAY TEAM WINS THE MATCH!';
         return { goalScored: false, phaseChanged: true };
       } else {
-        // Tied Match -> Golden Goal Extra Time!
+        // Tied Match -> Golden Goal Extra Time (Babak Penentuan - Siapa Ngegolin Dulu Dia Menang)!
         if (this.state.state !== 'GOLDEN_GOAL') {
           this.state.state = 'GOLDEN_GOAL';
-          this.state.logMessage = '⚡ FULL TIME DRAW (0:00)! GOLDEN GOAL EXTRA TIME - NEXT GOAL WINS!';
+          this.state.logMessage = '⚡ BABAK PENENTUAN! SKOR SERI (0:00) - GOLDEN GOAL: SIAPA NGE-GOLIN DULU DIA MENANG!';
         }
       }
     }

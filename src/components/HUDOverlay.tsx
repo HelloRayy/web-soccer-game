@@ -69,7 +69,7 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
   };
 
   const formatTime = (seconds: number) => {
-    const remaining = Math.max(0, 180 - Math.floor(seconds));
+    const remaining = Math.max(0, 60 - Math.floor(seconds));
     const mins = Math.floor(remaining / 60);
     const secs = Math.floor(remaining % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -243,11 +243,13 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
             </div>
             {/* Live Timer & Period Tag */}
             <div className="flex items-center gap-2 text-[10px] font-mono font-black text-emerald-400">
-              <span className="px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 text-[9px] uppercase">
-                {matchState.state === 'GOLDEN_GOAL' ? 'GOLDEN GOAL' : matchState.phase === 'PHASE_HALF_TIME' ? 'HT' : matchState.timerSeconds >= 90 ? '2ND' : '1ST'}
+              <span className={`px-1.5 py-0.2 rounded text-[9px] uppercase font-bold ${
+                matchState.state === 'GOLDEN_GOAL' ? 'bg-amber-950 text-amber-300 border border-amber-500/60 animate-pulse' : 'bg-slate-800 text-slate-300'
+              }`}>
+                {matchState.state === 'GOLDEN_GOAL' ? '⚡ BABAK PENENTUAN' : matchState.phase === 'PHASE_HALF_TIME' ? 'HT' : matchState.timerSeconds >= 30 ? '2ND' : '1ST'}
               </span>
-              <span>⏱️ {formatTime(matchState.timerSeconds)}</span>
-              {((matchState.timerSeconds >= 78 && matchState.timerSeconds <= 90) || (matchState.timerSeconds >= 168 && matchState.timerSeconds <= 180)) && (
+              <span>⏱️ {matchState.state === 'GOLDEN_GOAL' ? '0:00 (SD)' : formatTime(matchState.timerSeconds)}</span>
+              {((matchState.timerSeconds >= 25 && matchState.timerSeconds <= 30) || (matchState.timerSeconds >= 55 && matchState.timerSeconds <= 60)) && (
                 <span className="text-amber-300 animate-pulse font-black text-[9px]">+1'</span>
               )}
             </div>
@@ -341,8 +343,9 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
         </div>
       )}
       {matchState.state === 'GOLDEN_GOAL' && (
-        <div className="fixed top-[172px] left-1/2 -translate-x-1/2 z-40 bg-amber-950/90 border-2 border-amber-400 px-5 py-2 rounded-xl shadow-2xl text-amber-300 font-mono text-xs font-black tracking-wider animate-pulse">
-          GOLDEN GOAL • NEXT SCORE WINS
+        <div className="fixed top-[172px] left-1/2 -translate-x-1/2 z-40 bg-amber-950/95 border-2 border-amber-400 px-6 py-2 rounded-2xl shadow-2xl text-amber-300 font-mono text-xs font-black tracking-wider animate-pulse flex items-center gap-2 backdrop-blur-md">
+          <span>⚡</span>
+          <span>BABAK PENENTUAN: GOLDEN GOAL • SIAPA NGE-GOLIN DULU DIA MENANG!</span>
         </div>
       )}
       {/* PES / FIFA PRO STYLE ACTIVE PLAYER HUD CARD */}
