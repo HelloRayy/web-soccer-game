@@ -538,12 +538,12 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
           </div>
         )}
 
-        {/* 2-Second Goal Celebration Banner Overlay */}
+        {/* Snappy Compact Goal Celebration Banner Overlay */}
         {goalBannerText && (
-          <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center p-4">
-            <div className="bg-[#0b0f0c]/95 border-4 border-emerald-400 px-10 py-6 rounded-3xl shadow-2xl backdrop-blur-2xl flex flex-col items-center gap-2 animate-in zoom-in-75 duration-200">
-              <span className="text-6xl animate-bounce">⚽</span>
-              <span className="text-3xl font-black text-emerald-400 font-mono tracking-wider drop-shadow-xl">
+          <div className="fixed inset-x-0 top-16 z-50 pointer-events-none flex items-center justify-center p-2">
+            <div className="bg-[#0b0f0c]/95 border-2 border-emerald-400/90 px-6 py-2.5 rounded-2xl shadow-2xl backdrop-blur-xl flex items-center gap-3 animate-in zoom-in-90 duration-150">
+              <span className="text-2xl animate-bounce">⚽</span>
+              <span className="text-base sm:text-xl font-black text-emerald-400 font-mono tracking-wider drop-shadow-lg">
                 {goalBannerText}
               </span>
             </div>

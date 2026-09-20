@@ -491,7 +491,7 @@ export const GameView: React.FC<GameViewProps> = ({
     const matchResult = rules.update(dt, ball, field, players);
     if (matchResult.goalScored) {
       const shotSpeedKmH = rules.lastGoalShotSpeed;
-      cameraShakeRef.current = 36;
+      cameraShakeRef.current = 28;
       setIsGoalShaking(true);
       setIsCrowdSurging(true);
       setGoalBannerText(`⚽ GOAL! 🚀 ${shotSpeedKmH} KM/H THUNDERBOLT!`);
@@ -507,9 +507,13 @@ export const GameView: React.FC<GameViewProps> = ({
         setIsReplayActive(true);
       }
 
+      // Snappy 1.0-second auto-clear for goal notification banners
       setTimeout(() => {
+        setGoalBannerText(null);
         setWhistleBannerText(null);
-      }, 2200);
+        setIsGoalShaking(false);
+        setIsCrowdSurging(false);
+      }, 1000);
     }
 
     if (matchResult.needsKickoffReset) {
