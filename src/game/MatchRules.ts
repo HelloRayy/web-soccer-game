@@ -3,7 +3,7 @@ import { Ball } from './Ball';
 import { Field } from './Field';
 import { Player } from './Player';
 
-const MATCH_LIMIT_SECONDS = 180; // 3 Minutes Full Time (0:00 -> 3:00)
+const MATCH_LIMIT_SECONDS = 180; // 3 Minutes Full Time (Countdown from 3:00 to 0:00)
 const HALF_TIME_SECONDS = 90; // 1:30 Half Time whistle
 
 export interface MatchUpdateResult {
@@ -200,19 +200,19 @@ export class MatchRules {
         this.state.state = 'GAME_OVER';
         this.state.phase = 'PHASE_FULL_TIME';
         this.state.winnerTitle = '🎉 VICTORY! HOME TEAM WINS!';
-        this.state.logMessage = '🏆 FULL TIME (3:00) - HOME TEAM WINS THE MATCH!';
+        this.state.logMessage = '🏆 FULL TIME (0:00) - HOME TEAM WINS THE MATCH!';
         return { goalScored: false, phaseChanged: true };
       } else if (this.state.scoreAway > this.state.scoreHome) {
         this.state.state = 'GAME_OVER';
         this.state.phase = 'PHASE_FULL_TIME';
         this.state.winnerTitle = '🎉 VICTORY! AWAY TEAM WINS!';
-        this.state.logMessage = '🏆 FULL TIME (3:00) - AWAY TEAM WINS THE MATCH!';
+        this.state.logMessage = '🏆 FULL TIME (0:00) - AWAY TEAM WINS THE MATCH!';
         return { goalScored: false, phaseChanged: true };
       } else {
         // Tied Match -> Golden Goal Extra Time!
         if (this.state.state !== 'GOLDEN_GOAL') {
           this.state.state = 'GOLDEN_GOAL';
-          this.state.logMessage = '⚡ FULL TIME DRAW (3:00)! GOLDEN GOAL EXTRA TIME - NEXT GOAL WINS!';
+          this.state.logMessage = '⚡ FULL TIME DRAW (0:00)! GOLDEN GOAL EXTRA TIME - NEXT GOAL WINS!';
         }
       }
     }

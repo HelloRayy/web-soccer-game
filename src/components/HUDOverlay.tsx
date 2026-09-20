@@ -69,8 +69,9 @@ export const HUDOverlay: React.FC<HUDOverlayProps> = ({
   };
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
+    const remaining = Math.max(0, 180 - Math.floor(seconds));
+    const mins = Math.floor(remaining / 60);
+    const secs = Math.floor(remaining % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
