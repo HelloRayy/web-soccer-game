@@ -466,18 +466,49 @@ export const GameView: React.FC<GameViewProps> = ({
         return;
       }
 
-      const frame = replayFramesRef.current[Math.floor(replayFrameIndexRef.current)];
-      if (frame) {
-        ball.pos.x = frame.ballPos.x;
-        ball.pos.y = frame.ballPos.y;
-        ball.z = frame.ballPos.z;
-        ball.rotationAngle = frame.ballRotation;
-        frame.players.forEach((pf) => {
+      const totalFrames = replayFramesRef.current.length;
+      const currIdx = Math.floor(replayFrameIndexRef.current);
+      const nextIdx = Math.min(totalFrames - 1, currIdx + 1);
+      const frac = replayFrameIndexRef.current - currIdx;
+
+      const currFrame = replayFramesRef.current[currIdx];
+      const nextFrame = replayFramesRef.current[nextIdx];
+
+      if (currFrame && nextFrame) {
+        // 1. Silky Smooth Lerp Ball Position & Height
+        ball.pos.x = currFrame.ballPos.x + (nextFrame.ballPos.x - currFrame.ballPos.x) * frac;
+        ball.pos.y = currFrame.ballPos.y + (nextFrame.ballPos.y - currFrame.ballPos.y) * frac;
+        ball.z = currFrame.ballPos.z + (nextFrame.ballPos.z - currFrame.ballPos.z) * frac;
+        ball.rotationAngle = currFrame.ballRotation + (nextFrame.ballRotation - currFrame.ballRotation) * frac;
+
+        // 2. Silky Smooth Lerp Player Positions, Facing Angles & Running Animations
+        currFrame.players.forEach((pf) => {
           const p = players.find((pl) => pl.id === pf.id);
+          const npf = nextFrame.players.find((pl) => pl.id === pf.id);
           if (p) {
-            p.pos.x = pf.pos.x;
-            p.pos.y = pf.pos.y;
-            p.facingAngle = pf.facingAngle;
+            const nextX = npf ? npf.pos.x : pf.pos.x;
+            const nextY = npf ? npf.pos.y : pf.pos.y;
+            const nextAngle = npf ? npf.facingAngle : pf.facingAngle;
+
+            const deltaX = nextX - pf.pos.x;
+            const deltaY = nextY - pf.pos.y;
+            const spd = Math.hypot(deltaX, deltaY);
+
+            p.pos.x = pf.pos.x + deltaX * frac;
+            p.pos.y = pf.pos.y + deltaY * frac;
+
+            // Interpolate facing angle smoothly
+            let diff = nextAngle - pf.facingAngle;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            p.facingAngle = pf.facingAngle + diff * frac;
+
+            // Compute replay velocity & step animation phase for smooth leg strides
+            p.vel.x = deltaX * 0.6;
+            p.vel.y = deltaY * 0.6;
+            if (spd > 0.1) {
+              p.stepPhase = (p.stepPhase + spd * 0.05) % 1;
+            }
           }
         });
       }
