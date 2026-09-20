@@ -274,6 +274,8 @@ export const GameView: React.FC<GameViewProps> = ({
     if (!isReplayActiveRef.current) return;
     isReplayActiveRef.current = false;
     setIsReplayActive(false);
+    matchRulesRef.current.celebrationTimer = 0;
+    matchRulesRef.current.state.phase = 'PHASE_KICKOFF';
     resetMatchPositions(matchRulesRef.current.kickoffTeam);
     setGoalBannerText(null);
     setIsGoalShaking(false);
@@ -449,9 +451,13 @@ export const GameView: React.FC<GameViewProps> = ({
 
     // Handle 0.6x Slow-Motion Replay Playback Mode
     if (isReplayActiveRef.current) {
-      if (gamepads[0]?.buttons.a) {
-        skipReplay();
-        return;
+      // Prevent held shot/pass buttons from immediately skipping replay on frame 0/1.
+      // Require replay to play for at least 30 frames (~0.5s) before gamepad button skip is accepted.
+      if (replayFrameIndexRef.current > 30) {
+        if (gamepads[0]?.buttons.a || gamepads[1]?.buttons.a) {
+          skipReplay();
+          return;
+        }
       }
 
       replayFrameIndexRef.current += 0.6;
