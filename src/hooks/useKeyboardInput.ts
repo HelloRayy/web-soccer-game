@@ -6,7 +6,7 @@ export interface DualKeyboardState {
   p2Input: GamepadState;
 }
 
-export function useKeyboardInput(): DualKeyboardState {
+export function useKeyboardInput(isReplayActive = false): DualKeyboardState {
   const keysPressedRef = useRef<{ [key: string]: boolean }>({});
   const [, setTick] = useState(0);
 
@@ -15,6 +15,9 @@ export function useKeyboardInput(): DualKeyboardState {
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
         e.preventDefault();
       }
+
+      // While replay is active, ignore all game key inputs entirely
+      if (isReplayActive) return;
 
       const codeKey = e.code.toLowerCase();
       const valKey = e.key.toLowerCase();
@@ -48,7 +51,14 @@ export function useKeyboardInput(): DualKeyboardState {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [isReplayActive]);
+
+  // When replay is active, wipe all tracked key states so no button
+  // press from the skip gesture leaks into the first game frame after
+  // the replay ends.
+  if (isReplayActive) {
+    keysPressedRef.current = {};
+  }
 
   const keys = keysPressedRef.current;
 

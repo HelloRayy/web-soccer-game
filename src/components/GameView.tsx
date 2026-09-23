@@ -67,7 +67,6 @@ export const GameView: React.FC<GameViewProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const { gamepads } = useGamepad();
-  const { p1Input, p2Input } = useKeyboardInput();
 
   // Screen Viewport dimensions
   const [dimensions, setDimensions] = useState({
@@ -85,6 +84,7 @@ export const GameView: React.FC<GameViewProps> = ({
   const [offScreenBall, setOffScreenBall] = useState<OffScreenBallData | null>(null);
   const [isGoalShaking, setIsGoalShaking] = useState(false);
   const [isReplayActive, setIsReplayActive] = useState(false);
+  const { p1Input, p2Input } = useKeyboardInput(isReplayActive);
   const cameraShakeRef = useRef(0);
   const remoteGamepadStateRef = useRef<GamepadState | null>(null);
 
@@ -381,7 +381,8 @@ export const GameView: React.FC<GameViewProps> = ({
       if (e.key === 'Control' || e.ctrlKey) {
         setShowCursor((prev) => !prev);
       }
-      if ((e.key === 'Escape' || e.key === 'Enter') && isReplayActiveRef.current) {
+      if ((e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') && isReplayActiveRef.current) {
+        e.preventDefault(); // prevent page scroll on Space
         skipReplay();
       }
     };
@@ -556,9 +557,9 @@ export const GameView: React.FC<GameViewProps> = ({
       cameraShakeRef.current = 28;
       setIsGoalShaking(true);
       setIsCrowdSurging(true);
-      setGoalBannerText(`⚽ GOAL! 🚀 ${shotSpeedKmH} KM/H THUNDERBOLT!`);
-      setWhistleBannerText('GOAL!');
-      triggerCallout('goal', '🎉 GOAL GOAL GOAL!', `🚀 ${shotSpeedKmH} KM/H Thunderbolt Strike`);
+      setGoalBannerText(`GOAL! 🚀 ${shotSpeedKmH} KM/H THUNDERBOLT!`);
+      // Note: triggerCallout for 'goal' is intentionally omitted to avoid
+      // showing a second duplicate notification banner alongside goalBannerText.
       audioService.playGoalSound();
 
       // Trigger 240-frame 0.6x Slow-Motion Replay System

@@ -187,8 +187,12 @@ class AudioService {
     }
   }
 
+
   /**
-   * 3. Goal Horn / Celebration Explosion Sound Effect
+   * 3. Crowd Supporter "GOOOOOL!" Chant
+   *    Synthesizes the sound of thousands of supporters screaming "GOOOOOL!"
+   *    using layered detuned oscillators, vowel formant shaping, organic
+   *    tremolo, and a pink noise crowd texture bed — all via Web Audio API.
    */
   public playGoalSound() {
     if (this.isMuted) return;
@@ -196,44 +200,156 @@ class AudioService {
     if (!ctx) return;
 
     const now = ctx.currentTime;
+    const TOTAL = 4.0; // 4 seconds of crowd celebration
 
-    // High-Power Double/Triple Harmony Stadium Foghorn: C4 (261.63), G4 (392.00), C5 (523.25)
-    const freqs = [261.63, 392.00, 523.25];
-    const hornGain = ctx.createGain();
-    hornGain.gain.setValueAtTime(0.001, now);
-    hornGain.gain.linearRampToValueAtTime(0.75, now + 0.12);
-    hornGain.gain.setValueAtTime(0.75, now + 1.4);
-    hornGain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
+    // ============================================================
+    // MASTER BUS: Compressor/limiter prevents clipping from many voices
+    // ============================================================
+    const masterComp = ctx.createDynamicsCompressor();
+    masterComp.threshold.setValueAtTime(-8, now);
+    masterComp.knee.setValueAtTime(4, now);
+    masterComp.ratio.setValueAtTime(6, now);
+    masterComp.attack.setValueAtTime(0.002, now);
+    masterComp.release.setValueAtTime(0.3, now);
 
-    freqs.forEach((freq) => {
-      const osc = ctx.createOscillator();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(freq, now);
-      osc.connect(hornGain);
-      osc.start(now);
-      osc.stop(now + 2.2);
-    });
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.80, now);
+    masterComp.connect(masterGain);
+    masterGain.connect(ctx.destination);
 
-    hornGain.connect(ctx.destination);
+    // ============================================================
+    // LAYER 1: CROWD "GOOOOOL!" — 16 detuned human voices
+    //
+    // Each voice:
+    //  • Unique pitch in G3–B3 range (196–256 Hz) with random detune
+    //  • "GO!" pitch jump up then long "OOOOL" glide downward
+    //  • Slow tremolo LFO (2.5–5.5 Hz) for organic liveliness
+    //  • Routed through shared "O" vowel formant filters
+    // ============================================================
 
-    // Deep Sub-Bass Explosion Drop (120Hz -> 45Hz sub-drop boom)
-    const subOsc = ctx.createOscillator();
-    const subGain = ctx.createGain();
-    subOsc.type = 'sine';
-    subOsc.frequency.setValueAtTime(120, now);
-    subOsc.frequency.exponentialRampToValueAtTime(45, now + 0.8);
+    // Shared "O" vowel formant — sweeps from AH (800Hz) to OO (400Hz)
+    const vowelFormant = ctx.createBiquadFilter();
+    vowelFormant.type = 'bandpass';
+    vowelFormant.frequency.setValueAtTime(680, now);
+    vowelFormant.Q.setValueAtTime(2.2, now);
+    vowelFormant.frequency.linearRampToValueAtTime(420, now + TOTAL);
 
-    subGain.gain.setValueAtTime(1.0, now);
-    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+    // Upper resonance formant (nasal body of the chant)
+    const vowelFormant2 = ctx.createBiquadFilter();
+    vowelFormant2.type = 'bandpass';
+    vowelFormant2.frequency.setValueAtTime(1100, now);
+    vowelFormant2.Q.setValueAtTime(3, now);
+    vowelFormant2.frequency.linearRampToValueAtTime(850, now + TOTAL);
 
-    subOsc.connect(subGain);
-    subGain.connect(ctx.destination);
+    const crowdVocalGain = ctx.createGain();
+    crowdVocalGain.gain.setValueAtTime(0.001, now);
+    crowdVocalGain.gain.linearRampToValueAtTime(0.95, now + 0.15);  // crowd erupts!
+    crowdVocalGain.gain.setValueAtTime(0.90, now + 1.5);
+    crowdVocalGain.gain.linearRampToValueAtTime(0.70, now + 3.2);
+    crowdVocalGain.gain.exponentialRampToValueAtTime(0.001, now + TOTAL);
 
-    subOsc.start(now);
-    subOsc.stop(now + 0.8);
+    vowelFormant.connect(crowdVocalGain);
+    vowelFormant2.connect(crowdVocalGain);
+    crowdVocalGain.connect(masterComp);
 
-    // Trigger referee whistle and crowd surge
-    this.playWhistleSFX('long');
+    const numVoices = 16;
+    for (let v = 0; v < numVoices; v++) {
+      const detuneCents = (Math.random() - 0.5) * 100; // ±50 cents random
+      const basePitch = 196 + Math.random() * 60;       // 196–256 Hz (G3–B3)
+      const startDelay = Math.random() * 0.09;          // staggered 0–90ms
+
+      const voiceOsc = ctx.createOscillator();
+      voiceOsc.type = 'sawtooth';
+      // "GO!" jump up → long "OOOOL" glide down
+      voiceOsc.frequency.setValueAtTime(basePitch * 1.08, now + startDelay);
+      voiceOsc.frequency.linearRampToValueAtTime(basePitch * 1.15, now + startDelay + 0.08);
+      voiceOsc.frequency.linearRampToValueAtTime(basePitch * 0.95, now + startDelay + 2.5);
+      voiceOsc.frequency.linearRampToValueAtTime(basePitch * 0.88, now + TOTAL - 0.2);
+      voiceOsc.detune.setValueAtTime(detuneCents, now);
+
+      // Per-voice tremolo LFO — makes crowd feel alive, not robotic
+      const tremoloLFO = ctx.createOscillator();
+      const tremoloGain = ctx.createGain();
+      tremoloLFO.type = 'sine';
+      tremoloLFO.frequency.setValueAtTime(2.5 + Math.random() * 3.0, now);
+      tremoloGain.gain.setValueAtTime(3.5, now); // ±3.5 Hz pitch wobble
+      tremoloLFO.connect(tremoloGain);
+      tremoloGain.connect(voiceOsc.frequency);
+      tremoloLFO.start(now + startDelay);
+      tremoloLFO.stop(now + TOTAL);
+
+      // Per-voice amplitude
+      const voiceAmpGain = ctx.createGain();
+      voiceAmpGain.gain.setValueAtTime(0.001, now + startDelay);
+      voiceAmpGain.gain.linearRampToValueAtTime(1.0 / numVoices, now + startDelay + 0.12);
+      voiceAmpGain.gain.setValueAtTime(1.0 / numVoices, now + startDelay + 2.0);
+      voiceAmpGain.gain.exponentialRampToValueAtTime(0.001, now + TOTAL);
+
+      voiceOsc.connect(voiceAmpGain);
+      voiceAmpGain.connect(vowelFormant);
+      voiceAmpGain.connect(vowelFormant2);
+      voiceOsc.start(now + startDelay);
+      voiceOsc.stop(now + TOTAL);
+    }
+
+    // ============================================================
+    // LAYER 2: PINK NOISE CROWD TEXTURE
+    // Simulates the unintelligible roar of thousands of people;
+    // band-passed around the human vocal range for realism
+    // ============================================================
+    const crowdNoiseSize = Math.floor(ctx.sampleRate * TOTAL);
+    const crowdNoiseBuf = ctx.createBuffer(2, crowdNoiseSize, ctx.sampleRate);
+
+    for (let ch = 0; ch < 2; ch++) {
+      const data = crowdNoiseBuf.getChannelData(ch);
+      let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0;
+      for (let i = 0; i < crowdNoiseSize; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + white * 0.0555;
+        b1 = 0.99332 * b1 + white * 0.0751;
+        b2 = 0.96900 * b2 + white * 0.1539;
+        b3 = 0.86650 * b3 + white * 0.3105;
+        b4 = 0.55000 * b4 + white * 0.5330;
+        b5 = -0.7616 * b5 - white * 0.0169;
+        data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + white * 0.536) * 0.10;
+      }
+    }
+
+    const crowdNoiseSrc = ctx.createBufferSource();
+    crowdNoiseSrc.buffer = crowdNoiseBuf;
+
+    const noiseBP = ctx.createBiquadFilter();
+    noiseBP.type = 'bandpass';
+    noiseBP.frequency.setValueAtTime(900, now);
+    noiseBP.Q.setValueAtTime(0.5, now);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.001, now);
+    noiseGain.gain.linearRampToValueAtTime(0.50, now + 0.20);
+    noiseGain.gain.setValueAtTime(0.50, now + 1.5);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + TOTAL);
+
+    crowdNoiseSrc.connect(noiseBP);
+    noiseBP.connect(noiseGain);
+    noiseGain.connect(masterComp);
+    crowdNoiseSrc.start(now);
+
+    // ============================================================
+    // LAYER 3: SUB-BASS IMPACT — ball hitting the net at t=0
+    // ============================================================
+    const impactOsc = ctx.createOscillator();
+    const impactGain = ctx.createGain();
+    impactOsc.type = 'sine';
+    impactOsc.frequency.setValueAtTime(120, now);
+    impactOsc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+    impactGain.gain.setValueAtTime(0.7, now);
+    impactGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    impactOsc.connect(impactGain);
+    impactGain.connect(masterComp);
+    impactOsc.start(now);
+    impactOsc.stop(now + 0.35);
+
+    // Boost ambient crowd during celebration
     this.triggerCrowdCheer();
   }
 
