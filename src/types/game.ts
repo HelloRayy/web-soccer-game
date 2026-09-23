@@ -35,6 +35,8 @@ export interface GamepadState {
 
 export type TeamType = 'home' | 'away';
 
+export type BotDifficulty = 'easy' | 'hard';
+
 export type TacticalRole = 'GK' | 'DF' | 'MF' | 'ST';
 
 export type AIState =

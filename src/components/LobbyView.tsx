@@ -6,21 +6,23 @@ import { ControllerSelectModal, DeviceType, PlayerDeviceConfig } from './Control
 import { MatchModeModal } from './MatchModeModal';
 
 import { audioService } from '../services/audioService';
+import { BotDifficulty } from '../types/game';
 
 interface LobbyViewProps {
   onStartMatch: (
-    mode: '1v1' | '1vBot' | '2vBot',
+    mode: '1v1' | '2vBot',
     p1Device?: DeviceType,
     p2Device?: DeviceType,
     homeControllers?: PlayerDeviceConfig[],
-    awayControllers?: PlayerDeviceConfig[]
+    awayControllers?: PlayerDeviceConfig[],
+    botDifficulty?: BotDifficulty
   ) => void;
   peerRoomId: string;
   isPeerConnected: boolean;
   connectedPeerCount?: number;
 }
 
-type MenuItemId = '1v1' | '2vBot' | '1vBot' | 'extras' | 'settings';
+type MenuItemId = '1v1' | '2vBot' | 'extras' | 'settings';
 
 interface MenuItemConfig {
   id: MenuItemId;
@@ -72,7 +74,8 @@ const MENU_ITEMS: MenuItemConfig[] = [
 ];
 
 export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, isPeerConnected, connectedPeerCount = 0 }) => {
-  const [selectedMode, setSelectedMode] = useState<'1v1' | '1vBot' | '2vBot'>('1vBot');
+  const [selectedMode, setSelectedMode] = useState<'1v1' | '2vBot'>('1v1');
+  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('easy');
   const [activeItem, setActiveItem] = useState<MenuItemId>('1v1');
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [showControlsModal, setShowControlsModal] = useState(false);
@@ -121,8 +124,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
     }
   };
 
-  const handleSelectMatchMode = (mode: '1v1' | '1vBot' | '2vBot') => {
+  const handleSelectMatchMode = (mode: '1v1' | '2vBot', difficulty?: BotDifficulty) => {
     setSelectedMode(mode);
+    if (difficulty) setBotDifficulty(difficulty);
     setShowMatchModeModal(false);
     setShowControllerSelectModal(true);
   };
@@ -134,7 +138,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
     awayControllers?: PlayerDeviceConfig[]
   ) => {
     setShowControllerSelectModal(false);
-    onStartMatch(selectedMode, p1Device, p2Device, homeControllers, awayControllers);
+    onStartMatch(selectedMode, p1Device, p2Device, homeControllers, awayControllers, botDifficulty);
   };
 
   return (

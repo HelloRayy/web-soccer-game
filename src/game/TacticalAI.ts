@@ -1,4 +1,4 @@
-import { AIState, TacticalRole, Vector2D } from '../types/game';
+import { AIState, BotDifficulty, TacticalRole, TeamType, Vector2D } from '../types/game';
 import { Ball } from './Ball';
 import { Field } from './Field';
 import { Player } from './Player';
@@ -9,6 +9,76 @@ function lerpAngle(start: number, end: number, amount: number): number {
   while (diff > Math.PI) diff -= Math.PI * 2;
   return start + diff * amount;
 }
+
+export interface BotTacticalProfile {
+  name: string;
+  speedMultiplier: number;
+  dribbleSpeedMultiplier: number;
+  sprintEnabled: boolean;
+  sprintSpeedMultiplier: number;
+  shootRange: number;
+  rocketShotRange: number;
+  shotPower: number;
+  rocketShotPower: number;
+  aimJitter: number;
+  tackleChancePerFrame: number;
+  slideCooldown: number;
+  standingCooldown: number;
+  gocekEnabled: boolean;
+  gocekCooldown: number;
+  pressDistance: number;
+  throughPassEnabled: boolean;
+  chipShotEnabled: boolean;
+  loftedPassEnabled: boolean;
+  aerialFinishingEnabled: boolean;
+}
+
+export const BOT_PROFILES: Record<BotDifficulty, BotTacticalProfile> = {
+  easy: {
+    name: 'Easy Bot (Latihan / Santai)',
+    speedMultiplier: 1.0,
+    dribbleSpeedMultiplier: 0.92,
+    sprintEnabled: false,
+    sprintSpeedMultiplier: 1.0,
+    shootRange: 220,
+    rocketShotRange: 190,
+    shotPower: 9.8,
+    rocketShotPower: 11.0,
+    aimJitter: 75,
+    tackleChancePerFrame: 0.015,
+    slideCooldown: 7.0,
+    standingCooldown: 5.5,
+    gocekEnabled: false,
+    gocekCooldown: 25.0,
+    pressDistance: 90,
+    throughPassEnabled: false,
+    chipShotEnabled: false,
+    loftedPassEnabled: false,
+    aerialFinishingEnabled: false,
+  },
+  hard: {
+    name: 'Hard Bot (Pro / Agresif)',
+    speedMultiplier: 1.0,
+    dribbleSpeedMultiplier: 0.92,
+    sprintEnabled: true,
+    sprintSpeedMultiplier: 1.62,
+    shootRange: 340,
+    rocketShotRange: 240,
+    shotPower: 13.5,
+    rocketShotPower: 16.5,
+    aimJitter: 15,
+    tackleChancePerFrame: 0.05,
+    slideCooldown: 3.5,
+    standingCooldown: 2.5,
+    gocekEnabled: true,
+    gocekCooldown: 9.0,
+    pressDistance: 170,
+    throughPassEnabled: true,
+    chipShotEnabled: true,
+    loftedPassEnabled: true,
+    aerialFinishingEnabled: true,
+  },
+};
 
 export class TacticalAI {
   /**
@@ -21,17 +91,90 @@ export class TacticalAI {
     field: Field,
     opponents: Player[],
     teammates: Player[] = [],
-    dt = 1 / 60
+    dt = 1 / 60,
+    matchPhase: string = 'PHASE_PLAYING',
+    kickoffTeam: TeamType = 'home'
   ) {
     const frameScale = Math.min(2, Math.max(0.25, dt * 60));
     bot.walkTimerTick(0.02 * frameScale);
     bot.updateParticles();
 
+    // Process active tackle, stumble and dive states
+    if (bot.diveTimer > 0) {
+      bot.diveTimer -= dt;
+      if (bot.diveTimer <= 0) bot.isDiving = false;
+    } else {
+      bot.isDiving = false;
+    }
+
+    if (bot.tackleTimer > 0) {
+      bot.tackleTimer -= dt;
+      bot.vel.x *= Math.pow(0.94, frameScale);
+      bot.vel.y *= Math.pow(0.94, frameScale);
+      bot.spawnTurfParticle(2.8, true);
+
+      bot.pos.x += bot.vel.x * frameScale;
+      bot.pos.y += bot.vel.y * frameScale;
+
+      const bounds = field.pitchBounds;
+      bot.pos.x = Math.max(bounds.left + bot.radius, Math.min(bounds.right - bot.radius, bot.pos.x));
+      bot.pos.y = Math.max(bounds.top + bot.radius, Math.min(bounds.bottom - bot.radius, bot.pos.y));
+
+      if (bot.tackleTimer <= 0) {
+        bot.isTackling = false;
+        bot.vel.x = 0;
+        bot.vel.y = 0;
+      }
+      return; // Freeze AI decisions during active slide tackle
+    } else {
+      bot.isTackling = false;
+    }
+
+    if (bot.standingTackleTimer > 0) {
+      bot.standingTackleTimer -= dt;
+      bot.vel.x *= Math.pow(0.91, frameScale);
+      bot.vel.y *= Math.pow(0.91, frameScale);
+      bot.spawnTurfParticle(1.5, true);
+
+      bot.pos.x += bot.vel.x * frameScale;
+      bot.pos.y += bot.vel.y * frameScale;
+
+      const bounds = field.pitchBounds;
+      bot.pos.x = Math.max(bounds.left + bot.radius, Math.min(bounds.right - bot.radius, bot.pos.x));
+      bot.pos.y = Math.max(bounds.top + bot.radius, Math.min(bounds.bottom - bot.radius, bot.pos.y));
+
+      if (bot.standingTackleTimer <= 0) {
+        bot.isStandingTackling = false;
+        bot.vel.x = 0;
+        bot.vel.y = 0;
+      }
+      return; // Freeze AI decisions during active standing poke
+    } else {
+      bot.isStandingTackling = false;
+    }
+
+    if (bot.stumbleTimer > 0) {
+      bot.stumbleTimer -= dt;
+      bot.vel.x *= Math.pow(0.90, frameScale);
+      bot.vel.y *= Math.pow(0.90, frameScale);
+      bot.pos.x += bot.vel.x * frameScale;
+      bot.pos.y += bot.vel.y * frameScale;
+      return;
+    }
+
     // Decrease stun, cooldowns & duel feedback timers
-    if (bot.stumbleTimer > 0) bot.stumbleTimer -= dt;
     if (bot.aiGocekCooldownTimer > 0) bot.aiGocekCooldownTimer -= dt;
     if (bot.aiTackleCooldownTimer > 0) bot.aiTackleCooldownTimer -= dt;
     if (bot.dispossessProtectionTimer > 0) bot.dispossessProtectionTimer -= dt;
+    if (bot.isKickingTimer > 0) bot.isKickingTimer -= dt;
+    if (bot.volleyTimer > 0) {
+      bot.volleyTimer -= dt;
+      if (bot.volleyTimer <= 0) bot.isVolleying = false;
+    }
+    if (bot.headerTimer > 0) {
+      bot.headerTimer -= dt;
+      if (bot.headerTimer <= 0) bot.isHeading = false;
+    }
     if (bot.duelFeedbackTimer > 0) {
       bot.duelFeedbackTimer -= dt;
       bot.duelFeedbackYOffset += 0.4 * frameScale;
@@ -50,6 +193,74 @@ export class TacticalAI {
     }
     bot.isGoalkeeper = bot.role === 'GK';
 
+    const profile = BOT_PROFILES[bot.difficulty || 'easy'];
+
+    // 0. Freeze bot actions during match breaks and celebrations
+    if (matchPhase === 'PHASE_GOAL_CELEBRATION' || matchPhase === 'PHASE_HALF_TIME' || matchPhase === 'PHASE_FULL_TIME') {
+      bot.vel.x = 0;
+      bot.vel.y = 0;
+      bot.isSprinting = false;
+      return;
+    }
+
+    // 1. Kickoff Phase: Strict football kickoff rules enforcement
+    if (matchPhase === 'PHASE_KICKOFF') {
+      const centerX = field.width * 0.5;
+      const centerY = field.height * 0.5;
+      const isDefendingKickoff = bot.team !== kickoffTeam;
+
+      if (isDefendingKickoff) {
+        // Defending team MUST hold tactical position on their own half outside center circle (~95px)
+        const safeHalfX = bot.team === 'away' ? Math.max(centerX + 95, bot.pos.x) : Math.min(centerX - 95, bot.pos.x);
+        bot.pos.x = safeHalfX;
+        bot.vel.x = 0;
+        bot.vel.y = 0;
+        bot.isSprinting = false;
+        // Face the ball at center circle
+        bot.facingAngle = Math.atan2(centerY - bot.pos.y, centerX - bot.pos.x);
+        return;
+      }
+
+      // Attacking team during kickoff:
+      const distToBall = Math.hypot(bot.pos.x - ball.pos.x, bot.pos.y - ball.pos.y);
+      const isKicker = distToBall < 65;
+
+      if (!isKicker) {
+        // Supporting teammate stays in own half waiting for kickoff pass
+        bot.vel.x = 0;
+        bot.vel.y = 0;
+        bot.isSprinting = false;
+        bot.facingAngle = Math.atan2(ball.pos.y - bot.pos.y, ball.pos.x - bot.pos.x);
+        return;
+      }
+
+      // The bot IS the designated kickoff taker:
+      bot.aiKickoffTimer = (bot.aiKickoffTimer || 0) + dt;
+      // Wait ~0.65s for realistic match restart before passing
+      if (bot.aiKickoffTimer < 0.65) {
+        bot.vel.x = 0;
+        bot.vel.y = 0;
+        bot.facingAngle = bot.team === 'home' ? 0 : Math.PI;
+        return;
+      }
+
+      // Execute clean kickoff pass to teammate or touch forward
+      bot.aiKickoffTimer = 0;
+      const targetTeammate = teammates.find((t) => t.id !== bot.id && !t.isGoalkeeper) || teammates[0];
+      if (targetTeammate) {
+        const dx = targetTeammate.pos.x - bot.pos.x;
+        const dy = targetTeammate.pos.y - bot.pos.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        ball.kick({ x: dx / dist, y: dy / dist }, 5.2, bot.id, targetTeammate);
+        bot.isKickingTimer = 0.2;
+      } else {
+        const forwardX = bot.team === 'home' ? 1 : -1;
+        ball.kick({ x: forwardX, y: 0.15 }, 4.6, bot.id);
+        bot.isKickingTimer = 0.2;
+      }
+      return;
+    }
+
     // Dispatch by role
     switch (bot.role) {
       case 'GK':
@@ -62,7 +273,9 @@ export class TacticalAI {
           opponents,
           teammates,
           isHome,
-          dt
+          dt,
+          profile,
+          frameScale
         );
         break;
 
@@ -76,7 +289,9 @@ export class TacticalAI {
           opponents,
           teammates,
           isHome,
-          dt
+          dt,
+          profile,
+          frameScale
         );
         break;
 
@@ -90,7 +305,9 @@ export class TacticalAI {
           opponents,
           teammates,
           isHome,
-          dt
+          dt,
+          profile,
+          frameScale
         );
         break;
 
@@ -105,7 +322,9 @@ export class TacticalAI {
           opponents,
           teammates,
           isHome,
-          dt
+          dt,
+          profile,
+          frameScale
         );
         break;
     }
@@ -187,7 +406,9 @@ export class TacticalAI {
     opponents: Player[],
     teammates: Player[],
     isHome: boolean,
-    dt: number
+    dt: number,
+    profile: BotTacticalProfile,
+    frameScale = 1.0
   ) {
     const goalCenterY = (defendingGoal.top + defendingGoal.bottom) * 0.5;
     const goalLineX = defendingGoal.x;
@@ -293,6 +514,15 @@ export class TacticalAI {
     // Face towards the ball
     const angleToBall = Math.atan2(ball.pos.y - bot.pos.y, ball.pos.x - bot.pos.x);
     bot.facingAngle = lerpAngle(bot.facingAngle, angleToBall, 0.25);
+
+    // GK sprint reset & stamina recovery
+    bot.isSprinting = false;
+    if (bot.stamina < 1.0) {
+      bot.stamina = Math.min(1.0, bot.stamina + 0.002 * frameScale);
+      if (bot.isExhausted && bot.stamina > 0.30) {
+        bot.isExhausted = false;
+      }
+    }
   }
 
   /**
@@ -308,7 +538,9 @@ export class TacticalAI {
     opponents: Player[],
     teammates: Player[],
     isHome: boolean,
-    dt: number
+    dt: number,
+    profile: BotTacticalProfile,
+    frameScale = 1.0
   ) {
     const attackDir = isHome ? 1 : -1;
     const goalLineX = defendingGoal.x;
@@ -322,9 +554,24 @@ export class TacticalAI {
       // Look for forward pass to Midfielder or Striker
       const forwardTarget =
         teammates.find((t) => t.role === 'ST' || t.role === 'MF') || teammates[0];
+
+      // Tendangan Lambung / Long Lofted Clearance over opponent pressure
+      if (profile.loftedPassEnabled && forwardTarget && (opponentCarrier || Math.random() < 0.08)) {
+        bot.hasPossession = false;
+        const dx = forwardTarget.pos.x - bot.pos.x;
+        const dy = forwardTarget.pos.y - bot.pos.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const loftPower = Math.min(Math.max(dist * 0.048 + 6.5, 9.5), 14.5);
+        ball.kick({ x: dx / dist, y: dy / dist }, loftPower, bot.id, forwardTarget, null, 'chip');
+        bot.isKickingTimer = 0.25;
+        bot.triggerFeedback('🌈 LONG LOFTED PASS!');
+        return;
+      }
+
       if (forwardTarget && Math.random() < 0.035) {
         bot.hasPossession = false;
         bot.executePassTo(forwardTarget, ball);
+        bot.isKickingTimer = 0.25;
         bot.triggerFeedback('⚽ OUTLET PASS!');
         return;
       }
@@ -332,9 +579,14 @@ export class TacticalAI {
       // Safe dribble out of danger
       const safeDirX = attackDir * 0.85;
       const safeDirY = bot.pos.y < goalCenterY ? -0.5 : 0.5;
-      bot.vel.x = safeDirX * bot.speed * 0.45;
-      bot.vel.y = safeDirY * bot.speed * 0.45;
+      bot.vel.x = safeDirX * bot.speed * profile.dribbleSpeedMultiplier;
+      bot.vel.y = safeDirY * bot.speed * profile.dribbleSpeedMultiplier;
       bot.facingAngle = lerpAngle(bot.facingAngle, Math.atan2(bot.vel.y, bot.vel.x), 0.2);
+      bot.isSprinting = false;
+      if (bot.stamina < 1.0) {
+        bot.stamina = Math.min(1.0, bot.stamina + 0.002 * frameScale);
+        if (bot.isExhausted && bot.stamina > 0.30) bot.isExhausted = false;
+      }
       ball.attachToPlayer(bot.pos, bot.facingAngle, bot.radius, bot.vel, bot.id);
       return;
     }
@@ -345,7 +597,7 @@ export class TacticalAI {
       // Maintain backline cover behind carrier
       const targetDepthX = goalLineX + attackDir * Math.max(340, Math.abs(teammateCarrier.pos.x - goalLineX) * 0.65);
       const targetY = teammateCarrier.pos.y * 0.6 + goalCenterY * 0.4;
-      TacticalAI.moveTowards(bot, targetDepthX, targetY, bot.speed * 0.50);
+      TacticalAI.moveTowards(bot, targetDepthX, targetY, bot.speed * profile.speedMultiplier * 0.8, false, frameScale);
       return;
     }
 
@@ -365,22 +617,15 @@ export class TacticalAI {
     if (distBallToGoal < 420 && isClosestToBall) {
       // Urgent Sweeper Clearance!
       bot.aiState = 'STATE_SWEEPER_CLEAR';
-      TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.65);
+      TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * profile.speedMultiplier, profile.sprintEnabled, frameScale);
 
       // Standing Poke or Slide tackle loose ball / steal
       if (distToBall < 48 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
-        if (Math.random() < 0.02) {
-          if (Math.random() < 0.75) {
-            bot.isStandingTackling = true;
-            bot.standingTackleTimer = 0.25;
-            bot.aiTackleCooldownTimer = 5.5;
-            bot.triggerFeedback('👟 SWEEPER POKE!');
+        if (Math.random() < profile.tackleChancePerFrame) {
+          if (Math.random() < 0.65) {
+            TacticalAI.performStandingTackle(bot, '👟 SWEEPER POKE!', profile.standingCooldown);
           } else {
-            bot.isTackling = true;
-            bot.tackleTimer = 0.4;
-            bot.aiTackleCooldownTimer = 7.5;
-            bot.tackleSlideAngle = Math.atan2(ball.pos.y - bot.pos.y, ball.pos.x - bot.pos.x);
-            bot.triggerFeedback('⚡ SWEEPER TACKLE!');
+            TacticalAI.performSlideTackle(bot, ball.pos.x, ball.pos.y, '⚡ SWEEPER TACKLE!', profile.slideCooldown);
           }
         }
       }
@@ -391,25 +636,18 @@ export class TacticalAI {
       const distToThreat = Math.hypot(targetThreat.pos.x - bot.pos.x, targetThreat.pos.y - bot.pos.y);
       const threatDistToGoal = Math.abs(targetThreat.pos.x - goalLineX);
 
-      // Press if threat enters dangerous zone (< 380px from goal or < 120px from bot)
-      if (threatDistToGoal < 450 || distToThreat < 130) {
+      // Press if threat enters dangerous zone
+      if (threatDistToGoal < profile.pressDistance + 280 || distToThreat < profile.pressDistance) {
         bot.aiState = 'STATE_PRESS_BALL';
-        TacticalAI.moveTowards(bot, targetThreat.pos.x, targetThreat.pos.y, bot.speed * 0.50);
+        TacticalAI.moveTowards(bot, targetThreat.pos.x, targetThreat.pos.y, bot.speed * profile.speedMultiplier, profile.sprintEnabled, frameScale);
 
         // Standing Poke Tackle or Slide Tackle execution in box
         if (distToThreat < 48 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
-          if (Math.random() < 0.02) {
-            if (Math.random() < 0.75) {
-              bot.isStandingTackling = true;
-              bot.standingTackleTimer = 0.25;
-              bot.aiTackleCooldownTimer = 5.5;
-              bot.triggerFeedback('👟 DEFENDER POKE!');
+          if (Math.random() < profile.tackleChancePerFrame) {
+            if (Math.random() < 0.65) {
+              TacticalAI.performStandingTackle(bot, '👟 DEFENDER POKE!', profile.standingCooldown);
             } else {
-              bot.isTackling = true;
-              bot.tackleTimer = 0.42;
-              bot.aiTackleCooldownTimer = 7.5;
-              bot.tackleSlideAngle = Math.atan2(targetThreat.pos.y - bot.pos.y, targetThreat.pos.x - bot.pos.x);
-              bot.triggerFeedback('⚡ DEFENDER SLIDE!');
+              TacticalAI.performSlideTackle(bot, targetThreat.pos.x, targetThreat.pos.y, '⚡ DEFENDER SLIDE!', profile.slideCooldown);
             }
           }
         }
@@ -418,19 +656,19 @@ export class TacticalAI {
         bot.aiState = 'STATE_ZONE_COVER';
         const coverX = (targetThreat.pos.x + goalLineX) * 0.5;
         const coverY = (targetThreat.pos.y + goalCenterY) * 0.5;
-        TacticalAI.moveTowards(bot, coverX, coverY, bot.speed * 0.45);
+        TacticalAI.moveTowards(bot, coverX, coverY, bot.speed * profile.speedMultiplier * 0.75, false, frameScale);
       }
     } else {
       // Loose Ball Chase or Defensive Base
       if (isClosestToBall) {
         bot.aiState = 'STATE_PRESS_BALL';
-        TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.55);
+        TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * profile.speedMultiplier, profile.sprintEnabled, frameScale);
       } else {
         bot.aiState = 'STATE_ZONE_COVER';
         // Base defensive position
         const baseDefX = goalLineX + attackDir * 320;
         const baseDefY = Math.max(field.pitchBounds.top + 160, Math.min(field.pitchBounds.bottom - 160, ball.pos.y * 0.5 + goalCenterY * 0.5));
-        TacticalAI.moveTowards(bot, baseDefX, baseDefY, bot.speed * 0.45);
+        TacticalAI.moveTowards(bot, baseDefX, baseDefY, bot.speed * profile.speedMultiplier * 0.75, false, frameScale);
       }
     }
   }
@@ -448,7 +686,9 @@ export class TacticalAI {
     opponents: Player[],
     teammates: Player[],
     isHome: boolean,
-    dt: number
+    dt: number,
+    profile: BotTacticalProfile,
+    frameScale = 1.0
   ) {
     const attackDir = isHome ? 1 : -1;
     const targetGoalCenterY = (targetGoal.top + targetGoal.bottom) * 0.5;
@@ -460,8 +700,37 @@ export class TacticalAI {
       bot.aiState = 'STATE_ATTACK_FINISH';
       const striker = teammates.find((t) => t.role === 'ST');
 
-      // Check for Through Pass to Striker
-      if (striker && ball.releaseTimer <= 0) {
+      // Check for Lofted Cross / Chip Pass to Striker (Tendangan Lambung melayang di atas pertahanan)
+      if (profile.loftedPassEnabled && striker && ball.releaseTimer <= 0) {
+        const distToStriker = Math.hypot(striker.pos.x - bot.pos.x, striker.pos.y - bot.pos.y);
+        const strikerAdvantage = (striker.pos.x - bot.pos.x) * attackDir;
+        const isNearWing = Math.abs(bot.pos.y - field.pitchBounds.top) < 280 || Math.abs(bot.pos.y - field.pitchBounds.bottom) < 280;
+
+        // Check if opponent defenders are blocking ground lane between midfielder and striker
+        const hasGroundObstacle = opponents.some((opp) => {
+          const dOpp = Math.hypot(opp.pos.x - bot.pos.x, opp.pos.y - bot.pos.y);
+          return dOpp < 120 && Math.abs(opp.pos.y - bot.pos.y) < 60;
+        });
+
+        if ((hasGroundObstacle || isNearWing || Math.random() < 0.06) && distToStriker > 120 && distToStriker < 650 && strikerAdvantage > 30) {
+          bot.hasPossession = false;
+          const crossTarget: Vector2D = {
+            x: striker.pos.x + attackDir * 40,
+            y: striker.pos.y + (striker.vel.y || 0) * 10,
+          };
+          const dx = crossTarget.x - bot.pos.x;
+          const dy = crossTarget.y - bot.pos.y;
+          const len = Math.hypot(dx, dy) || 1;
+          const passPower = Math.min(Math.max(len * 0.046 + 6.5, 9.5), 14.0);
+          ball.kick({ x: dx / len, y: dy / len }, passPower, bot.id, striker, crossTarget, 'chip');
+          bot.isKickingTimer = 0.25;
+          bot.triggerFeedback('🌈 LOFTED CROSS!');
+          return;
+        }
+      }
+
+      // Check for Ground Through Pass to Striker
+      if (profile.throughPassEnabled && striker && ball.releaseTimer <= 0) {
         const distToStriker = Math.hypot(striker.pos.x - bot.pos.x, striker.pos.y - bot.pos.y);
         const strikerAdvantage = (striker.pos.x - bot.pos.x) * attackDir;
 
@@ -477,28 +746,73 @@ export class TacticalAI {
           const dy = throughPos.y - bot.pos.y;
           const len = Math.hypot(dx, dy) || 1;
           ball.kick({ x: dx / len, y: dy / len }, 10.5, bot.id, striker, throughPos);
+          bot.isKickingTimer = 0.25;
           bot.triggerFeedback('🎯 THROUGH BALL!');
           return;
         }
       }
 
-      // Check shooting chance from medium range (< 240px)
+      // Check shooting chance from medium / long range
       const distToGoal = Math.hypot(targetGoal.x - bot.pos.x, targetGoalCenterY - bot.pos.y);
-      if (distToGoal < 240 && ball.releaseTimer <= 0 && Math.random() < 0.02) {
-        bot.hasPossession = false;
-        const dx = targetGoal.x - bot.pos.x;
-        const dy = targetGoalCenterY - bot.pos.y + (Math.random() - 0.5) * 75;
-        const len = Math.hypot(dx, dy) || 1;
-        ball.kick({ x: dx / len, y: dy / len }, 11.0, bot.id);
-        bot.triggerFeedback('⚽ MIDFIELD ROCKET!');
-        return;
+      if (distToGoal < profile.shootRange && ball.releaseTimer <= 0) {
+        const shootChance = profile.chipShotEnabled ? 0.05 : 0.025;
+        if (Math.random() < shootChance) {
+          bot.hasPossession = false;
+          const cornerTargetY =
+            bot.pos.y < targetGoalCenterY ? targetGoal.top + 35 : targetGoal.bottom - 35;
+          const dx = targetGoal.x - bot.pos.x;
+          const dy = cornerTargetY - bot.pos.y + (Math.random() - 0.5) * profile.aimJitter;
+          const len = Math.hypot(dx, dy) || 1;
+
+          const oppGk = opponents.find((opp) => opp.role === 'GK' || opp.isGoalkeeper);
+          const isGkOffLine = oppGk && Math.abs(oppGk.pos.x - targetGoal.x) > 50;
+
+          // Tendangan lambung ke gawang melewati kiper jika kiper maju
+          if (profile.chipShotEnabled && (isGkOffLine || (distToGoal < 260 && Math.random() < 0.35))) {
+            const chipPower = Math.min(13.8, Math.max(10.5, distToGoal * 0.05 + 8.0));
+            ball.kick({ x: dx / len, y: dy / len }, chipPower, bot.id, null, null, 'chip');
+            bot.isKickingTimer = 0.25;
+            bot.triggerFeedback('🌈 MIDFIELD CHIP!');
+          } else if (distToGoal > profile.rocketShotRange) {
+            ball.kick({ x: dx / len, y: dy / len }, profile.rocketShotPower, bot.id, null, null, 'rocket');
+            bot.isKickingTimer = 0.25;
+            bot.triggerFeedback('💥 MIDFIELD ROCKET!');
+          } else {
+            ball.kick({ x: dx / len, y: dy / len }, profile.shotPower, bot.id, null, null, 'normal');
+            bot.isKickingTimer = 0.25;
+            bot.triggerFeedback('⚽ MIDFIELD SHOT!');
+          }
+          return;
+        }
       }
 
       // Progressively dribble towards attacking third while scanning options
+      let dribbleSpeed = bot.speed * profile.dribbleSpeedMultiplier;
+      const wantsSprintDribble = profile.sprintEnabled && !bot.isExhausted && bot.stamina > 0.20;
+      if (wantsSprintDribble) {
+        bot.isSprinting = true;
+        dribbleSpeed *= profile.sprintSpeedMultiplier;
+        bot.stamina = Math.max(0, bot.stamina - 0.003 * frameScale);
+        bot.spawnTurfParticle(1.4);
+        if (bot.stamina === 0) {
+          bot.isExhausted = true;
+          bot.isSprinting = false;
+          bot.triggerFeedback('⚠️ EXHAUSTED!');
+        }
+      } else {
+        bot.isSprinting = false;
+        if (bot.stamina < 1.0) {
+          bot.stamina = Math.min(1.0, bot.stamina + 0.002 * frameScale);
+          if (bot.isExhausted && bot.stamina > 0.30) {
+            bot.isExhausted = false;
+          }
+        }
+      }
+
       const dribbleDirX = attackDir * 0.85;
       const dribbleDirY = (targetGoalCenterY - bot.pos.y) * 0.003;
-      bot.vel.x = dribbleDirX * bot.speed * 0.48;
-      bot.vel.y = dribbleDirY * bot.speed * 0.48;
+      bot.vel.x = dribbleDirX * dribbleSpeed;
+      bot.vel.y = dribbleDirY * dribbleSpeed;
       bot.facingAngle = lerpAngle(bot.facingAngle, Math.atan2(bot.vel.y, bot.vel.x), 0.2);
       ball.attachToPlayer(bot.pos, bot.facingAngle, bot.radius, bot.vel, bot.id);
       return;
@@ -514,15 +828,59 @@ export class TacticalAI {
         field.pitchBounds.top + 140,
         Math.min(field.pitchBounds.bottom - 140, teammateCarrier.pos.y + sideSign * 200)
       );
-      TacticalAI.moveTowards(bot, supportX, supportY, bot.speed * 0.52);
+      TacticalAI.moveTowards(bot, supportX, supportY, bot.speed * profile.speedMultiplier, profile.sprintEnabled, frameScale);
       return;
     }
 
     // Press opponent or contest loose ball in midfield
     if (opponentCarrier) {
       bot.aiState = 'STATE_PRESS_BALL';
-      TacticalAI.moveTowards(bot, opponentCarrier.pos.x, opponentCarrier.pos.y, bot.speed * 0.48);
+      TacticalAI.moveTowards(bot, opponentCarrier.pos.x, opponentCarrier.pos.y, bot.speed * profile.speedMultiplier, profile.sprintEnabled, frameScale);
+
+      const distToCarrier = Math.hypot(opponentCarrier.pos.x - bot.pos.x, opponentCarrier.pos.y - bot.pos.y);
+      if (distToCarrier < 48 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
+        if (Math.random() < profile.tackleChancePerFrame) {
+          if (Math.random() < 0.65) {
+            TacticalAI.performStandingTackle(bot, '👟 MIDFIELD POKE!', profile.standingCooldown);
+          } else {
+            TacticalAI.performSlideTackle(bot, opponentCarrier.pos.x, opponentCarrier.pos.y, '⚡ MIDFIELD SLIDE!', profile.slideCooldown);
+          }
+        }
+      }
     } else {
+      // Aerial Finishing on incoming airborne crosses
+      if (profile.aerialFinishingEnabled && ball.z > 8 && !ball.attachedPlayerId) {
+        const distToAirBall = Math.hypot(ball.pos.x - bot.pos.x, ball.pos.y - bot.pos.y);
+        const distAirToGoal = Math.hypot(targetGoal.x - bot.pos.x, targetGoalCenterY - bot.pos.y);
+
+        if (distToAirBall < bot.radius + ball.radius + 34 && distAirToGoal < 300) {
+          const cornerTargetY =
+            bot.pos.y < targetGoalCenterY ? targetGoal.top + 35 : targetGoal.bottom - 35;
+          const dx = targetGoal.x - bot.pos.x;
+          const dy = cornerTargetY - bot.pos.y;
+          const len = Math.hypot(dx, dy) || 1;
+
+          bot.hasPossession = false;
+          ball.attachedPlayerId = null;
+          bot.isKickingTimer = 0.30;
+
+          if (ball.z >= 20) {
+            bot.isHeading = true;
+            bot.headerTimer = 0.35;
+            ball.kick({ x: dx / len, y: dy / len }, 16.0, bot.id, null, null, 'rocket');
+            ball.vz = -2.5;
+            bot.triggerFeedback('💥 BULLET HEADER!');
+          } else {
+            bot.isVolleying = true;
+            bot.volleyTimer = 0.40;
+            ball.kick({ x: dx / len, y: dy / len }, 17.5, bot.id, null, null, 'rocket');
+            ball.vz = 3.5;
+            bot.triggerFeedback('🚀 FLYING VOLLEY!');
+          }
+          return;
+        }
+      }
+
       // Loose ball or zone coverage
       const isClosest = teammates.every((t) => {
         const myDist = Math.hypot(ball.pos.x - bot.pos.x, ball.pos.y - bot.pos.y);
@@ -532,14 +890,14 @@ export class TacticalAI {
 
       if (isClosest) {
         bot.aiState = 'STATE_PRESS_BALL';
-        TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.52);
+        TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * profile.speedMultiplier, profile.sprintEnabled, frameScale);
       } else {
         bot.aiState = 'STATE_ZONE_COVER';
         // Central midfield hub
         const pitchCenter = (field.pitchBounds.left + field.pitchBounds.right) * 0.5;
         const targetX = pitchCenter + attackDir * 60;
         const targetY = ball.pos.y * 0.4 + targetGoalCenterY * 0.6;
-        TacticalAI.moveTowards(bot, targetX, targetY, bot.speed * 0.45);
+        TacticalAI.moveTowards(bot, targetX, targetY, bot.speed * (profile.speedMultiplier * 0.85), false, frameScale);
       }
     }
   }
@@ -557,7 +915,9 @@ export class TacticalAI {
     opponents: Player[],
     teammates: Player[],
     isHome: boolean,
-    dt: number
+    dt: number,
+    profile: BotTacticalProfile,
+    frameScale = 1.0
   ) {
     const attackDir = isHome ? 1 : -1;
     const targetGoalCenterY = (targetGoal.top + targetGoal.bottom) * 0.5;
@@ -569,20 +929,50 @@ export class TacticalAI {
       bot.aiState = 'STATE_ATTACK_FINISH';
       const distToGoal = Math.hypot(targetGoal.x - bot.pos.x, targetGoalCenterY - bot.pos.y);
 
-      // In shooting range (< 280px from goal) -> Shoot finish
-      if (distToGoal < 280 && ball.releaseTimer <= 0) {
+      // In shooting range -> Clinical finishing
+      if (distToGoal < profile.shootRange && ball.releaseTimer <= 0) {
         bot.hasPossession = false;
         const cornerTargetY =
           bot.pos.y < targetGoalCenterY ? targetGoal.top + 35 : targetGoal.bottom - 35;
-        const aimJitter = (Math.random() - 0.5) * 75;
+        const aimJitter = (Math.random() - 0.5) * profile.aimJitter;
         const dx = targetGoal.x - bot.pos.x;
         const dy = cornerTargetY + aimJitter - bot.pos.y;
         const len = Math.hypot(dx, dy) || 1;
 
-        const isRocket = distToGoal > 210;
-        const shotPower = isRocket ? 12.5 : 11.0;
-        ball.kick({ x: dx / len, y: dy / len }, shotPower, bot.id, null, null, isRocket ? 'rocket' : 'normal');
-        bot.triggerFeedback(isRocket ? '⚡ THUNDERBOLT!' : '⚽ POACHER FINISH!');
+        const oppGk = opponents.find((opp) => opp.role === 'GK' || opp.isGoalkeeper);
+        const isGkOffLine = oppGk && Math.abs(oppGk.pos.x - targetGoal.x) > 45;
+
+        // 1. Tendangan Lambung / Lofted Chip Shot over GK or sliding defenders
+        if (profile.chipShotEnabled && (isGkOffLine || (distToGoal < 260 && Math.random() < 0.35))) {
+          const chipPower = Math.min(13.8, Math.max(10.5, distToGoal * 0.05 + 8.2));
+          ball.kick({ x: dx / len, y: dy / len }, chipPower, bot.id, null, null, 'chip');
+          bot.isKickingTimer = 0.25;
+          bot.triggerFeedback('🌈 CHIP SHOT!');
+          return;
+        }
+
+        // 2. Curled Finesse Shot (angled into corners)
+        if (profile.chipShotEnabled && Math.abs(bot.pos.y - targetGoalCenterY) > 65 && distToGoal < profile.shootRange * 0.85 && Math.random() < 0.45) {
+          ball.kick({ x: dx / len, y: dy / len }, profile.shotPower + 1.2, bot.id, null, null, 'finesse');
+          bot.isKickingTimer = 0.25;
+          bot.triggerFeedback('🍌 CURLED FINESSE!');
+          return;
+        }
+
+        // 3. Rocket Shot (Thunderbolt from distance)
+        const isRocket = distToGoal > profile.rocketShotRange;
+        if (isRocket) {
+          ball.kick({ x: dx / len, y: dy / len }, profile.rocketShotPower, bot.id, null, null, 'rocket');
+          bot.isKickingTimer = 0.25;
+          bot.triggerFeedback('💥 THUNDERBOLT!');
+          return;
+        }
+
+        // 4. Low Laser / Poacher Finish
+        const isLowLaser = distToGoal < 160 && Math.random() < 0.5;
+        ball.kick({ x: dx / len, y: dy / len }, profile.shotPower, bot.id, null, null, isLowLaser ? 'ground' : 'normal');
+        bot.isKickingTimer = 0.25;
+        bot.triggerFeedback(isLowLaser ? '⚡ LOW LASER!' : '⚽ POACHER FINISH!');
         return;
       }
 
@@ -596,15 +986,15 @@ export class TacticalAI {
       let moveY = (targetGoalCenterY - bot.pos.y) / distToGoal;
 
       if (blockingOpponent) {
-        // Rare skill move attempt (15s cooldown, 0.2% chance per frame)
-        if (bot.aiGocekCooldownTimer <= 0 && Math.random() < 0.002) {
+        // Skill move attempt (governed by profile)
+        if (profile.gocekEnabled && bot.aiGocekCooldownTimer <= 0 && Math.random() < 0.008) {
           bot.isDribbleSkillActive = true;
           bot.skillDodgeInvincibleTimer = 0.15;
-          bot.aiGocekCooldownTimer = 15.0;
+          bot.aiGocekCooldownTimer = profile.gocekCooldown;
           bot.triggerFeedback('✨ GOCEK SKILL!');
         }
 
-        // Smooth gentle curve around defender instead of violent sideways wiggling
+        // Smooth gentle curve around defender
         const sideSign = bot.pos.y < blockingOpponent.pos.y ? -1 : 1;
         moveY += sideSign * 0.35;
         const norm = Math.hypot(moveX, moveY) || 1;
@@ -612,7 +1002,28 @@ export class TacticalAI {
         moveY /= norm;
       }
 
-      const dribbleSpeed = bot.speed * 0.48;
+      let dribbleSpeed = bot.speed * profile.dribbleSpeedMultiplier;
+      const wantsSprintDribble = profile.sprintEnabled && !bot.isExhausted && bot.stamina > 0.20 && distToGoal > 110 && !blockingOpponent;
+      if (wantsSprintDribble) {
+        bot.isSprinting = true;
+        dribbleSpeed *= profile.sprintSpeedMultiplier;
+        bot.stamina = Math.max(0, bot.stamina - 0.003 * frameScale);
+        bot.spawnTurfParticle(1.4);
+        if (bot.stamina <= 0) {
+          bot.isExhausted = true;
+          bot.isSprinting = false;
+          bot.triggerFeedback('⚠️ EXHAUSTED!');
+        }
+      } else {
+        bot.isSprinting = false;
+        if (bot.stamina < 1.0) {
+          bot.stamina = Math.min(1.0, bot.stamina + 0.002 * frameScale);
+          if (bot.isExhausted && bot.stamina > 0.30) {
+            bot.isExhausted = false;
+          }
+        }
+      }
+
       bot.vel.x = moveX * dribbleSpeed;
       bot.vel.y = moveY * dribbleSpeed;
       bot.facingAngle = lerpAngle(bot.facingAngle, Math.atan2(bot.vel.y, bot.vel.x), 0.24);
@@ -635,56 +1046,151 @@ export class TacticalAI {
         Math.min(field.pitchBounds.bottom - 130, targetGoalCenterY + postOffset)
       );
 
-      TacticalAI.moveTowards(bot, runDepthX, runTargetY, bot.speed * 0.55);
+      TacticalAI.moveTowards(bot, runDepthX, runTargetY, bot.speed * profile.speedMultiplier, profile.sprintEnabled, frameScale);
       return;
     }
 
     // Defending or Loose Ball
     if (opponentCarrier) {
       bot.aiState = 'STATE_PRESS_BALL';
-      // Press opponent ball carrier gently
-      TacticalAI.moveTowards(bot, opponentCarrier.pos.x, opponentCarrier.pos.y, bot.speed * 0.48);
+      // Press opponent ball carrier
+      TacticalAI.moveTowards(bot, opponentCarrier.pos.x, opponentCarrier.pos.y, bot.speed * profile.speedMultiplier, profile.sprintEnabled, frameScale);
 
       const distToCarrier = Math.hypot(opponentCarrier.pos.x - bot.pos.x, opponentCarrier.pos.y - bot.pos.y);
       if (distToCarrier < 48 && !bot.isStandingTackling && !bot.isTackling && bot.aiTackleCooldownTimer <= 0) {
-        if (Math.random() < 0.02) {
-          if (Math.random() < 0.75) {
-            bot.isStandingTackling = true;
-            bot.standingTackleTimer = 0.25;
-            bot.aiTackleCooldownTimer = 5.5;
-            bot.triggerFeedback('👟 BOT POKE!');
+        if (Math.random() < profile.tackleChancePerFrame) {
+          if (Math.random() < 0.65) {
+            TacticalAI.performStandingTackle(bot, '👟 BOT POKE!', profile.standingCooldown);
           } else {
-            bot.isTackling = true;
-            bot.tackleTimer = 0.40;
-            bot.aiTackleCooldownTimer = 7.5;
-            bot.tackleSlideAngle = Math.atan2(opponentCarrier.pos.y - bot.pos.y, opponentCarrier.pos.x - bot.pos.x);
-            bot.triggerFeedback('⚡ BOT SLIDE!');
+            TacticalAI.performSlideTackle(bot, opponentCarrier.pos.x, opponentCarrier.pos.y, '⚡ BOT SLIDE!', profile.slideCooldown);
           }
         }
       }
     } else {
+      // Aerial Finishing on incoming airborne crosses / lofted passes
+      if (profile.aerialFinishingEnabled && ball.z > 8 && !ball.attachedPlayerId) {
+        const distToAirBall = Math.hypot(ball.pos.x - bot.pos.x, ball.pos.y - bot.pos.y);
+        const distAirToGoal = Math.hypot(targetGoal.x - bot.pos.x, targetGoalCenterY - bot.pos.y);
+
+        if (distToAirBall < bot.radius + ball.radius + 36 && distAirToGoal < 340) {
+          const cornerTargetY =
+            bot.pos.y < targetGoalCenterY ? targetGoal.top + 35 : targetGoal.bottom - 35;
+          const dx = targetGoal.x - bot.pos.x;
+          const dy = cornerTargetY - bot.pos.y;
+          const len = Math.hypot(dx, dy) || 1;
+
+          bot.hasPossession = false;
+          ball.attachedPlayerId = null;
+          bot.isKickingTimer = 0.30;
+
+          if (ball.z >= 20) {
+            bot.isHeading = true;
+            bot.headerTimer = 0.35;
+            ball.kick({ x: dx / len, y: dy / len }, 16.5, bot.id, null, null, 'rocket');
+            ball.vz = -2.5;
+            bot.triggerFeedback('💥 BULLET HEADER!');
+          } else {
+            bot.isVolleying = true;
+            bot.volleyTimer = 0.40;
+            ball.kick({ x: dx / len, y: dy / len }, 18.0, bot.id, null, null, 'rocket');
+            ball.vz = 3.5;
+            bot.triggerFeedback('🚀 FLYING VOLLEY!');
+          }
+          return;
+        }
+      }
+
       // Chase loose ball
       bot.aiState = 'STATE_PRESS_BALL';
-      TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * 0.50);
+      TacticalAI.moveTowards(bot, ball.pos.x, ball.pos.y, bot.speed * profile.speedMultiplier, profile.sprintEnabled, frameScale);
     }
   }
 
   /**
    * Shared helper for moving an AI player towards target coordinates.
    */
-  private static moveTowards(bot: Player, targetX: number, targetY: number, speed: number) {
+  private static moveTowards(
+    bot: Player,
+    targetX: number,
+    targetY: number,
+    speed: number,
+    allowSprint = false,
+    frameScale = 1.0
+  ) {
     const dx = targetX - bot.pos.x;
     const dy = targetY - bot.pos.y;
     const dist = Math.hypot(dx, dy);
 
+    let currentSpeed = speed;
+
+    const wantsSprint = allowSprint && dist > 110 && !bot.isExhausted && bot.stamina > 0.15;
+    if (wantsSprint) {
+      bot.isSprinting = true;
+      currentSpeed *= 1.62;
+      bot.stamina = Math.max(0, bot.stamina - 0.003 * frameScale);
+      bot.spawnTurfParticle(1.4);
+      if (bot.stamina <= 0) {
+        bot.isExhausted = true;
+        bot.isSprinting = false;
+        bot.triggerFeedback('⚠️ EXHAUSTED!');
+      }
+    } else {
+      bot.isSprinting = false;
+      if (bot.stamina < 1.0) {
+        bot.stamina = Math.min(1.0, bot.stamina + 0.002 * frameScale);
+        if (bot.isExhausted && bot.stamina > 0.30) {
+          bot.isExhausted = false;
+        }
+      }
+    }
+
     if (dist > 18) {
-      bot.vel.x = (dx / dist) * speed;
-      bot.vel.y = (dy / dist) * speed;
+      bot.vel.x = (dx / dist) * currentSpeed;
+      bot.vel.y = (dy / dist) * currentSpeed;
       const targetAngle = Math.atan2(bot.vel.y, bot.vel.x);
       bot.facingAngle = lerpAngle(bot.facingAngle, targetAngle, 0.22);
     } else {
       bot.vel.x *= 0.6;
       bot.vel.y *= 0.6;
     }
+  }
+
+  /**
+   * Helper to initiate dynamic sliding tackle physics.
+   */
+  private static performSlideTackle(
+    bot: Player,
+    targetX: number,
+    targetY: number,
+    feedback: string,
+    cooldown = 4.0
+  ) {
+    bot.isTackling = true;
+    bot.isStandingTackling = false;
+    bot.tackleTimer = 0.38;
+    bot.aiTackleCooldownTimer = cooldown;
+    bot.tackleSlideAngle = Math.atan2(targetY - bot.pos.y, targetX - bot.pos.x);
+    bot.facingAngle = bot.tackleSlideAngle;
+    const slideSpeed = 14.5;
+    bot.vel.x = Math.cos(bot.tackleSlideAngle) * slideSpeed;
+    bot.vel.y = Math.sin(bot.tackleSlideAngle) * slideSpeed;
+    bot.triggerFeedback(feedback);
+  }
+
+  /**
+   * Helper to initiate standing poke tackle.
+   */
+  private static performStandingTackle(
+    bot: Player,
+    feedback: string,
+    cooldown = 3.5
+  ) {
+    bot.isStandingTackling = true;
+    bot.isTackling = false;
+    bot.standingTackleTimer = 0.25;
+    bot.aiTackleCooldownTimer = cooldown;
+    bot.vel.x *= 0.4;
+    bot.vel.y *= 0.4;
+    bot.triggerFeedback(feedback);
   }
 }

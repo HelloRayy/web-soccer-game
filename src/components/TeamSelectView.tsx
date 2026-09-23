@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Keyboard, Gamepad, Smartphone, Bot, RotateCcw, Lock, CheckCircle2 } from 'lucide-react';
 import { DeviceType, PlayerDeviceConfig } from './ControllerSelectModal';
+import { BotDifficulty } from '../types/game';
 
 export interface SquadPlayer {
   pos: 'GK' | 'CB' | 'LB' | 'RB' | 'DMF' | 'CMF' | 'LWF' | 'RWF' | 'CF' | 'SS' | 'RMF';
@@ -66,7 +67,8 @@ export interface PlayerNode {
 }
 
 interface TeamSelectViewProps {
-  mode: '1v1' | '1vBot' | '2vBot';
+  mode: '1v1' | '2vBot';
+  botDifficulty?: BotDifficulty;
   p1Device: DeviceType;
   p2Device: DeviceType;
   homeControllers?: PlayerDeviceConfig[];
@@ -92,7 +94,7 @@ const DEFAULT_COORDS = [
 ];
 
 const buildInitialNodes = (
-  mode: '1v1' | '1vBot' | '2vBot',
+  mode: '1v1' | '2vBot',
   p1Device: DeviceType,
   p2Device: DeviceType,
   homeControllers?: PlayerDeviceConfig[],
@@ -115,30 +117,27 @@ const buildInitialNodes = (
     });
   } else {
     result.push({ id: 'home_1', name: 'Player 1', devType: p1Device, team: 'home', x: 50, y: 55 });
-    if (mode === '2vBot') {
-      result.push({ id: 'home_2', name: 'Player 2', devType: 'keyboard2', team: 'home', x: 30, y: 72 });
-    }
   }
 
   // 2. Build Away Nodes from exact controllers selected in Modal
-  if (mode === '2vBot') {
-    result.push({ id: 'away_1', name: 'AI Bot 1', devType: 'ai_bot', team: 'away', x: 50, y: 55 });
-    result.push({ id: 'away_2', name: 'AI Bot 2', devType: 'ai_bot', team: 'away', x: 70, y: 72 });
-  } else if (mode === '1vBot') {
-    // 1 Player vs 1 Bot — only spawn a single AI bot on away side
-    result.push({ id: 'away_1', name: 'AI Bot', devType: 'ai_bot', team: 'away', x: 50, y: 55 });
-  } else if (awayControllers && awayControllers.length > 0) {
+  if (awayControllers && awayControllers.length > 0) {
     awayControllers.forEach((ctrl, idx) => {
       const coord = DEFAULT_COORDS[idx % DEFAULT_COORDS.length];
+      const isBot = ctrl.devType === 'ai_bot' || mode === '2vBot';
+      const nodeName = isBot
+        ? (awayControllers.length === 1 ? 'AI Bot' : `AI Bot ${idx + 1}`)
+        : (ctrl.name || `Player ${idx + 1}`);
       result.push({
         id: `away_${idx + 1}`,
-        name: `Player ${idx + 1}`,
-        devType: ctrl.devType,
+        name: nodeName,
+        devType: isBot ? 'ai_bot' : ctrl.devType,
         team: 'away',
         x: coord.x,
         y: coord.y,
       });
     });
+  } else if (mode === '2vBot') {
+    result.push({ id: 'away_1', name: 'AI Bot', devType: 'ai_bot', team: 'away', x: 50, y: 55 });
   } else {
     result.push({ id: 'away_1', name: 'Player 1', devType: p2Device, team: 'away', x: 50, y: 55 });
   }
@@ -148,6 +147,7 @@ const buildInitialNodes = (
 
 export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
   mode,
+  botDifficulty = 'easy',
   p1Device,
   p2Device,
   homeControllers,
@@ -584,8 +584,16 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-amber-300 bg-[#261f14] px-3 py-1.5 rounded-lg border border-amber-500/20">
-                {mode === '2vBot' ? 'Auto Bot AI' : getDevLabel(p2Device)}
+              <span className={`text-xs font-semibold px-3 py-1.5 rounded-lg border ${
+                mode === '2vBot'
+                  ? botDifficulty === 'hard'
+                    ? 'text-rose-400 bg-rose-950/40 border-rose-500/40'
+                    : 'text-emerald-400 bg-emerald-950/40 border-emerald-500/40'
+                  : 'text-amber-300 bg-[#261f14] border-amber-500/20'
+              }`}>
+                {mode === '2vBot'
+                  ? (botDifficulty === 'hard' ? '⚡ Hard Bot AI' : '🟢 Easy Bot AI')
+                  : getDevLabel(p2Device)}
               </span>
               <button
                 onClick={handleResetPositions}
@@ -726,7 +734,9 @@ export const TeamSelectView: React.FC<TeamSelectViewProps> = ({
                                 {node.name}
                               </span>
                               <span className="text-[11px] text-slate-400">
-                                {mode === '2vBot' ? 'Auto AI Player' : getDevLabel(node.devType)}
+                                {mode === '2vBot'
+                                  ? (botDifficulty === 'hard' ? 'Hard Bot AI' : 'Easy Bot AI')
+                                  : getDevLabel(node.devType)}
                               </span>
                             </div>
                           </div>

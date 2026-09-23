@@ -14,7 +14,7 @@ export interface MatchUpdateResult {
 
 export class MatchRules {
   state: MatchRulesState;
-  private isGoalCoolingDown: boolean = false;
+  isGoalCoolingDown: boolean = false;
   private halfTimeTriggered: boolean = false;
   private homePossessionTicks: number = 50;
   private awayPossessionTicks: number = 50;

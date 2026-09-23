@@ -9,6 +9,7 @@ import { DebugControllerView } from './components/DebugControllerView';
 import { DeviceType, PlayerDeviceConfig } from './components/ControllerSelectModal';
 import { HostPeerService } from './services/peerService';
 import { Agentation } from 'agentation';
+import { BotDifficulty } from './types/game';
 
 const MainGameContainer: React.FC = () => {
   const [currentView, setCurrentView] = useState<'splash' | 'lobby' | 'team-select' | 'game'>(() => {
@@ -17,7 +18,8 @@ const MainGameContainer: React.FC = () => {
     }
     return 'splash';
   });
-  const [selectedMode, setSelectedMode] = useState<'1v1' | '1vBot' | '2vBot'>('1vBot');
+  const [selectedMode, setSelectedMode] = useState<'1v1' | '2vBot'>('2vBot');
+  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('easy');
   const [p1Device, setP1Device] = useState<DeviceType>('keyboard1');
   const [p2Device, setP2Device] = useState<DeviceType>('keyboard2');
   const [homeControllers, setHomeControllers] = useState<PlayerDeviceConfig[]>([]);
@@ -58,13 +60,15 @@ const MainGameContainer: React.FC = () => {
 
   // Step 1: Confirm Controllers in Lobby ➔ Advance to Team Selection Screen (PES Flow)
   const handleConfirmControllers = (
-    mode: '1v1' | '1vBot' | '2vBot',
+    mode: '1v1' | '2vBot',
     p1Dev?: DeviceType,
     p2Dev?: DeviceType,
     homeDevs?: PlayerDeviceConfig[],
-    awayDevs?: PlayerDeviceConfig[]
+    awayDevs?: PlayerDeviceConfig[],
+    diff?: BotDifficulty
   ) => {
     setSelectedMode(mode);
+    if (diff) setBotDifficulty(diff);
     if (p1Dev) setP1Device(p1Dev);
     if (p2Dev) setP2Device(p2Dev);
     if (homeDevs) setHomeControllers(homeDevs);
@@ -103,6 +107,7 @@ const MainGameContainer: React.FC = () => {
     return (
       <TeamSelectView
         mode={selectedMode}
+        botDifficulty={botDifficulty}
         p1Device={p1Device}
         p2Device={p2Device}
         homeControllers={homeControllers}
@@ -116,6 +121,7 @@ const MainGameContainer: React.FC = () => {
   return (
     <GameView
       selectedMode={selectedMode}
+      botDifficulty={botDifficulty}
       p1Device={p1Device}
       p2Device={p2Device}
       customSpawns={customSpawns}

@@ -1,4 +1,4 @@
-import { AIState, GamepadState, PlayerEntity, TacticalRole, TeamType, Vector2D } from '../types/game';
+import { AIState, BotDifficulty, GamepadState, PlayerEntity, TacticalRole, TeamType, Vector2D } from '../types/game';
 import { Ball } from './Ball';
 import { Field } from './Field';
 import { PixelSpriteRenderer } from './PixelSpriteRenderer';
@@ -103,8 +103,10 @@ export class Player implements PlayerEntity {
 
   // Patrol / Walking Simulation & AI Cooldown Timers
   walkTimer: number = 0;
+  aiKickoffTimer: number = 0;
   aiGocekCooldownTimer: number = 0;
   aiTackleCooldownTimer: number = 0;
+  difficulty: BotDifficulty = 'easy';
 
   walkTimerTick(amount: number) {
     this.walkTimer += amount;
@@ -213,6 +215,7 @@ export class Player implements PlayerEntity {
     this.duelFeedbackTimer = 0;
     this.duelFeedbackYOffset = 0;
     this.dribbleSpinAngle = 0;
+    this.aiKickoffTimer = 0;
     this.aiGocekCooldownTimer = 0;
     this.tackleSlideAngle = 0;
     this.isStandingTackling = false;
@@ -312,7 +315,7 @@ export class Player implements PlayerEntity {
     }
   }
 
-  private spawnTurfParticle(speedRatio: number, isSlide = false) {
+  spawnTurfParticle(speedRatio: number, isSlide = false) {
     const count = isSlide ? 4 : 1;
     for (let k = 0; k < count; k++) {
       const backAngle = (isSlide ? this.tackleSlideAngle : this.facingAngle) + Math.PI + (Math.random() - 0.5) * 1.1;
@@ -344,8 +347,16 @@ export class Player implements PlayerEntity {
     ball.kick({ x: dx / dist, y: dy / dist }, passPower, this.id, targetPlayer);
   }
 
-  updateEnemyBotAI(ball: Ball, field: Field, opponents: Player[], teammates: Player[] = [], dt = 1 / 60) {
-    TacticalAI.update(this, ball, field, opponents, teammates, dt);
+  updateEnemyBotAI(
+    ball: Ball,
+    field: Field,
+    opponents: Player[],
+    teammates: Player[] = [],
+    dt = 1 / 60,
+    matchPhase: string = 'PHASE_PLAYING',
+    kickoffTeam: TeamType = 'home'
+  ) {
+    TacticalAI.update(this, ball, field, opponents, teammates, dt, matchPhase, kickoffTeam);
   }
 
   updatePassiveReception(ball: Ball, field: Field, dt = 1 / 60) {
@@ -394,7 +405,8 @@ export class Player implements PlayerEntity {
         targetX = ball.throughPassTargetPos.x;
         targetY = ball.throughPassTargetPos.y;
 
-        if (!this.isExhausted && this.stamina > 0) {
+        const canSprint = (!this.isAI || this.difficulty !== 'easy') && !this.isExhausted && this.stamina > 0;
+        if (canSprint) {
           this.isSprinting = true;
           this.stamina = Math.max(0, this.stamina - 0.004 * frameScale);
           if (this.stamina === 0) {
@@ -405,7 +417,9 @@ export class Player implements PlayerEntity {
         } else {
           this.isSprinting = false;
         }
-        this.spawnTurfParticle(1.5);
+        if (this.isSprinting) {
+          this.spawnTurfParticle(1.5);
+        }
       } else {
         this.isSprinting = false;
       }
@@ -414,7 +428,7 @@ export class Player implements PlayerEntity {
       const dy = targetY - this.pos.y;
       const dist = Math.hypot(dx, dy) || 1;
 
-      const stepSpeed = this.isSprinting ? this.speed * 1.5 : this.speed * 0.70;
+      const stepSpeed = this.isSprinting ? this.speed * 1.62 : this.speed;
       this.vel.x = (dx / dist) * stepSpeed;
       this.vel.y = (dy / dist) * stepSpeed;
 

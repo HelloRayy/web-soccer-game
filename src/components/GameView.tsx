@@ -7,7 +7,7 @@ import { Ball } from '../game/Ball';
 import { Player } from '../game/Player';
 import { MatchRules } from '../game/MatchRules';
 import { HUDOverlay } from './HUDOverlay';
-import { MatchMode, MatchRulesState, GamepadState, RadarData, OffScreenBallData, TeamType, ActivePlayerData, ArcadeCallout } from '../types/game';
+import { MatchMode, MatchRulesState, GamepadState, RadarData, OffScreenBallData, TeamType, ActivePlayerData, ArcadeCallout, BotDifficulty } from '../types/game';
 import { HostPeerService } from '../services/peerService';
 import { PixelSpriteRenderer } from '../game/PixelSpriteRenderer';
 import { DeviceType } from './ControllerSelectModal';
@@ -45,7 +45,8 @@ function drawTacticalPassingGrid(
 }
 
 interface GameViewProps {
-  selectedMode?: '1v1' | '1vBot' | '2vBot';
+  selectedMode?: '1v1' | '2vBot';
+  botDifficulty?: BotDifficulty;
   p1Device?: DeviceType;
   p2Device?: DeviceType;
   customSpawns?: PlayerNode[] | null;
@@ -57,6 +58,7 @@ interface GameViewProps {
 
 export const GameView: React.FC<GameViewProps> = ({
   selectedMode = '1v1',
+  botDifficulty = 'easy',
   p1Device = 'keyboard1',
   p2Device = 'keyboard2',
   customSpawns = null,
@@ -139,13 +141,35 @@ export const GameView: React.FC<GameViewProps> = ({
   const replayBufferRef = useRef<Array<{
     ballPos: { x: number; y: number; z: number };
     ballRotation: number;
-    players: Array<{ id: string; pos: { x: number; y: number }; facingAngle: number; isTackling?: boolean; isStandingTackling?: boolean; isKicking?: boolean; isDiving?: boolean }>;
+    players: Array<{
+      id: string;
+      pos: { x: number; y: number };
+      facingAngle: number;
+      isTackling?: boolean;
+      isStandingTackling?: boolean;
+      isKicking?: boolean;
+      isDiving?: boolean;
+      isHeading?: boolean;
+      isVolleying?: boolean;
+      hasPossession?: boolean;
+    }>;
   }>>([]);
   const isReplayActiveRef = useRef<boolean>(false);
   const replayFramesRef = useRef<Array<{
     ballPos: { x: number; y: number; z: number };
     ballRotation: number;
-    players: Array<{ id: string; pos: { x: number; y: number }; facingAngle: number; isTackling?: boolean; isStandingTackling?: boolean; isKicking?: boolean; isDiving?: boolean }>;
+    players: Array<{
+      id: string;
+      pos: { x: number; y: number };
+      facingAngle: number;
+      isTackling?: boolean;
+      isStandingTackling?: boolean;
+      isKicking?: boolean;
+      isDiving?: boolean;
+      isHeading?: boolean;
+      isVolleying?: boolean;
+      hasPossession?: boolean;
+    }>;
   }>>([]);
   const replayFrameIndexRef = useRef<number>(0);
 
@@ -245,12 +269,15 @@ export const GameView: React.FC<GameViewProps> = ({
           players[1].reset(WORLD_WIDTH * 0.58, WORLD_HEIGHT * 0.5);
         }
       } else {
-        // 2 vs BOT Mode
+        // Fallback Formations
         if (players.length >= 4) {
           players[0].reset(WORLD_WIDTH * 0.38, WORLD_HEIGHT * 0.42);
           players[1].reset(WORLD_WIDTH * 0.38, WORLD_HEIGHT * 0.58);
           players[2].reset(WORLD_WIDTH * 0.62, WORLD_HEIGHT * 0.42);
           players[3].reset(WORLD_WIDTH * 0.62, WORLD_HEIGHT * 0.58);
+        } else if (players.length >= 2) {
+          players[0].reset(WORLD_WIDTH * 0.42, WORLD_HEIGHT * 0.5);
+          players[1].reset(WORLD_WIDTH * 0.58, WORLD_HEIGHT * 0.5);
         }
       }
     }
@@ -274,9 +301,38 @@ export const GameView: React.FC<GameViewProps> = ({
     if (!isReplayActiveRef.current) return;
     isReplayActiveRef.current = false;
     setIsReplayActive(false);
+    replayFramesRef.current = [];
+    replayFrameIndexRef.current = 0;
+    replayBufferRef.current = []; // Clean snapshot buffer on reset
+
     matchRulesRef.current.celebrationTimer = 0;
+    matchRulesRef.current.isGoalCoolingDown = false;
     matchRulesRef.current.state.phase = 'PHASE_KICKOFF';
+
+    ballRef.current.attachedPlayerId = null;
+    ballRef.current.releaseTimer = 0;
+
     resetMatchPositions(matchRulesRef.current.kickoffTeam);
+
+    // Thoroughly reset all players animation and possession states
+    playersRef.current.forEach((p) => {
+      p.hasPossession = false;
+      p.isHeading = false;
+      p.isVolleying = false;
+      p.headerTimer = 0;
+      p.volleyTimer = 0;
+      p.isDiving = false;
+      p.diveTimer = 0;
+      p.isTackling = false;
+      p.tackleTimer = 0;
+      p.isStandingTackling = false;
+      p.standingTackleTimer = 0;
+      p.isChargingShot = false;
+      p.shotPower = 0;
+      p.turfParticles = [];
+      p.aiKickoffTimer = 0;
+    });
+
     setGoalBannerText(null);
     setIsGoalShaking(false);
     setIsCrowdSurging(false);
@@ -315,7 +371,10 @@ export const GameView: React.FC<GameViewProps> = ({
         } else {
           currentAwayIdx++;
           playerId = currentAwayIdx === 1 ? 'p2' : `p2_${currentAwayIdx}`;
-          displayName = isBot ? `Bot AI ${currentAwayIdx} (Away)` : `Player ${currentAwayIdx} (Away)`;
+          const awayCount = customSpawns.filter((n) => n.team === 'away').length;
+          displayName = isBot
+            ? (awayCount === 1 ? 'AI Bot (Away)' : `Bot AI ${currentAwayIdx} (Away)`)
+            : (awayCount === 1 ? 'Player 2 (Away)' : `Player ${currentAwayIdx} (Away)`);
         }
 
         const color = node.team === 'home'
@@ -324,6 +383,7 @@ export const GameView: React.FC<GameViewProps> = ({
 
         const p = new Player(playerId, displayName, node.team, isBot ? null : controllerIdx, color, coords.x, coords.y);
         p.devType = node.devType;
+        p.difficulty = botDifficulty;
         if (isBot) p.isAI = true;
         return p;
       });
@@ -331,39 +391,34 @@ export const GameView: React.FC<GameViewProps> = ({
       const isP1Bot = p1Device === 'ai_bot';
       const p1 = new Player('p1', isP1Bot ? 'Bot AI (Home)' : 'Player 1 (Home)', 'home', isP1Bot ? null : 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5);
       p1.devType = p1Device;
+      p1.difficulty = botDifficulty;
       if (isP1Bot) p1.isAI = true;
 
       const isP2Bot = p2Device === 'ai_bot';
       const p2 = new Player('p2', isP2Bot ? 'Bot AI (Away)' : 'Player 2 (Away)', 'away', isP2Bot ? null : 1, '#f59e0b', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.5);
       p2.devType = p2Device;
+      p2.difficulty = botDifficulty;
       if (isP2Bot) p2.isAI = true;
 
       playersRef.current = [p1, p2];
-    } else if (selectedMode === '1vBot') {
-      // 1 Player (Home) vs 1 AI Bot (Away)
-      const p1 = new Player('p1', 'Player 1 (Home)', 'home', 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5);
-      p1.devType = p1Device;
-      const bot = new Player('p2', 'Bot AI (Away)', 'away', null, '#f59e0b', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.5);
-      bot.devType = 'ai_bot';
-      bot.isAI = true;
-      playersRef.current = [p1, bot];
     } else {
-      // 2 vs BOT Mode
-      const p1 = new Player('p1', 'Player 1 (Home)', 'home', 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.42);
+      // Player vs BOT Mode Fallback (1 Player vs 1 Bot)
+      const isP1Bot = p1Device === 'ai_bot';
+      const p1 = new Player('p1', isP1Bot ? 'Bot AI (Home)' : 'Player 1 (Home)', 'home', isP1Bot ? null : 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5);
       p1.devType = p1Device;
-      const p2 = new Player('p2', 'Player 2 (Home)', 'home', 1, '#34d399', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.58);
-      p2.devType = p2Device;
-      const p3 = new Player('p3', 'Bot AI 1 (Away)', 'away', null, '#f59e0b', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.42);
-      p3.devType = 'ai_bot';
-      p3.isAI = true;
-      const p4 = new Player('p4', 'Bot AI 2 (Away)', 'away', null, '#ef4444', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.58);
-      p4.devType = 'ai_bot';
-      p4.isAI = true;
-      playersRef.current = [p1, p2, p3, p4];
+      p1.difficulty = botDifficulty;
+      if (isP1Bot) p1.isAI = true;
+
+      const p2 = new Player('p2', botDifficulty === 'hard' ? 'Hard Bot AI (Away)' : 'Easy Bot AI (Away)', 'away', null, '#f59e0b', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.5);
+      p2.devType = 'ai_bot';
+      p2.difficulty = botDifficulty;
+      p2.isAI = true;
+
+      playersRef.current = [p1, p2];
     }
     matchRulesRef.current.resetMatch();
     resetMatchPositions();
-  }, [selectedMode, customSpawns, p1Device, p2Device, resetMatchPositions]);
+  }, [selectedMode, botDifficulty, customSpawns, p1Device, p2Device, resetMatchPositions]);
 
   // Match Start Audio Lifecycle (Stop Menu BGM, Start Stadium Crowd, Whistle Kickoff)
   useEffect(() => {
@@ -455,6 +510,9 @@ export const GameView: React.FC<GameViewProps> = ({
           isStandingTackling: p.isStandingTackling,
           isKicking: p.isKickingTimer > 0 || p.isVolleying || p.isHeading,
           isDiving: p.isDiving,
+          isHeading: p.isHeading,
+          isVolleying: p.isVolleying,
+          hasPossession: p.hasPossession,
         })),
       });
       if (replayBufferRef.current.length > 240) {
@@ -521,11 +579,17 @@ export const GameView: React.FC<GameViewProps> = ({
             p.isStandingTackling = pf.isStandingTackling || false;
             p.isKickingTimer = pf.isKicking ? 0.1 : 0;
             p.isDiving = pf.isDiving || false;
+            p.isHeading = pf.isHeading || false;
+            p.isVolleying = pf.isVolleying || false;
+            p.hasPossession = pf.hasPossession || false;
 
             // --- RESET all stale timers/states from the live game so they
             //     cannot bleed into the replay visuals ---
             if (!p.isTackling) p.tackleTimer = 0;
             if (!p.isStandingTackling) p.standingTackleTimer = 0;
+            p.headerTimer = pf.isHeading ? 0.2 : 0;
+            p.volleyTimer = pf.isVolleying ? 0.2 : 0;
+            p.diveTimer = pf.isDiving ? 0.2 : 0;
             p.duelFeedbackTimer = 0;        // Hide all floating feedback badges
             p.duelFeedbackText = '';
             p.duelFeedbackYOffset = 0;
@@ -546,6 +610,11 @@ export const GameView: React.FC<GameViewProps> = ({
         });
       }
 
+      // Decouple ball from any carrier during replay playback
+      ball.attachedPlayerId = null;
+      ball.homingTargetPlayer = null;
+      ball.throughPassTargetPos = null;
+
       // Clear all player & ball particle effects each replay frame so live-game
       // particles (slide dust, kick sparks) are never visible during the replay
       players.forEach((p) => { p.turfParticles = []; });
@@ -553,9 +622,10 @@ export const GameView: React.FC<GameViewProps> = ({
       ball.burstShockwaves = [];
       ball.trailHistory = [];
 
-      // Smooth camera follow during replay
+      // Smooth camera follow & broadcast zoom during replay
       cameraRef.current.x = cameraRef.current.x * 0.88 + ball.pos.x * 0.12;
       cameraRef.current.y = cameraRef.current.y * 0.88 + ball.pos.y * 0.12;
+      zoomRef.current = zoomRef.current * 0.92 + 0.84 * 0.08;
     } else {
 
     // 2. Update Match Rules, Statistics & Match Engine Phases
@@ -653,7 +723,7 @@ export const GameView: React.FC<GameViewProps> = ({
           }
         } else if (player.isAI || devType === 'ai_bot') {
           // AI Enemy Bot Intelligence Loop
-          player.updateEnemyBotAI(ball, field, opponents, teammates, dt);
+          player.updateEnemyBotAI(ball, field, opponents, teammates, dt, rules.state.phase, rules.kickoffTeam);
         } else {
           player.updatePassiveReception(ball, field, dt);
         }
@@ -751,10 +821,12 @@ export const GameView: React.FC<GameViewProps> = ({
                 triggerCallout('tackle', '👟 POKE TACKLE!', 'Tekel Berdiri Cepat & Bersih');
                 tackler.triggerFeedback('👟 POKE STEAL!');
                 tackler.isStandingTackling = false;
+                tackler.standingTackleTimer = 0;
               } else {
                 triggerCallout('tackle', '🛡️ CLEAN TACKLE!', 'Rebutan Bola Sukses');
                 tackler.triggerFeedback('🛡️ TACKLE!');
                 tackler.isTackling = false;
+                tackler.tackleTimer = 0;
               }
               ballCarrier.triggerFeedback('💥 REBUT!');
               audioService.playTackleSFX();
