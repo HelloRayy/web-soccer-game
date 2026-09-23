@@ -45,7 +45,7 @@ function drawTacticalPassingGrid(
 }
 
 interface GameViewProps {
-  selectedMode?: '1v1' | '2vBot';
+  selectedMode?: '1v1' | '1vBot' | '2vBot';
   p1Device?: DeviceType;
   p2Device?: DeviceType;
   customSpawns?: PlayerNode[] | null;
@@ -339,6 +339,14 @@ export const GameView: React.FC<GameViewProps> = ({
       if (isP2Bot) p2.isAI = true;
 
       playersRef.current = [p1, p2];
+    } else if (selectedMode === '1vBot') {
+      // 1 Player (Home) vs 1 AI Bot (Away)
+      const p1 = new Player('p1', 'Player 1 (Home)', 'home', 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.5);
+      p1.devType = p1Device;
+      const bot = new Player('p2', 'Bot AI (Away)', 'away', null, '#f59e0b', WORLD_WIDTH * 0.65, WORLD_HEIGHT * 0.5);
+      bot.devType = 'ai_bot';
+      bot.isAI = true;
+      playersRef.current = [p1, bot];
     } else {
       // 2 vs BOT Mode
       const p1 = new Player('p1', 'Player 1 (Home)', 'home', 0, '#06b6d4', WORLD_WIDTH * 0.35, WORLD_HEIGHT * 0.42);

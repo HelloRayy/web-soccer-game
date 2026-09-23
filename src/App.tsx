@@ -17,7 +17,7 @@ const MainGameContainer: React.FC = () => {
     }
     return 'splash';
   });
-  const [selectedMode, setSelectedMode] = useState<'1v1' | '2vBot'>('2vBot');
+  const [selectedMode, setSelectedMode] = useState<'1v1' | '1vBot' | '2vBot'>('1vBot');
   const [p1Device, setP1Device] = useState<DeviceType>('keyboard1');
   const [p2Device, setP2Device] = useState<DeviceType>('keyboard2');
   const [homeControllers, setHomeControllers] = useState<PlayerDeviceConfig[]>([]);
@@ -58,7 +58,7 @@ const MainGameContainer: React.FC = () => {
 
   // Step 1: Confirm Controllers in Lobby ➔ Advance to Team Selection Screen (PES Flow)
   const handleConfirmControllers = (
-    mode: '1v1' | '2vBot',
+    mode: '1v1' | '1vBot' | '2vBot',
     p1Dev?: DeviceType,
     p2Dev?: DeviceType,
     homeDevs?: PlayerDeviceConfig[],

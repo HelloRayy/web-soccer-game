@@ -66,7 +66,7 @@ export interface PlayerNode {
 }
 
 interface TeamSelectViewProps {
-  mode: '1v1' | '2vBot';
+  mode: '1v1' | '1vBot' | '2vBot';
   p1Device: DeviceType;
   p2Device: DeviceType;
   homeControllers?: PlayerDeviceConfig[];
@@ -92,7 +92,7 @@ const DEFAULT_COORDS = [
 ];
 
 const buildInitialNodes = (
-  mode: '1v1' | '2vBot',
+  mode: '1v1' | '1vBot' | '2vBot',
   p1Device: DeviceType,
   p2Device: DeviceType,
   homeControllers?: PlayerDeviceConfig[],
@@ -124,6 +124,9 @@ const buildInitialNodes = (
   if (mode === '2vBot') {
     result.push({ id: 'away_1', name: 'AI Bot 1', devType: 'ai_bot', team: 'away', x: 50, y: 55 });
     result.push({ id: 'away_2', name: 'AI Bot 2', devType: 'ai_bot', team: 'away', x: 70, y: 72 });
+  } else if (mode === '1vBot') {
+    // 1 Player vs 1 Bot — only spawn a single AI bot on away side
+    result.push({ id: 'away_1', name: 'AI Bot', devType: 'ai_bot', team: 'away', x: 50, y: 55 });
   } else if (awayControllers && awayControllers.length > 0) {
     awayControllers.forEach((ctrl, idx) => {
       const coord = DEFAULT_COORDS[idx % DEFAULT_COORDS.length];

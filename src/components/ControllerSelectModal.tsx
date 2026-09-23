@@ -43,7 +43,7 @@ interface ControllerSelectModalProps {
   peerRoomId: string;
   isPeerConnected: boolean;
   connectedPeerCount?: number;
-  selectedMode: '1v1' | '2vBot';
+  selectedMode: '1v1' | '1vBot' | '2vBot';
 }
 
 export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
@@ -140,7 +140,7 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
   const ALL_5_SLOTS = [0, 1, 2, 3, 4];
 
   const p1Device = DEVICE_OPTIONS[homeSeats[0]]?.id || 'keyboard1';
-  const p2Device = selectedMode === '2vBot' ? 'ai_bot' : (DEVICE_OPTIONS[awaySeats[0]]?.id || 'keyboard2');
+  const p2Device = (selectedMode === '2vBot' || selectedMode === '1vBot') ? 'ai_bot' : (DEVICE_OPTIONS[awaySeats[0]]?.id || 'keyboard2');
 
   return (
     <AnimatePresence>
@@ -406,7 +406,8 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
               <button
                 onClick={() => {
                   const homeDevTypes = homeSeats.map((s) => DEVICE_OPTIONS[s]?.id);
-                  const awayDevTypes = selectedMode === '2vBot' ? ['ai_bot' as DeviceType] : awaySeats.map((s) => DEVICE_OPTIONS[s]?.id);
+                  const isVsBot = selectedMode === '2vBot' || selectedMode === '1vBot';
+                  const awayDevTypes = isVsBot ? ['ai_bot' as DeviceType] : awaySeats.map((s) => DEVICE_OPTIONS[s]?.id);
 
                   const conflict = homeDevTypes.find((hDev) => hDev && hDev !== 'hp_remote' && awayDevTypes.includes(hDev));
                   if (conflict) {
@@ -427,19 +428,21 @@ export const ControllerSelectModal: React.FC<ControllerSelectModalProps> = ({
                     };
                   });
 
-                  const awayConfig: PlayerDeviceConfig[] = awaySeats.map((seatDevIdx, i) => {
-                    const opt = selectedMode === '2vBot' && i === 0
-                      ? { id: 'ai_bot' as DeviceType, name: 'AI Enemy Bot', badge: 'BOT', type: 'bot' as const }
-                      : (DEVICE_OPTIONS[seatDevIdx] || DEVICE_OPTIONS[1]);
-                    return {
-                      id: `away_${i + 1}`,
-                      name: selectedMode === '2vBot' && i === 0 ? 'AI Bot' : `Player ${i + 1}`,
-                      devType: opt.id,
-                      label: opt.name,
-                      team: 'away',
-                      slotIndex: i,
-                    };
-                  });
+                  const awayConfig: PlayerDeviceConfig[] = (selectedMode === '1vBot')
+                    ? [{ id: 'away_1', name: 'AI Bot', devType: 'ai_bot', label: 'AI Enemy Bot', team: 'away', slotIndex: 0 }]
+                    : awaySeats.map((seatDevIdx, i) => {
+                        const opt = selectedMode === '2vBot' && i === 0
+                          ? { id: 'ai_bot' as DeviceType, name: 'AI Enemy Bot', badge: 'BOT', type: 'bot' as const }
+                          : (DEVICE_OPTIONS[seatDevIdx] || DEVICE_OPTIONS[1]);
+                        return {
+                          id: `away_${i + 1}`,
+                          name: selectedMode === '2vBot' && i === 0 ? 'AI Bot' : `Player ${i + 1}`,
+                          devType: opt.id,
+                          label: opt.name,
+                          team: 'away' as const,
+                          slotIndex: i,
+                        };
+                      });
 
                   onConfirmStart(p1Device, p2Device, homeConfig, awayConfig);
                 }}

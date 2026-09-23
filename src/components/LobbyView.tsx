@@ -9,7 +9,7 @@ import { audioService } from '../services/audioService';
 
 interface LobbyViewProps {
   onStartMatch: (
-    mode: '1v1' | '2vBot',
+    mode: '1v1' | '1vBot' | '2vBot',
     p1Device?: DeviceType,
     p2Device?: DeviceType,
     homeControllers?: PlayerDeviceConfig[],
@@ -20,7 +20,7 @@ interface LobbyViewProps {
   connectedPeerCount?: number;
 }
 
-type MenuItemId = '1v1' | '2vBot' | 'extras' | 'settings';
+type MenuItemId = '1v1' | '2vBot' | '1vBot' | 'extras' | 'settings';
 
 interface MenuItemConfig {
   id: MenuItemId;
@@ -72,7 +72,7 @@ const MENU_ITEMS: MenuItemConfig[] = [
 ];
 
 export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, isPeerConnected, connectedPeerCount = 0 }) => {
-  const [selectedMode, setSelectedMode] = useState<'1v1' | '2vBot'>('1v1');
+  const [selectedMode, setSelectedMode] = useState<'1v1' | '1vBot' | '2vBot'>('1vBot');
   const [activeItem, setActiveItem] = useState<MenuItemId>('1v1');
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [showControlsModal, setShowControlsModal] = useState(false);
@@ -121,7 +121,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ onStartMatch, peerRoomId, 
     }
   };
 
-  const handleSelectMatchMode = (mode: '1v1' | '2vBot') => {
+  const handleSelectMatchMode = (mode: '1v1' | '1vBot' | '2vBot') => {
     setSelectedMode(mode);
     setShowMatchModeModal(false);
     setShowControllerSelectModal(true);

@@ -5,7 +5,7 @@ import { Swords, Bot, X, Gamepad } from 'lucide-react';
 interface MatchModeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectMode: (mode: '1v1' | '2vBot') => void;
+  onSelectMode: (mode: '1v1' | '1vBot' | '2vBot') => void;
 }
 
 export const MatchModeModal: React.FC<MatchModeModalProps> = ({
@@ -13,7 +13,7 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
   onClose,
   onSelectMode,
 }) => {
-  const [selectedCard, setSelectedCard] = useState<'1v1' | '2vBot'>('1v1');
+  const [selectedCard, setSelectedCard] = useState<'1v1' | '1vBot' | '2vBot'>('1vBot');
 
   // Keyboard D-Pad Navigation Support (ArrowLeft, ArrowRight, Enter, Escape)
   useEffect(() => {
@@ -21,9 +21,9 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-        setSelectedCard('1v1');
+        setSelectedCard((prev) => prev === '2vBot' ? '1vBot' : '1v1');
       } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-        setSelectedCard('2vBot');
+        setSelectedCard((prev) => prev === '1v1' ? '1vBot' : '2vBot');
       } else if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         onSelectMode(selectedCard);
@@ -66,22 +66,21 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
               </p>
             </div>
 
-            {/* CENTER CARDS BODY: 2 HORIZONTAL SELECTOR CARDS */}
-            <div className="p-6 sm:p-10 grid grid-cols-1 sm:grid-cols-2 gap-6 bg-[#111513]">
+            {/* CENTER CARDS BODY: 3 HORIZONTAL SELECTOR CARDS */}
+            <div className="p-6 sm:p-10 grid grid-cols-1 sm:grid-cols-3 gap-5 bg-[#111513]">
               
-              {/* CARD 1: PLAYER VS PLAYER (NO LAYOUT SHIFT / NO BORDER THICKNESS JUMP) */}
+              {/* CARD 1: PLAYER VS PLAYER */}
               <div
                 onMouseEnter={() => setSelectedCard('1v1')}
                 onClick={() => onSelectMode('1v1')}
-                className={`cursor-pointer p-6 flex flex-col items-center text-center gap-4 relative rounded-none border-2 ${
+                className={`cursor-pointer p-5 flex flex-col items-center text-center gap-3 relative rounded-none border-2 ${
                   selectedCard === '1v1'
                     ? 'bg-[#141e2e] text-white border-[#3B82F6]'
                     : 'bg-[#171d1a] text-white border-white/10 hover:border-white/30'
                 }`}
               >
-                {/* INNER LOGO CARD GRAPHIC */}
                 <div
-                  className={`w-full h-44 rounded-2xl flex flex-col items-center justify-center p-4 border ${
+                  className={`w-full h-40 rounded-2xl flex flex-col items-center justify-center p-4 border ${
                     selectedCard === '1v1'
                       ? 'bg-gradient-to-br from-[#0c1426] via-[#121c33] to-[#0a1020] border-[#3B82F6]/80 text-white'
                       : 'bg-[#0e1311] border-white/10 text-slate-300'
@@ -90,62 +89,70 @@ export const MatchModeModal: React.FC<MatchModeModalProps> = ({
                   <div className="w-12 h-12 rounded-full border-2 border-current flex items-center justify-center mb-2">
                     <Swords className="w-6 h-6 text-[#3B82F6]" />
                   </div>
-                  <span className="text-xl font-black italic tracking-tighter font-['Outfit',sans-serif] uppercase">
-                    KICK OFF
-                  </span>
-                  <span className="text-xs font-mono font-bold tracking-widest text-[#3B82F6] mt-0.5">
-                    PLAYER VS PLAYER
-                  </span>
+                  <span className="text-lg font-black italic tracking-tighter font-['Outfit',sans-serif] uppercase">KICK OFF</span>
+                  <span className="text-xs font-mono font-bold tracking-widest text-[#3B82F6] mt-0.5">PLAYER VS PLAYER</span>
                 </div>
-
-                {/* CARD TITLE & DESCRIPTION */}
                 <div className="flex flex-col items-center gap-1 mt-1">
-                  <h3 className="text-xl font-bold font-['Outfit',sans-serif] text-white">
-                    Player vs Player
-                  </h3>
-                  <p className="text-xs max-w-xs font-normal leading-relaxed text-slate-300">
-                    Play local & multi-remote match with your friends in PVP arena.
-                  </p>
+                  <h3 className="text-lg font-bold font-['Outfit',sans-serif] text-white">Player vs Player</h3>
+                  <p className="text-xs max-w-xs font-normal leading-relaxed text-slate-300">Local & remote PVP match with friends.</p>
                 </div>
               </div>
 
-              {/* CARD 2: PLAYER VS BOT (NO LAYOUT SHIFT / NO BORDER THICKNESS JUMP) */}
+              {/* CARD 2: PLAYER VS 1 BOT */}
               <div
-                onMouseEnter={() => setSelectedCard('2vBot')}
-                onClick={() => onSelectMode('2vBot')}
-                className={`cursor-pointer p-6 flex flex-col items-center text-center gap-4 relative rounded-none border-2 ${
-                  selectedCard === '2vBot'
-                    ? 'bg-[#141e2e] text-white border-[#3B82F6]'
+                onMouseEnter={() => setSelectedCard('1vBot')}
+                onClick={() => onSelectMode('1vBot')}
+                className={`cursor-pointer p-5 flex flex-col items-center text-center gap-3 relative rounded-none border-2 ${
+                  selectedCard === '1vBot'
+                    ? 'bg-[#1e1a09] text-white border-[#FFD13B]'
                     : 'bg-[#171d1a] text-white border-white/10 hover:border-white/30'
                 }`}
               >
-                {/* INNER LOGO CARD GRAPHIC */}
                 <div
-                  className={`w-full h-44 rounded-2xl flex flex-col items-center justify-center p-4 border ${
-                    selectedCard === '2vBot'
-                      ? 'bg-gradient-to-br from-[#0c1426] via-[#121c33] to-[#0a1020] border-[#3B82F6]/80 text-white'
+                  className={`w-full h-40 rounded-2xl flex flex-col items-center justify-center p-4 border ${
+                    selectedCard === '1vBot'
+                      ? 'bg-gradient-to-br from-[#201600] via-[#1a1000] to-[#0e0900] border-[#FFD13B]/80 text-white'
                       : 'bg-[#0e1311] border-white/10 text-slate-300'
                   }`}
                 >
                   <div className="w-12 h-12 rounded-full border-2 border-current flex items-center justify-center mb-2">
                     <Bot className="w-6 h-6 text-[#FFD13B]" />
                   </div>
-                  <span className="text-xl font-black italic tracking-tighter font-['Outfit',sans-serif] uppercase">
-                    KICK OFF
-                  </span>
-                  <span className="text-xs font-mono font-bold tracking-widest text-[#FFD13B] mt-0.5">
-                    REAL BOT AI
-                  </span>
+                  <span className="text-lg font-black italic tracking-tighter font-['Outfit',sans-serif] uppercase">SOLO CLASH</span>
+                  <span className="text-xs font-mono font-bold tracking-widest text-[#FFD13B] mt-0.5">PLAYER VS BOT</span>
                 </div>
-
-                {/* CARD TITLE & DESCRIPTION */}
                 <div className="flex flex-col items-center gap-1 mt-1">
-                  <h3 className="text-xl font-bold font-['Outfit',sans-serif] text-white">
-                    Player vs Bot
-                  </h3>
-                  <p className="text-xs max-w-xs font-normal leading-relaxed text-slate-300">
-                    Team up with friends or play against AI Enemy Bots.
-                  </p>
+                  <h3 className="text-lg font-bold font-['Outfit',sans-serif] text-white">Player vs Bot</h3>
+                  <p className="text-xs max-w-xs font-normal leading-relaxed text-slate-300">1 player vs 1 AI enemy bot.</p>
+                </div>
+              </div>
+
+              {/* CARD 3: 2 PLAYERS VS 2 BOTS CO-OP */}
+              <div
+                onMouseEnter={() => setSelectedCard('2vBot')}
+                onClick={() => onSelectMode('2vBot')}
+                className={`cursor-pointer p-5 flex flex-col items-center text-center gap-3 relative rounded-none border-2 ${
+                  selectedCard === '2vBot'
+                    ? 'bg-[#0e1a0e] text-white border-[#10b981]'
+                    : 'bg-[#171d1a] text-white border-white/10 hover:border-white/30'
+                }`}
+              >
+                <div
+                  className={`w-full h-40 rounded-2xl flex flex-col items-center justify-center p-4 border ${
+                    selectedCard === '2vBot'
+                      ? 'bg-gradient-to-br from-[#031a0c] via-[#021408] to-[#010a04] border-[#10b981]/80 text-white'
+                      : 'bg-[#0e1311] border-white/10 text-slate-300'
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-full border-2 border-current flex items-center justify-center mb-2">
+                    <Gamepad className="w-6 h-6 text-[#10b981]" />
+                  </div>
+                  <span className="text-lg font-black italic tracking-tighter font-['Outfit',sans-serif] uppercase">CO-OP</span>
+                  <span className="text-xs font-mono font-bold tracking-widest text-[#10b981] mt-0.5">2 PLAYERS VS 2 BOTS</span>
+                </div>
+                <div className="flex flex-col items-center gap-1 mt-1">
+                  <h3 className="text-lg font-bold font-['Outfit',sans-serif] text-white">Co-op vs Bots</h3>
+                  <p className="text-xs max-w-xs font-normal leading-relaxed text-slate-300">2 players team up vs 2 AI enemy bots.</p>
                 </div>
               </div>
 
