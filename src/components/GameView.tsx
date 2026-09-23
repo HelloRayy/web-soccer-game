@@ -139,13 +139,13 @@ export const GameView: React.FC<GameViewProps> = ({
   const replayBufferRef = useRef<Array<{
     ballPos: { x: number; y: number; z: number };
     ballRotation: number;
-    players: Array<{ id: string; pos: { x: number; y: number }; facingAngle: number }>;
+    players: Array<{ id: string; pos: { x: number; y: number }; facingAngle: number; isTackling?: boolean; isStandingTackling?: boolean; isKicking?: boolean; isDiving?: boolean }>;
   }>>([]);
   const isReplayActiveRef = useRef<boolean>(false);
   const replayFramesRef = useRef<Array<{
     ballPos: { x: number; y: number; z: number };
     ballRotation: number;
-    players: Array<{ id: string; pos: { x: number; y: number }; facingAngle: number }>;
+    players: Array<{ id: string; pos: { x: number; y: number }; facingAngle: number; isTackling?: boolean; isStandingTackling?: boolean; isKicking?: boolean; isDiving?: boolean }>;
   }>>([]);
   const replayFrameIndexRef = useRef<number>(0);
 
@@ -381,7 +381,7 @@ export const GameView: React.FC<GameViewProps> = ({
       if (e.key === 'Control' || e.ctrlKey) {
         setShowCursor((prev) => !prev);
       }
-      if ((e.key === ' ' || e.key === 'Enter') && isReplayActiveRef.current) {
+      if ((e.key === 'Escape' || e.key === 'Enter') && isReplayActiveRef.current) {
         skipReplay();
       }
     };
@@ -442,6 +442,10 @@ export const GameView: React.FC<GameViewProps> = ({
           id: p.id,
           pos: { x: p.pos.x, y: p.pos.y },
           facingAngle: p.facingAngle,
+          isTackling: p.isTackling,
+          isStandingTackling: p.isStandingTackling,
+          isKicking: p.isKickingTimer > 0 || p.isVolleying || p.isHeading,
+          isDiving: p.isDiving,
         })),
       });
       if (replayBufferRef.current.length > 240) {
@@ -503,6 +507,26 @@ export const GameView: React.FC<GameViewProps> = ({
             while (diff > Math.PI) diff -= Math.PI * 2;
             p.facingAngle = pf.facingAngle + diff * frac;
 
+            // Replay-controlled animation states (from snapshot buffer)
+            p.isTackling = pf.isTackling || false;
+            p.isStandingTackling = pf.isStandingTackling || false;
+            p.isKickingTimer = pf.isKicking ? 0.1 : 0;
+            p.isDiving = pf.isDiving || false;
+
+            // --- RESET all stale timers/states from the live game so they
+            //     cannot bleed into the replay visuals ---
+            if (!p.isTackling) p.tackleTimer = 0;
+            if (!p.isStandingTackling) p.standingTackleTimer = 0;
+            p.duelFeedbackTimer = 0;        // Hide all floating feedback badges
+            p.duelFeedbackText = '';
+            p.duelFeedbackYOffset = 0;
+            p.isChargingShot = false;       // Hide shot power meter
+            p.isChargingSlide = false;      // Hide slide power meter
+            p.shotPower = 0;
+            p.slidePower = 0;
+            p.isSprinting = false;          // Hide sprint stamina effects
+            p.skillDodgeInvincibleTimer = 0;// Hide dodge invincible ring
+
             // Compute replay velocity & step animation phase for smooth leg strides
             p.vel.x = deltaX * 0.6;
             p.vel.y = deltaY * 0.6;
@@ -512,6 +536,13 @@ export const GameView: React.FC<GameViewProps> = ({
           }
         });
       }
+
+      // Clear all player & ball particle effects each replay frame so live-game
+      // particles (slide dust, kick sparks) are never visible during the replay
+      players.forEach((p) => { p.turfParticles = []; });
+      ball.turfGrassParticles = [];
+      ball.burstShockwaves = [];
+      ball.trailHistory = [];
 
       // Smooth camera follow during replay
       cameraRef.current.x = cameraRef.current.x * 0.88 + ball.pos.x * 0.12;
@@ -536,6 +567,12 @@ export const GameView: React.FC<GameViewProps> = ({
         replayFrameIndexRef.current = 0;
         isReplayActiveRef.current = true;
         setIsReplayActive(true);
+
+        // Clear all live-game particle effects so they don't bleed into replay visuals
+        players.forEach((p) => { p.turfParticles = []; });
+        ball.turfGrassParticles = [];
+        ball.burstShockwaves = [];
+        ball.trailHistory = [];
       }
 
       // Snappy 1.0-second auto-clear for goal notification banners

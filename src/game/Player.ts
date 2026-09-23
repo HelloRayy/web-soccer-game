@@ -770,9 +770,16 @@ export class Player implements PlayerEntity {
           this.shotAimAngle = this.facingAngle;
         }
 
-        // Monotonic charge up to 1.0 (standard football power bar)
+        // Oscillating charge (0 to 1.0 and back to 0)
         const chargeSpeed = 0.022;
-        this.shotPower = Math.min(1.0, this.shotPower + chargeSpeed);
+        this.shotPower += chargeSpeed * this.shotPowerDirection;
+        if (this.shotPower >= 1.0) {
+          this.shotPower = 1.0;
+          this.shotPowerDirection = -1;
+        } else if (this.shotPower <= 0.0) {
+          this.shotPower = 0.0;
+          this.shotPowerDirection = 1;
+        }
         this.smoothShotPower += (this.shotPower - this.smoothShotPower) * 0.35;
 
         const stickMag = Math.hypot(moveX, moveY);
@@ -1360,8 +1367,8 @@ export class Player implements PlayerEntity {
       facingAngle: this.facingAngle,
       stepPhase: this.stepPhase,
       isMoving: spd > 0.15,
-      isKicking: this.isKickingTimer > 0 || this.isVolleying || this.isHeading,
-      isTackling: this.isTackling || this.isStandingTackling,
+      isKicking: this.isKickingTimer > 0 || this.isVolleying || this.isHeading || this.isStandingTackling,
+      isTackling: this.isTackling,
       isGoalkeeper: this.isGoalkeeper,
       isDiving: this.isDiving,
       team: this.team,
